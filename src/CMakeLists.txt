@@ -1,5 +1,10 @@
 set(src
     lox/cint.cc lox/cint.h
+    lox/token.cc lox/token.h
+    lox/object.cc lox/object.h
+    lox/scanner.cc lox/scanner.h
+    lox/errorhandler.cc lox/errorhandler.h
+    lox/tokentype.h
 )
 
 add_library(liblox STATIC ${src})
@@ -14,7 +19,7 @@ target_include_directories(liblox
 source_group("" FILES ${src})
 
 set(src_test
-    # lox/foo.test.cc
+    lox/lox.test.cc
     ../external/catch/main.cc
 )
 add_executable(test ${src_test})
