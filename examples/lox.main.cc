@@ -102,14 +102,9 @@ struct Lox : public lox::ErrorHandler
         }
     }
 
-    void error(int line, const std::string& message)
+    void on_error(const Offset& offset, const std::string& message) override
     {
-        report(line, "", message);
-    }
-
-    void report(int line, const std::string& where, const std::string& message) override
-    {
-        std::cerr << "[line " << line << "] Error" << where << ": " << message << "\n";
+        std::cerr << "[offset " << offset.start << " " << offset.end << "] Error: " << message << "\n";
         hadError = true;
     }
 

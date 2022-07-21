@@ -5,11 +5,11 @@ namespace lox
 {
 
     
-Token::Token(TokenType the_type, std::string_view the_lexeme, std::shared_ptr<Object> the_literal, int the_line)
+Token::Token(TokenType the_type, std::string_view the_lexeme, std::shared_ptr<Object> the_literal, const Offset& the_offset)
     : type(the_type)
     , lexeme(the_lexeme)
     , literal(the_literal)
-    , line(the_line)
+    , offset(the_offset)
 {
 }
 

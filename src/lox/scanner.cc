@@ -43,9 +43,10 @@ parseDouble(std::string_view str)
 
 
 std::string_view
-substr(std::string_view str, int start_index, int end_index)
+substr(std::string_view str, std::size_t start_index, std::size_t end_index)
 {
-    return str.substr(Cint_to_sizet(start_index), Cint_to_sizet(end_index - start_index));
+    assert(end_index >= start_index);
+    return str.substr(start_index, end_index - start_index);
 }
 
 
@@ -54,9 +55,8 @@ struct Scanner
     std::string_view source;
     ErrorHandler* error_handler;
     std::vector<Token> tokens;
-    int start = 0;
-    int current = 0;
-    int line = 1;
+    std::size_t start = 0;
+    std::size_t current = 0;
 
     std::unordered_map<std::string_view, TokenType> keywords;
 
@@ -92,7 +92,7 @@ struct Scanner
             scanToken();
         }
 
-        tokens.emplace_back(TokenType::EOF, "", nullptr, line);
+        tokens.emplace_back(TokenType::EOF, "", nullptr, Offset{start, current});
     }
 
     void
@@ -133,11 +133,7 @@ struct Scanner
             break;
 
         // Ignore whitespace.
-        case ' ': case '\r': case '\t':
-            break;
-
-        case '\n':
-            line++;
+        case ' ': case '\r': case '\t': case '\n':
             break;
 
         case '"': case '\'':
@@ -155,7 +151,7 @@ struct Scanner
             }
             else
             {
-                error_handler->error(line, "Unexpected character.");
+                error_handler->on_error(start, "Unexpected character.");
             }
             break;
         }
@@ -164,20 +160,30 @@ struct Scanner
     void
     identifier()
     {
-        while (isAlphaNumeric(peek())) advance();
+        while (isAlphaNumeric(peek()))
+        {
+            advance();
+        }
 
-        auto text = substr(source, start, current);
-        auto type = keywords.find(text);
+        const auto text = substr(source, start, current);
+        const auto type = keywords.find(text);
         if (type == keywords.end())
+        {
             addToken(TokenType::IDENTIFIER);
+        }
         else
+        {
             addToken(type->second);
+        }
     }
 
     void
     number()
     {
-        while (isDigit(peek())) advance();
+        while (isDigit(peek()))
+        {
+            advance();
+        }
 
         // Look for a fractional part.
         if (peek() == '.' && isDigit(peekNext()))
@@ -185,7 +191,10 @@ struct Scanner
             // Consume the "."
             advance();
 
-            while (isDigit(peek())) advance();
+            while (isDigit(peek()))
+            {
+                advance();
+            }
         }
 
         const auto str = substr(source, start, current);
@@ -197,14 +206,12 @@ struct Scanner
     {
         while (peek() != end_char && !isAtEnd())
         {
-            if (peek() == '\n')
-                line++;
             advance();
         }
 
         if (isAtEnd())
         {
-            error_handler->error(line, "Unterminated string.");
+            error_handler->on_error(Offset{start, current}, "Unterminated string.");
             return;
         }
 
@@ -220,9 +227,14 @@ struct Scanner
     match(char expected)
     {
         if (isAtEnd())
+        {
             return false;
-        if (source[Cint_to_sizet(current)] != expected)
+        }
+
+        if (source[current] != expected)
+        {
             return false;
+        }
 
         current++;
         return true;
@@ -232,28 +244,38 @@ struct Scanner
     peek()
     {
         if (isAtEnd())
+        {
             return '\0';
-        return source[Cint_to_sizet(current)];
+        }
+        else
+        {
+            return source[current];
+        }
     }
 
     char
     peekNext()
     {
-        if (Cint_to_sizet(current + 1) >= source.length())
+        if (current + 1 >= source.length())
+        {
             return '\0';
-        return source[Cint_to_sizet(current + 1)];
+        }
+        else
+        {
+            return source[current + 1];
+        }
     }
 
     bool
     isAtEnd() const
     {
-        return current >= Csizet_to_int(source.length());
+        return current >= source.length();
     }
 
     char
     advance()
     {
-        const auto r = source[Cint_to_sizet(current)];
+        const auto r = source[current];
         current++;
         return r;
     }
@@ -268,7 +290,7 @@ struct Scanner
     addToken(TokenType type, std::shared_ptr<Object> literal)
     {
         auto text = substr(source, start, current);
-        tokens.emplace_back(Token(type, text, literal, line));
+        tokens.emplace_back(Token(type, text, literal, Offset{start, current}));
     }
 };
 } }

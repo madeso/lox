@@ -4,6 +4,8 @@
 #include <string>
 #include <string_view>
 #include <optional>
+#include <cassert>
+#include <memory>
 
 #include <fmt/core.h>
 #include <fmt/format.h>
