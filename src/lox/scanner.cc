@@ -1,7 +1,6 @@
 #include "lox/scanner.h"
 
 #include <unordered_map>
-#include <charconv>
 
 #include "lox/errorhandler.h"
 
@@ -35,10 +34,9 @@ is_alphanum_char(char c)
 float
 parse_double(std::string_view str)
 {
-    double val;
-    std::from_chars(str.data(), str.data() + str.size(), val);
-    // hrm... clang + gcc 10 can't parse floats?
-    return static_cast<float>(val);
+    // hrm... from_chars isn't available for clang + gcc 10?
+    return std::stof(std::string(str));
+    // std::from_chars(str.data(), str.data() + str.size(), out_val);
 }
 
 
