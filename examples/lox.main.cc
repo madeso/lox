@@ -137,7 +137,7 @@ struct Lox : public lox::ErrorHandler
         const std::string gutter = get_line_gutter(line.line+1);
 
         const std::string dashes = std::string((gutter.length() + line_length) - 1, '-');
-        return fmt::format("{}^ ", dashes);
+        return fmt::format("{}^-- ", dashes);
     }
 
     std::string

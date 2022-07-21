@@ -92,9 +92,11 @@ struct Scanner
 {
     std::string_view source;
     ErrorHandler* error_handler;
-    std::vector<Token> tokens;
-    std::size_t start = 0;
-    std::size_t current = 0;
+
+    std::vector<Token> tokens; // output "variable"
+
+    std::size_t start = 0; // first character in lexeme being scanned
+    std::size_t current = 0; // character currently being scanned
 
     explicit Scanner(std::string_view s, ErrorHandler* eh)
         : source(s)
@@ -121,6 +123,7 @@ struct Scanner
         const char first_char = advance();
         switch (first_char)
         {
+        // single character tokens
         case '(': add_token(TokenType::LEFT_PAREN);  break;
         case ')': add_token(TokenType::RIGHT_PAREN); break;
         case '{': add_token(TokenType::LEFT_BRACE);  break;
@@ -132,12 +135,15 @@ struct Scanner
         case ';': add_token(TokenType::SEMICOLON);   break;
         case '*': add_token(TokenType::STAR);        break;
 
+        // 1 or 2 character tokens
         case '!': add_token(match('=') ? TokenType::BANG_EQUAL    : TokenType::BANG);    break;
         case '=': add_token(match('=') ? TokenType::EQUAL_EQUAL   : TokenType::EQUAL);   break;
         case '<': add_token(match('=') ? TokenType::LESS_EQUAL    : TokenType::LESS);    break;
         case '>': add_token(match('=') ? TokenType::GREATER_EQUAL : TokenType::GREATER); break;
 
+        // division or comment?
         case '/':
+            // todo(Gustav): add c-style /*  */ multi-line comments
             if (match('/'))
             {
                 // A comment goes until the end of the line.
@@ -153,6 +159,7 @@ struct Scanner
         case ' ': case '\r': case '\t': case '\n':
             break;
 
+        // string literal
         case '"': case '\'':
             parse_string(first_char);
             break;
@@ -214,6 +221,12 @@ struct Scanner
     void
     parse_string(char end_char)
     {
+        // todo(Gustav): add back-slash escaping
+        // todo(Gustav): require string on single line?
+        // todo(Gustav): add multiline strings?
+        // todo(Gustav): add format strings?
+        // todo(Gustav): concat many strings like c
+        // todo(Gustav): add support for here-docs?: https://en.wikipedia.org/wiki/Here_document
         while (peek() != end_char && !is_at_end())
         {
             advance();
@@ -243,6 +256,7 @@ struct Scanner
         }
     }
 
+    // only consume if the character is what we are looking for
     bool
     match(char expected)
     {
@@ -260,6 +274,7 @@ struct Scanner
         return true;
     }
 
+    // one character look-ahead
     char
     peek()
     {
@@ -273,6 +288,7 @@ struct Scanner
         }
     }
 
+    // two character look-ahead
     char
     peek_next()
     {
@@ -286,12 +302,14 @@ struct Scanner
         }
     }
 
+    /// have all characters been consumed?
     bool
     is_at_end() const
     {
         return current >= source.length();
     }
 
+    /// consume character and return it
     char
     advance()
     {
