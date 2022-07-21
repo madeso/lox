@@ -11,7 +11,10 @@
 // represents Lox.java
 struct Lox : public lox::ErrorHandler
 {
-    int main(int argc, char** argv)
+    bool hadError = false;
+
+    int
+    main(int argc, char** argv)
     {
         if (argc > 3)
         {
@@ -24,7 +27,7 @@ struct Lox : public lox::ErrorHandler
             const std::string cmd = argv[2];
             if (flag == "-x")
             {
-                return runCode(cmd);
+                return run_code_get_exitcode(cmd);
             }
             else
             {
@@ -34,16 +37,17 @@ struct Lox : public lox::ErrorHandler
         }
         else if (argc == 2)
         {
-            return runFile(argv[1]);
+            return run_file_get_exitcode(argv[1]);
         }
         else
         {
-            runPrompt();
+            run_prompt();
             return exit_codes::no_error;
         }
     }
 
-    void runPrompt()
+    void
+    run_prompt()
     {
         while (true)
         {
@@ -61,7 +65,8 @@ struct Lox : public lox::ErrorHandler
         }
     }
 
-    [[nodiscard]] int runFile(char* path)
+    [[nodiscard]] int
+    run_file_get_exitcode(char* path)
     {
         // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring/2602258
         std::ifstream handle(path);
@@ -75,10 +80,11 @@ struct Lox : public lox::ErrorHandler
         std::string str((std::istreambuf_iterator<char>(handle)),
                         std::istreambuf_iterator<char>());
 
-        return runCode(str);
+        return run_code_get_exitcode(str);
     }
 
-    [[nodiscard]] int runCode(const std::string& str)
+    [[nodiscard]] int
+    run_code_get_exitcode(const std::string& str)
     {
         run(str);
 
@@ -92,23 +98,23 @@ struct Lox : public lox::ErrorHandler
         }
     }
 
-    void run(const std::string& source)
+    void
+    run(const std::string& source)
     {
         auto tokens = lox::ScanTokens(source, this);
 
         for (const auto& token : tokens)
         {
-            std::cout << token.toString() << "\n";
+            std::cout << token.to_string() << "\n";
         }
     }
 
-    void on_error(const Offset& offset, const std::string& message) override
+    void
+    on_error(const Offset& offset, const std::string& message) override
     {
         std::cerr << "[offset " << offset.start << " " << offset.end << "] Error: " << message << "\n";
         hadError = true;
     }
-
-    bool hadError = false;
 };
 
 

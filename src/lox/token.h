@@ -19,7 +19,7 @@ struct Token
     Token(TokenType type, std::string_view lexeme, std::shared_ptr<Object> literal, const Offset& offset);
 
     std::string
-    toString() const;
+    to_string() const;
 };
 
 

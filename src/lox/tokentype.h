@@ -30,7 +30,7 @@ namespace lox
         EOF
     };
 
-    constexpr std::string_view ToString(TokenType tt)
+    constexpr std::string_view tokentype_to_string(TokenType tt)
     {
         switch (tt)
         {

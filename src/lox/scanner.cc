@@ -3,7 +3,6 @@
 #include <unordered_map>
 #include <charconv>
 
-#include "lox/cint.h"
 #include "lox/errorhandler.h"
 
 namespace lox { namespace
@@ -11,37 +10,37 @@ namespace lox { namespace
 
 
 bool
-isDigit(char c)
+is_num_char(char c)
 {
-    return c >= '0' && c <= '9';
+    return '0' <= c && c <= '9';
 }
 
 
 bool
-isAlpha(char c)
+is_alpha_char(char c)
 {
-    return (c >= 'a' && c <= 'z') ||
-            (c >= 'A' && c <= 'Z') ||
-            c == '_';
+    const bool is_lower_case = 'a' <= c && c <= 'z';
+    const bool is_upper_case = 'A' <= c && c <= 'Z';
+    return is_lower_case || is_upper_case || c == '_';
 }
 
 
 bool
-isAlphaNumeric(char c)
+is_alphanum_char(char c)
 {
-    return isAlpha(c) || isDigit(c);
+    return is_alpha_char(c) || is_num_char(c);
 }
 
 
 float
-parseDouble(std::string_view str)
+parse_double(std::string_view str)
 {
     float val;
     std::from_chars(str.data(), str.data() + str.size(), val);
     return val;
 }
 
-
+// todo(Gustav): remove this
 std::string_view
 substr(std::string_view str, std::size_t start_index, std::size_t end_index)
 {
@@ -50,20 +49,13 @@ substr(std::string_view str, std::size_t start_index, std::size_t end_index)
 }
 
 
-struct Scanner
+std::optional<TokenType>
+find_keyword_or_null(std::string_view str)
 {
-    std::string_view source;
-    ErrorHandler* error_handler;
-    std::vector<Token> tokens;
-    std::size_t start = 0;
-    std::size_t current = 0;
-
-    std::unordered_map<std::string_view, TokenType> keywords;
-
-    explicit Scanner(std::string_view s, ErrorHandler* eh)
-        : source(s)
-        , error_handler(eh)
+    // todo(Gustav): just constinit this instead of going via a local function
+    static const std::unordered_map<std::string_view, TokenType> keywords = []() -> auto
     {
+        std::unordered_map<std::string_view, TokenType> keywords;
         keywords["and"] = TokenType::AND;
         keywords["class"] = TokenType::CLASS;
         keywords["else"] = TokenType::ELSE;
@@ -80,55 +72,79 @@ struct Scanner
         keywords["true"] = TokenType::TRUE;
         keywords["var"] = TokenType::VAR;
         keywords["while"] = TokenType::WHILE;
+        return keywords;
+    }();
+
+    const auto found = keywords.find(str);
+    if(found != keywords.end())
+    {
+        return found->second;
+    }
+    else
+    {
+        return std::nullopt;
+    }
+}
+
+
+struct Scanner
+{
+    std::string_view source;
+    ErrorHandler* error_handler;
+    std::vector<Token> tokens;
+    std::size_t start = 0;
+    std::size_t current = 0;
+
+    explicit Scanner(std::string_view s, ErrorHandler* eh)
+        : source(s)
+        , error_handler(eh)
+    {
     }
 
     void
-    scanTokens()
+    scan_many_tokens()
     {
-        while (!isAtEnd())
+        while (!is_at_end())
         {
             // We are at the beginning of the next lexeme.
             start = current;
-            scanToken();
+            scan_single_token();
         }
 
         tokens.emplace_back(TokenType::EOF, "", nullptr, Offset{start, current});
     }
 
     void
-    scanToken()
+    scan_single_token()
     {
-        char c = advance();
-        switch (c)
+        const char first_char = advance();
+        switch (first_char)
         {
-        case '(': addToken(TokenType::LEFT_PAREN);  break;
-        case ')': addToken(TokenType::RIGHT_PAREN); break;
-        case '{': addToken(TokenType::LEFT_BRACE);  break;
-        case '}': addToken(TokenType::RIGHT_BRACE); break;
-        case ',': addToken(TokenType::COMMA);       break;
-        case '.': addToken(TokenType::DOT);         break;
-        case '-': addToken(TokenType::MINUS);       break;
-        case '+': addToken(TokenType::PLUS);        break;
-        case ';': addToken(TokenType::SEMICOLON);   break;
-        case '*': addToken(TokenType::STAR);        break;
+        case '(': add_token(TokenType::LEFT_PAREN);  break;
+        case ')': add_token(TokenType::RIGHT_PAREN); break;
+        case '{': add_token(TokenType::LEFT_BRACE);  break;
+        case '}': add_token(TokenType::RIGHT_BRACE); break;
+        case ',': add_token(TokenType::COMMA);       break;
+        case '.': add_token(TokenType::DOT);         break;
+        case '-': add_token(TokenType::MINUS);       break;
+        case '+': add_token(TokenType::PLUS);        break;
+        case ';': add_token(TokenType::SEMICOLON);   break;
+        case '*': add_token(TokenType::STAR);        break;
 
-        case '!': addToken(match('=') ? TokenType::BANG_EQUAL    : TokenType::BANG);    break;
-        case '=': addToken(match('=') ? TokenType::EQUAL_EQUAL   : TokenType::EQUAL);   break;
-        case '<': addToken(match('=') ? TokenType::LESS_EQUAL    : TokenType::LESS);    break;
-        case '>': addToken(match('=') ? TokenType::GREATER_EQUAL : TokenType::GREATER); break;
+        case '!': add_token(match('=') ? TokenType::BANG_EQUAL    : TokenType::BANG);    break;
+        case '=': add_token(match('=') ? TokenType::EQUAL_EQUAL   : TokenType::EQUAL);   break;
+        case '<': add_token(match('=') ? TokenType::LESS_EQUAL    : TokenType::LESS);    break;
+        case '>': add_token(match('=') ? TokenType::GREATER_EQUAL : TokenType::GREATER); break;
 
         case '/':
             if (match('/'))
             {
                 // A comment goes until the end of the line.
-                while (peek() != '\n' && !isAtEnd())
-                {
-                    advance();
-                }
+                eat_line();
             }
             else
             {
-                addToken(TokenType::SLASH);
+                add_token(TokenType::SLASH);
             }
             break;
 
@@ -137,17 +153,17 @@ struct Scanner
             break;
 
         case '"': case '\'':
-            string(c);
+            parse_string(first_char);
             break;
 
         default:
-            if (isDigit(c))
+            if (is_num_char(first_char))
             {
-                number();
+                parse_number();
             }
-            else if (isAlpha(c))
+            else if (is_alpha_char(first_char))
             {
-                identifier();
+                parse_identifier_or_keyword();
             }
             else
             {
@@ -158,60 +174,53 @@ struct Scanner
     }
 
     void
-    identifier()
+    parse_identifier_or_keyword()
     {
-        while (isAlphaNumeric(peek()))
+        while (is_alphanum_char(peek()))
         {
             advance();
         }
 
         const auto text = substr(source, start, current);
-        const auto type = keywords.find(text);
-        if (type == keywords.end())
-        {
-            addToken(TokenType::IDENTIFIER);
-        }
-        else
-        {
-            addToken(type->second);
-        }
+        const auto keyword_type = find_keyword_or_null(text);
+        add_token(keyword_type.value_or(TokenType::IDENTIFIER));
     }
 
     void
-    number()
+    parse_number()
     {
-        while (isDigit(peek()))
+        while (is_num_char(peek()))
         {
             advance();
         }
 
         // Look for a fractional part.
-        if (peek() == '.' && isDigit(peekNext()))
+        if (peek() == '.' && is_num_char(peek_next()))
         {
             // Consume the "."
             advance();
 
-            while (isDigit(peek()))
+            while (is_num_char(peek()))
             {
                 advance();
             }
         }
 
         const auto str = substr(source, start, current);
-        addToken(TokenType::NUMBER, std::make_shared<Number>(parseDouble(str)));
+        add_token(TokenType::NUMBER, std::make_shared<Number>(parse_double(str)));
     }
 
     void
-    string(char end_char)
+    parse_string(char end_char)
     {
-        while (peek() != end_char && !isAtEnd())
+        while (peek() != end_char && !is_at_end())
         {
             advance();
         }
 
-        if (isAtEnd())
+        if (is_at_end())
         {
-            error_handler->on_error(Offset{start, current}, "Unterminated string.");
+            error_handler->on_error(Offset{start, current}, "Unterminated parse_string.");
             return;
         }
 
@@ -219,14 +228,24 @@ struct Scanner
         advance();
 
         // Trim the surrounding quotes.
+        assert(current > 0);
         auto value = substr(source, start + 1, current - 1);
-        addToken(TokenType::STRING, std::make_shared<String>(value));
+        add_token(TokenType::STRING, std::make_shared<String>(value));
+    }
+
+    void
+    eat_line()
+    {
+        while (peek() != '\n' && !is_at_end())
+        {
+            advance();
+        }
     }
 
     bool
     match(char expected)
     {
-        if (isAtEnd())
+        if (is_at_end())
         {
             return false;
         }
@@ -243,7 +262,7 @@ struct Scanner
     char
     peek()
     {
-        if (isAtEnd())
+        if (is_at_end())
         {
             return '\0';
         }
@@ -254,7 +273,7 @@ struct Scanner
     }
 
     char
-    peekNext()
+    peek_next()
     {
         if (current + 1 >= source.length())
         {
@@ -267,7 +286,7 @@ struct Scanner
     }
 
     bool
-    isAtEnd() const
+    is_at_end() const
     {
         return current >= source.length();
     }
@@ -281,13 +300,13 @@ struct Scanner
     }
 
     void
-    addToken(TokenType type)
+    add_token(TokenType type)
     {
-        addToken(type, nullptr);
+        add_token(type, nullptr);
     }
 
     void
-    addToken(TokenType type, std::shared_ptr<Object> literal)
+    add_token(TokenType type, std::shared_ptr<Object> literal)
     {
         auto text = substr(source, start, current);
         tokens.emplace_back(Token(type, text, literal, Offset{start, current}));
@@ -304,7 +323,7 @@ std::vector<Token>
 ScanTokens(std::string_view source, ErrorHandler* error_handler)
 {
     auto scanner = Scanner(source, error_handler);
-    scanner.scanTokens();
+    scanner.scan_many_tokens();
     return scanner.tokens;
 }
 

@@ -1,5 +1,5 @@
 set(src
-    lox/cint.cc lox/cint.h
+    lox/offset.h
     lox/token.cc lox/token.h
     lox/object.cc lox/object.h
     lox/scanner.cc lox/scanner.h
