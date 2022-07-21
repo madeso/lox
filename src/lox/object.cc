@@ -5,7 +5,7 @@ namespace lox
 {
 
 
-String::String(const std::string& s)
+String::String(const std::string_view& s)
     : string(s)
 {
 }

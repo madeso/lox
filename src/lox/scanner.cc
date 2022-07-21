@@ -1,6 +1,7 @@
 #include "lox/scanner.h"
 
 #include <unordered_map>
+#include <charconv>
 
 #include "lox/cint.h"
 #include "lox/errorhandler.h"
@@ -33,14 +34,16 @@ isAlphaNumeric(char c)
 
 
 float
-parseDouble(const std::string& str)
+parseDouble(std::string_view str)
 {
-    return std::stof(str);
+    float val;
+    std::from_chars(str.data(), str.data() + str.size(), val);
+    return val;
 }
 
 
-std::string
-substr(const std::string& str, int start_index, int end_index)
+std::string_view
+substr(std::string_view str, int start_index, int end_index)
 {
     return str.substr(Cint_to_sizet(start_index), Cint_to_sizet(end_index - start_index));
 }
@@ -48,16 +51,16 @@ substr(const std::string& str, int start_index, int end_index)
 
 struct Scanner
 {
-    std::string source;
+    std::string_view source;
     ErrorHandler* error_handler;
     std::vector<Token> tokens;
     int start = 0;
     int current = 0;
     int line = 1;
 
-    std::unordered_map<std::string, TokenType> keywords;
+    std::unordered_map<std::string_view, TokenType> keywords;
 
-    explicit Scanner(const std::string& s, ErrorHandler* eh)
+    explicit Scanner(std::string_view s, ErrorHandler* eh)
         : source(s)
         , error_handler(eh)
     {
@@ -276,7 +279,7 @@ namespace lox
 {
 
 std::vector<Token>
-ScanTokens(const std::string& source, ErrorHandler* error_handler)
+ScanTokens(std::string_view source, ErrorHandler* error_handler)
 {
     auto scanner = Scanner(source, error_handler);
     scanner.scanTokens();

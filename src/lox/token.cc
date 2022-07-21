@@ -5,7 +5,7 @@ namespace lox
 {
 
     
-Token::Token(TokenType the_type, const std::string& the_lexeme, std::shared_ptr<Object> the_literal, int the_line)
+Token::Token(TokenType the_type, std::string_view the_lexeme, std::shared_ptr<Object> the_literal, int the_line)
     : type(the_type)
     , lexeme(the_lexeme)
     , literal(the_literal)

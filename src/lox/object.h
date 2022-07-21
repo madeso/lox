@@ -14,7 +14,7 @@ struct Object
 
 struct String : public Object
 {
-    explicit String(const std::string& s);
+    explicit String(const std::string_view& s);
     virtual ~String() = default;
 
     std::string string;
