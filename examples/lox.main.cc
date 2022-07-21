@@ -5,19 +5,21 @@
 #include <streambuf>
 #include <string>
 
+#include "exit_codes/exit_codes.h"
+
 #include "lox/errorhandler.h"
 #include "lox/scanner.h"
 
-// represents Lox.java
 
+// represents Lox.java
 struct Lox : public lox::ErrorHandler
 {
     int main(int argc, char** argv)
     {
         if (argc > 3)
         {
-            fmt::print("Usage: lox [script]");
-            return 64;
+            fmt::print("Usage: lox [script]\n");
+            return exit_codes::incorrect_usage;
         }
         else if (argc == 3)
         {
@@ -29,8 +31,8 @@ struct Lox : public lox::ErrorHandler
             }
             else
             {
-                fmt::print("Invalid flag {0}", flag);
-                return -3;
+                fmt::print("Invalid flag {0}\n", flag);
+                return exit_codes::incorrect_usage;
             }
         }
         else if (argc == 2)
@@ -40,7 +42,7 @@ struct Lox : public lox::ErrorHandler
         else
         {
             runPrompt();
-            return 0;
+            return exit_codes::no_error;
         }
     }
 
@@ -65,8 +67,15 @@ struct Lox : public lox::ErrorHandler
     [[nodiscard]] int runFile(char* path)
     {
         // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring/2602258
-        std::ifstream t(path);
-        std::string str((std::istreambuf_iterator<char>(t)),
+        std::ifstream handle(path);
+
+        if(handle.good() == false)
+        {
+            fmt::print("Unable to open file '{}'\n", path);
+            return exit_codes::missing_input;
+        }
+
+        std::string str((std::istreambuf_iterator<char>(handle)),
                         std::istreambuf_iterator<char>());
 
         return runCode(str);
@@ -78,11 +87,11 @@ struct Lox : public lox::ErrorHandler
 
         if (hadError)
         {
-            return 65;
+            return exit_codes::bad_input;
         }
         else
         {
-            return 0;
+            return exit_codes::no_error;
         }
     }
 
@@ -109,6 +118,7 @@ struct Lox : public lox::ErrorHandler
 
     bool hadError = false;
 };
+
 
 int main(int argc, char** argv)
 {

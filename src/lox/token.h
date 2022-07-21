@@ -8,15 +8,20 @@
 
 namespace lox
 {
-    struct Token
-    {
-        TokenType type;
-        std::string lexeme;
-        std::shared_ptr<Object> literal;
-        int line;
 
-        Token(TokenType type, const std::string& lexeme, std::shared_ptr<Object> literal, int line);
 
-        std::string toString() const;
-    };
+struct Token
+{
+    TokenType type;
+    std::string lexeme;
+    std::shared_ptr<Object> literal;
+    int line;
+
+    Token(TokenType type, const std::string& lexeme, std::shared_ptr<Object> literal, int line);
+
+    std::string
+    toString() const;
+};
+
+
 }
