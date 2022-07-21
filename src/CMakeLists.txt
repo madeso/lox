@@ -15,6 +15,11 @@ target_link_libraries(liblox
 target_include_directories(liblox
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
 )
+target_precompile_headers(liblox
+    PUBLIC lox/pch.public.h
+    PRIVATE lox/pch.private.h
+)
+
 
 source_group("" FILES ${src})
 

@@ -1,8 +1,5 @@
 #pragma once
 
-// include size_t
-#include <vector>
-
 namespace lox
 {
 

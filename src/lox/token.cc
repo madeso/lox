@@ -1,6 +1,5 @@
 #include "lox/token.h"
 
-#include <fmt/core.h>
 
 namespace lox
 {

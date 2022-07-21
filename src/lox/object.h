@@ -1,10 +1,9 @@
 #pragma once
 
-#include <string>
 
 namespace lox
 {
-    
+
 struct Object
 {
     Object() = default;

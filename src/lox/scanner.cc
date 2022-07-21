@@ -1,7 +1,6 @@
 #include "lox/scanner.h"
 
-#include <map>
-#include <string>
+#include <unordered_map>
 
 #include "lox/cint.h"
 #include "lox/errorhandler.h"
@@ -56,7 +55,7 @@ struct Scanner
     int current = 0;
     int line = 1;
 
-    std::map<std::string, TokenType> keywords;
+    std::unordered_map<std::string, TokenType> keywords;
 
     explicit Scanner(const std::string& s, ErrorHandler* eh)
         : source(s)

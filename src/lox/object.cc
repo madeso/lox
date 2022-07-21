@@ -1,7 +1,5 @@
 #include "lox/object.h"
 
-#include "fmt/core.h"
-
 
 namespace lox
 {
