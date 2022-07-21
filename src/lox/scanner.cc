@@ -40,6 +40,7 @@ parse_double(std::string_view str)
     return val;
 }
 
+
 // todo(Gustav): remove this
 std::string_view
 substr(std::string_view str, std::size_t start_index, std::size_t end_index)
