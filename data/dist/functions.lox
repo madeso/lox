@@ -1,0 +1,50 @@
+// ----------------------------------------------------------------------------
+// void function
+fun printSum(a, b) {
+  print a + b;
+}
+
+// returning function
+fun returnSum(a, b) {
+  return a + b;
+}
+
+
+// ----------------------------------------------------------------------------
+// closures 1
+fun addPair(a, b) {
+  return a + b;
+}
+
+fun identity(a) {
+  return a;
+}
+
+print identity(addPair)(1, 2); // Prints "3".
+
+
+// ----------------------------------------------------------------------------
+// closures 2
+fun outerFunction() {
+  fun localFunction() {
+    print "I'm local!";
+  }
+
+  localFunction();
+}
+
+
+// ----------------------------------------------------------------------------
+// closures 3
+fun returnFunction() {
+  var outside = "outside";
+
+  fun inner() {
+    print outside;
+  }
+
+  return inner;
+}
+
+var fn = returnFunction();
+fn();
