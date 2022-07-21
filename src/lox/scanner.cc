@@ -56,24 +56,24 @@ find_keyword_or_null(std::string_view str)
     // todo(Gustav): just constinit this instead of going via a local function
     static const std::unordered_map<std::string_view, TokenType> keywords = []() -> auto
     {
-        std::unordered_map<std::string_view, TokenType> keywords;
-        keywords["and"] = TokenType::AND;
-        keywords["class"] = TokenType::CLASS;
-        keywords["else"] = TokenType::ELSE;
-        keywords["false"] = TokenType::FALSE;
-        keywords["for"] = TokenType::FOR;
-        keywords["fun"] = TokenType::FUN;
-        keywords["if"] = TokenType::IF;
-        keywords["nil"] = TokenType::NIL;
-        keywords["or"] = TokenType::OR;
-        keywords["print"] = TokenType::PRINT;
-        keywords["return"] = TokenType::RETURN;
-        keywords["super"] = TokenType::SUPER;
-        keywords["this"] = TokenType::THIS;
-        keywords["true"] = TokenType::TRUE;
-        keywords["var"] = TokenType::VAR;
-        keywords["while"] = TokenType::WHILE;
-        return keywords;
+        std::unordered_map<std::string_view, TokenType> kw;
+        kw["and"] = TokenType::AND;
+        kw["class"] = TokenType::CLASS;
+        kw["else"] = TokenType::ELSE;
+        kw["false"] = TokenType::FALSE;
+        kw["for"] = TokenType::FOR;
+        kw["fun"] = TokenType::FUN;
+        kw["if"] = TokenType::IF;
+        kw["nil"] = TokenType::NIL;
+        kw["or"] = TokenType::OR;
+        kw["print"] = TokenType::PRINT;
+        kw["return"] = TokenType::RETURN;
+        kw["super"] = TokenType::SUPER;
+        kw["this"] = TokenType::THIS;
+        kw["true"] = TokenType::TRUE;
+        kw["var"] = TokenType::VAR;
+        kw["while"] = TokenType::WHILE;
+        return kw;
     }();
 
     const auto found = keywords.find(str);
