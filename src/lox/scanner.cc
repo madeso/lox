@@ -35,9 +35,10 @@ is_alphanum_char(char c)
 float
 parse_double(std::string_view str)
 {
-    float val;
+    double val;
     std::from_chars(str.data(), str.data() + str.size(), val);
-    return val;
+    // hrm... clang + gcc 10 can't parse floats?
+    return static_cast<float>(val);
 }
 
 
