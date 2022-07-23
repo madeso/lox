@@ -10,46 +10,104 @@
 
 
 // represents Lox.java
-struct Lox : public lox::ErrorHandler
+struct Lox : lox::ErrorHandler
 {
     bool error_detected = false;
+
+    void
+    print_usage()
+    {
+        std::cout << "Usage: lox [flags] [file/script]\n";
+        std::cout << "\n";
+
+        std::cout << "FLAGS:\n";
+        std::cout << "  -x - assume the file is a piece of code\n";
+        std::cout << "  -h - print help\n";
+        std::cout << "\n";
+
+        std::cout << "FILE/SCRIPT:\n";
+        std::cout << "  path to file or script(-x), special files are:\n";
+        std::cout << "    repl - run a repl instead\n";
+        std::cout << "    stdin - read file from stdin\n";
+        std::cout << "\n";
+    }
 
     int
     main(int argc, char** argv)
     {
-        if (argc > 3)
+        bool is_code = false;
+
+        for(int arg_index=1; arg_index<argc; arg_index+=1)
         {
-            fmt::print("Usage: lox [script]\n");
-            return exit_codes::incorrect_usage;
-        }
-        else if (argc == 3)
-        {
-            const std::string flag = argv[1];
-            const std::string cmd = argv[2];
-            if (flag == "-x")
+            const std::string cmd = argv[arg_index];
+            const bool is_flags = cmd[0] == '-' || cmd[0] == '/';
+
+            if(is_flags)
             {
-                return run_code_get_exitcode(cmd);
+                bool got_flag = false;
+                for(unsigned int flag_index=1; flag_index<cmd.length(); flag_index+=1)
+                {
+                    got_flag = true;
+                    const auto flag = cmd[flag_index];
+                    switch(flag)
+                    {
+                    case 'x':
+                        is_code = true;
+                        break;
+                    case 'h':
+                        print_usage();
+                        return exit_codes::no_error;
+                    default:
+                        std::cerr << "ERROR: unknown flag" << flag << "\n";
+                        print_usage();
+                        return exit_codes::incorrect_usage;
+                    }
+                }
+
+                if(got_flag == false)
+                {
+                    std::cerr << "ERROR: missing flag in argument #" << arg_index << ": " << cmd << "\n";
+                    print_usage();
+                    return exit_codes::incorrect_usage;
+                }
             }
             else
             {
-                fmt::print("Invalid flag {0}\n", flag);
-                return exit_codes::incorrect_usage;
+                if(arg_index+1 != argc)
+                {
+                    // this isn't the last argument
+                    std::cerr << "ERROR: too many arguments after #" << arg_index << ": " << cmd << "\n";
+                    print_usage();
+                    return exit_codes::incorrect_usage;
+                }
+
+                // arg is not flags, assume "file"
+                if(is_code)
+                {
+                    return run_code_get_exitcode(cmd);
+                }
+                else if(cmd == "repl")
+                {
+                    run_prompt();
+                    return exit_codes::no_error;
+                }
+                else
+                {
+                    // neither code nor prompt, assume file
+                    return run_file_get_exitcode(cmd);
+                }
             }
         }
-        else if (argc == 2)
-        {
-            return run_file_get_exitcode(argv[1]);
-        }
-        else
-        {
-            run_prompt();
-            return exit_codes::no_error;
-        }
+        
+        std::cerr << "No input given...\n";
+        print_usage();
+        return exit_codes::incorrect_usage;
     }
 
     void
     run_prompt()
     {
+        std::cout << "REPL started. EOF (ctrl-d) to exit.\n";
         while (true)
         {
             std::cout << "> ";
@@ -61,25 +119,42 @@ struct Lox : public lox::ErrorHandler
             }
             else
             {
+                std::cout << "\n\n";
                 return;
             }
         }
     }
 
     [[nodiscard]] int
-    run_file_get_exitcode(char* path)
+    run_file_get_exitcode(const std::string& path)
+    {
+        if(path == "stdin")
+        {
+            return run_stream_get_exitcode(std::cin);
+        }
+        else
+        {
+            std::ifstream handle(path);
+
+            if(handle.good() == false)
+            {
+                std::cerr << "Unable to open file '" << path << "'\n";
+                return exit_codes::missing_input;
+            }
+
+            return run_stream_get_exitcode(handle);
+        }
+    }
+
+    [[nodiscard]] int
+    run_stream_get_exitcode(std::istream& handle)
     {
         // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring/2602258
-        std::ifstream handle(path);
-
-        if(handle.good() == false)
-        {
-            fmt::print("Unable to open file '{}'\n", path);
-            return exit_codes::missing_input;
-        }
-
-        std::string str((std::istreambuf_iterator<char>(handle)),
-                        std::istreambuf_iterator<char>());
+        std::string str
+        (
+            (std::istreambuf_iterator<char>(handle)),
+            std::istreambuf_iterator<char>()
+        );
 
         return run_code_get_exitcode(str);
     }
