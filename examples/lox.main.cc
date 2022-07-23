@@ -135,12 +135,12 @@ struct AstCodeRunner : CodeRunner
             std::make_shared<lox::ExprUnary>
             (
                 lox::TokenType::MINUS,
-                std::make_shared<lox::ExprLiteral>(std::make_shared<lox::Number>(123))
+                std::make_shared<lox::ExprLiteral>(std::make_shared<lox::Number>(123.0f))
             ),
             lox::TokenType::STAR,
             std::make_shared<lox::ExprGrouping>
             (
-                std::make_shared<lox::ExprLiteral>(std::make_shared<lox::Number>(45.67))
+                std::make_shared<lox::ExprLiteral>(std::make_shared<lox::Number>(45.67f))
             )
         );
 
