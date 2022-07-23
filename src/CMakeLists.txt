@@ -1,3 +1,34 @@
+# -----------------------------------------------------------------------------
+# ast generator
+set(src
+    lox/generate_ast.cc
+)
+add_executable(generate_ast ${src})
+target_link_libraries(generate_ast
+    PUBLIC fmt::fmt
+    PRIVATE project_options project_warnings external::exit_codes
+)
+source_group("" FILES ${src})
+
+
+
+# -----------------------------------------------------------------------------
+# generate expression
+set(EXPR_SOURCE "${CMAKE_CURRENT_BINARY_DIR}/expr.cc")
+set(EXPR_HEADER "${CMAKE_CURRENT_BINARY_DIR}/expr.h")
+add_custom_command(
+    OUTPUT ${EXPR_SOURCE} ${EXPR_HEADER}
+    MAIN_DEPENDENCY generate_ast
+    COMMAND generate_ast
+    ARGS ${EXPR_SOURCE} ${EXPR_HEADER}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    COMMENT "Generating expression"
+)
+
+
+
+# -----------------------------------------------------------------------------
+# main loxlib
 set(src
     lox/errorhandler.cc lox/errorhandler.h
     lox/object.cc lox/object.h
@@ -8,7 +39,7 @@ set(src
     lox/tokentype.h
 )
 
-add_library(liblox STATIC ${src})
+add_library(liblox STATIC ${src} ${EXPR_SOURCE} ${EXPR_HEADER})
 target_link_libraries(liblox
     PUBLIC fmt::fmt
     PRIVATE project_options project_warnings
@@ -20,10 +51,13 @@ target_precompile_headers(liblox
     PUBLIC lox/pch.public.h
     PRIVATE lox/pch.private.h
 )
-
-
 source_group("" FILES ${src})
+source_group("generated" FILES ${EXPR_SOURCE} ${EXPR_HEADER})
 
+
+
+# -----------------------------------------------------------------------------
+# unit test
 set(src_test
     lox/lox.test.cc
     ../external/catch/main.cc
