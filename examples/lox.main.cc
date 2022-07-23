@@ -1,6 +1,8 @@
 #include <fstream>
 #include <iostream>
 #include <streambuf>
+#include <memory>
+#include <functional>
 
 #include "exit_codes/exit_codes.h"
 
@@ -9,192 +11,15 @@
 #include "lox/stringmap.h"
 
 
-// represents Lox.java
-struct Lox : lox::ErrorHandler
+struct PrintErrors : lox::ErrorHandler
 {
     bool error_detected = false;
-
-    void
-    print_usage()
-    {
-        std::cout << "Usage: lox [flags] [file/script]\n";
-        std::cout << "\n";
-
-        std::cout << "FLAGS:\n";
-        std::cout << "  -x - assume the file is a piece of code\n";
-        std::cout << "  -h - print help\n";
-        std::cout << "\n";
-
-        std::cout << "FILE/SCRIPT:\n";
-        std::cout << "  path to file or script(-x), special files are:\n";
-        std::cout << "    repl - run a repl instead\n";
-        std::cout << "    stdin - read file from stdin\n";
-        std::cout << "\n";
-    }
-
-    int
-    main(int argc, char** argv)
-    {
-        bool is_code = false;
-
-        for(int arg_index=1; arg_index<argc; arg_index+=1)
-        {
-            const std::string cmd = argv[arg_index];
-            const bool is_flags = cmd[0] == '-' || cmd[0] == '/';
-
-            if(is_flags)
-            {
-                bool got_flag = false;
-                for(unsigned int flag_index=1; flag_index<cmd.length(); flag_index+=1)
-                {
-                    got_flag = true;
-                    const auto flag = cmd[flag_index];
-                    switch(flag)
-                    {
-                    case 'x':
-                        is_code = true;
-                        break;
-                    case 'h':
-                        print_usage();
-                        return exit_codes::no_error;
-                    default:
-                        std::cerr << "ERROR: unknown flag" << flag << "\n";
-                        print_usage();
-                        return exit_codes::incorrect_usage;
-                    }
-                }
-
-                if(got_flag == false)
-                {
-                    std::cerr << "ERROR: missing flag in argument #" << arg_index << ": " << cmd << "\n";
-                    print_usage();
-                    return exit_codes::incorrect_usage;
-                }
-            }
-            else
-            {
-                if(arg_index+1 != argc)
-                {
-                    // this isn't the last argument
-                    std::cerr << "ERROR: too many arguments after #" << arg_index << ": " << cmd << "\n";
-                    print_usage();
-                    return exit_codes::incorrect_usage;
-                }
-
-                // arg is not flags, assume "file"
-                if(is_code)
-                {
-                    return run_code_get_exitcode(cmd);
-                }
-                else if(cmd == "repl")
-                {
-                    run_prompt();
-                    return exit_codes::no_error;
-                }
-                else
-                {
-                    // neither code nor prompt, assume file
-                    return run_file_get_exitcode(cmd);
-                }
-            }
-        }
-        
-        std::cerr << "No input given...\n";
-        print_usage();
-        return exit_codes::incorrect_usage;
-    }
-
-    void
-    run_prompt()
-    {
-        std::cout << "REPL started. EOF (ctrl-d) to exit.\n";
-        while (true)
-        {
-            std::cout << "> ";
-            std::string line;
-            if (std::getline(std::cin, line))
-            {
-                run(line);
-                error_detected = false;
-            }
-            else
-            {
-                std::cout << "\n\n";
-                return;
-            }
-        }
-    }
-
-    [[nodiscard]] int
-    run_file_get_exitcode(const std::string& path)
-    {
-        if(path == "stdin")
-        {
-            return run_stream_get_exitcode(std::cin);
-        }
-        else
-        {
-            std::ifstream handle(path);
-
-            if(handle.good() == false)
-            {
-                std::cerr << "Unable to open file '" << path << "'\n";
-                return exit_codes::missing_input;
-            }
-
-            return run_stream_get_exitcode(handle);
-        }
-    }
-
-    [[nodiscard]] int
-    run_stream_get_exitcode(std::istream& handle)
-    {
-        // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring/2602258
-        std::string str
-        (
-            (std::istreambuf_iterator<char>(handle)),
-            std::istreambuf_iterator<char>()
-        );
-
-        return run_code_get_exitcode(str);
-    }
-
-    [[nodiscard]] int
-    run_code_get_exitcode(const std::string& str)
-    {
-        run(str);
-
-        if (error_detected)
-        {
-            return exit_codes::bad_input;
-        }
-        else
-        {
-            return exit_codes::no_error;
-        }
-    }
-
-    void
-    run(const std::string& source)
-    {
-        current_source = source;
-        auto tokens = lox::ScanTokens(source, this);
-
-        if(error_detected)
-        {
-            // assume we have written error to user
-            return;
-        }
-
-        for (const auto& token : tokens)
-        {
-            std::cout << token.to_string() << "\n";
-        }
-    }
-
-    // todo(Gustav): refactor error handling to be part of parsing so we
-    // know the source and don't have to recreate the mapping for each error
     std::string_view current_source;
+
+    explicit PrintErrors(std::string_view source)
+        : current_source(source)
+    {
+    }
 
     std::string
     get_line_gutter(std::size_t line)
@@ -266,6 +91,219 @@ struct Lox : lox::ErrorHandler
         }
         error_detected = true;
     }
+};
+
+struct CodeRunner
+{
+    virtual ~CodeRunner() = default;
+
+    virtual bool run_code(const std::string& str) = 0;
+};
+
+struct TokenizeCodeRunner : CodeRunner
+{
+    bool run_code(const std::string& source) override
+    {
+        auto printer = PrintErrors{source};
+        auto tokens = lox::ScanTokens(source, &printer);
+
+        if(printer.error_detected)
+        {
+            return false;
+        }
+
+        for (const auto& token : tokens)
+        {
+            std::cout << token.to_string() << "\n";
+        }
+
+        return true;
+    }
+};
+
+
+std::unique_ptr<CodeRunner> make_tokenizer()
+{
+    return std::make_unique<TokenizeCodeRunner>();
+}
+
+
+// represents Lox.java
+struct Lox
+{
+    void
+    print_usage()
+    {
+        std::cout << "Usage: lox [flags] [file/script]\n";
+        std::cout << "\n";
+
+        std::cout << "FLAGS:\n";
+        std::cout << "  -x - assume the file is a piece of code\n";
+        std::cout << "  -h - print help\n";
+        std::cout << "  -t - tokenize input\n";
+        std::cout << "\n";
+
+        std::cout << "FILE/SCRIPT:\n";
+        std::cout << "  path to file or script(-x), special files are:\n";
+        std::cout << "    repl - run a repl instead\n";
+        std::cout << "    stdin - read file from stdin\n";
+        std::cout << "\n";
+    }
+
+    int
+    main(int argc, char** argv)
+    {
+        std::function<std::unique_ptr<CodeRunner>()> run_creator = make_tokenizer;
+        bool is_code = false;
+
+        for(int arg_index=1; arg_index<argc; arg_index+=1)
+        {
+            const std::string cmd = argv[arg_index];
+            const bool is_flags = cmd[0] == '-' || cmd[0] == '/';
+
+            if(is_flags)
+            {
+                bool got_flag = false;
+                for(unsigned int flag_index=1; flag_index<cmd.length(); flag_index+=1)
+                {
+                    got_flag = true;
+                    const auto flag = cmd[flag_index];
+                    switch(flag)
+                    {
+                    case 'x':
+                        is_code = true;
+                        break;
+                    case 'h':
+                        print_usage();
+                        return exit_codes::no_error;
+                    case 't':
+                        run_creator = make_tokenizer;
+                        break;
+                    default:
+                        std::cerr << "ERROR: unknown flag" << flag << "\n";
+                        print_usage();
+                        return exit_codes::incorrect_usage;
+                    }
+                }
+
+                if(got_flag == false)
+                {
+                    std::cerr << "ERROR: missing flag in argument #" << arg_index << ": " << cmd << "\n";
+                    print_usage();
+                    return exit_codes::incorrect_usage;
+                }
+            }
+            else
+            {
+                if(arg_index+1 != argc)
+                {
+                    // this isn't the last argument
+                    std::cerr << "ERROR: too many arguments after #" << arg_index << ": " << cmd << "\n";
+                    print_usage();
+                    return exit_codes::incorrect_usage;
+                }
+
+
+                // arg is not flags, assume "file"
+                if(is_code)
+                {
+                    auto runner = run_creator();
+                    return run_code_get_exitcode(runner.get(), cmd);
+                }
+                else if(cmd == "repl")
+                {
+                    run_prompt(run_creator);
+                    return exit_codes::no_error;
+                }
+                else
+                {
+                    auto runner = run_creator();
+                    // neither code nor prompt, assume file
+                    return run_file_get_exitcode(runner.get(), cmd);
+                }
+            }
+        }
+        
+        std::cerr << "No input given...\n";
+        print_usage();
+        return exit_codes::incorrect_usage;
+    }
+
+    void
+    run_prompt(const std::function<std::unique_ptr<CodeRunner>()>& run_creator)
+    {
+        std::cout << "REPL started. EOF (ctrl-d) to exit.\n";
+        while (true)
+        {
+            std::cout << "> ";
+            std::string line;
+            if (std::getline(std::cin, line))
+            {
+                auto run = run_creator();
+                run->run_code(line);
+            }
+            else
+            {
+                std::cout << "\n\n";
+                return;
+            }
+        }
+    }
+
+    [[nodiscard]] int
+    run_file_get_exitcode(CodeRunner* runner, const std::string& path)
+    {
+        if(path == "stdin")
+        {
+            return run_stream_get_exitcode(runner, std::cin);
+        }
+        else
+        {
+            std::ifstream handle(path);
+
+            if(handle.good() == false)
+            {
+                std::cerr << "Unable to open file '" << path << "'\n";
+                return exit_codes::missing_input;
+            }
+
+            return run_stream_get_exitcode(runner, handle);
+        }
+    }
+
+    [[nodiscard]] int
+    run_stream_get_exitcode(CodeRunner* runner, std::istream& handle)
+    {
+        // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring/2602258
+        std::string str
+        (
+            (std::istreambuf_iterator<char>(handle)),
+            std::istreambuf_iterator<char>()
+        );
+
+        return run_code_get_exitcode(runner, str);
+    }
+
+    [[nodiscard]] int
+    run_code_get_exitcode(CodeRunner* runner, const std::string& str)
+    {
+        const auto error_detected = runner->run_code(str);
+
+        if (error_detected)
+        {
+            return exit_codes::bad_input;
+        }
+        else
+        {
+            return exit_codes::no_error;
+        }
+    }
+
+    
+
+    // todo(Gustav): refactor error handling to be part of parsing so we
+    // know the source and don't have to recreate the mapping for each error
+    
 };
 
 
