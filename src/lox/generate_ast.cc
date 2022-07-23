@@ -37,11 +37,12 @@ define_type
     header << "\n";
     for(const auto& v: visitors)
     {
-        header << INDENT << v.type << " accept" << "(" << v.name << "* vis) const override;\n";
+        header << INDENT << v.type << " accept" << "(" << base_name << v.name << "* vis) const override;\n";
         
-        source << v.type << " " << base_name << sub.name << "::accept(" << v.name << "* vis) const\n";
+        source << v.type << " " << base_name << sub.name << "::accept(" << base_name << v.name << "* vis) const\n";
         source << "{\n";
-        source << INDENT << "vis ->visit" << sub.name << "(*this);\n";
+        const std::string ret = v.type == "void" ? "" : "return ";
+        source << INDENT << ret << "vis ->visit" << sub.name << "(*this);\n";
         source << "}\n";
         source << "\n\n";
     }
@@ -59,9 +60,9 @@ define_visitor
     const Vis& vis, const std::vector<Sub>& subs
 )
 {
-    header << "struct " << vis.name << "\n";
+    header << "struct " << base_name << vis.name << "\n";
     header << "{\n";
-    header << INDENT << "virtual ~" << vis.name << "() = default;\n";
+    header << INDENT << "virtual ~" << base_name << vis.name << "() = default;\n";
     header << "\n";
     for(const auto& s: subs)
     {
@@ -86,6 +87,7 @@ define_ast
     header << "#pragma once\n";
     header << "\n";
     header << "#include <memory>\n";
+    header << "#include <string>\n";
     header << "\n";
     header << "#include \"lox/token.h\"\n";
     header << "\n\n";
@@ -110,7 +112,7 @@ define_ast
     header << "\n";
     for(const auto& vis: visitors)
     {
-        header << INDENT << "virtual " << vis.type << " accept(" << vis.name << "* vis) const = 0;\n";
+        header << INDENT << "virtual " << vis.type << " accept(" << base_name << vis.name << "* vis) const = 0;\n";
     }
     header << "};\n";
     header << "\n\n";
@@ -193,7 +195,8 @@ main(int argc, char** argv)
             }
         },
         {
-            {"VoidVisitor", "void"}
+            {"VoidVisitor", "void"},
+            {"StringVisitor", "std::string"}
         }
     );
 
