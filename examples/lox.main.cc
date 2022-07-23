@@ -9,6 +9,7 @@
 #include "lox/errorhandler.h"
 #include "lox/scanner.h"
 #include "lox/stringmap.h"
+#include "lox/ast.h"
 
 
 struct PrintErrors : lox::ErrorHandler
@@ -122,9 +123,41 @@ struct TokenizeCodeRunner : CodeRunner
 };
 
 
-std::unique_ptr<CodeRunner> make_tokenizer()
+struct AstCodeRunner : CodeRunner
+{
+    bool run_code(const std::string&) override
+    {
+        // todo(Gustav): remove sample and parse code...
+
+        std::shared_ptr<lox::Expr> expression =
+        std::make_shared<lox::ExprBinary>
+        (
+            std::make_shared<lox::ExprUnary>
+            (
+                lox::TokenType::MINUS,
+                std::make_shared<lox::ExprLiteral>(std::make_shared<lox::Number>(123))
+            ),
+            lox::TokenType::STAR,
+            std::make_shared<lox::ExprGrouping>
+            (
+                std::make_shared<lox::ExprLiteral>(std::make_shared<lox::Number>(45.67))
+            )
+        );
+
+        std::cout << lox::print_ast(*expression) << "\n";
+        return true;
+    }
+};
+
+
+std::unique_ptr<CodeRunner> make_lexer()
 {
     return std::make_unique<TokenizeCodeRunner>();
+}
+
+std::unique_ptr<CodeRunner> make_parser()
+{
+    return std::make_unique<AstCodeRunner>();
 }
 
 
@@ -140,7 +173,8 @@ struct Lox
         std::cout << "FLAGS:\n";
         std::cout << "  -x - assume the file is a piece of code\n";
         std::cout << "  -h - print help\n";
-        std::cout << "  -t - tokenize input\n";
+        std::cout << "  -L - run lexer only = tokenize input\n";
+        std::cout << "  -P - run lexer/parser only = print ast tree\n";
         std::cout << "\n";
 
         std::cout << "FILE/SCRIPT:\n";
@@ -153,7 +187,7 @@ struct Lox
     int
     main(int argc, char** argv)
     {
-        std::function<std::unique_ptr<CodeRunner>()> run_creator = make_tokenizer;
+        std::function<std::unique_ptr<CodeRunner>()> run_creator = make_lexer;
         bool is_code = false;
 
         for(int arg_index=1; arg_index<argc; arg_index+=1)
@@ -176,8 +210,11 @@ struct Lox
                     case 'h':
                         print_usage();
                         return exit_codes::no_error;
-                    case 't':
-                        run_creator = make_tokenizer;
+                    case 'L':
+                        run_creator = make_lexer;
+                        break;
+                    case 'P':
+                        run_creator = make_parser;
                         break;
                     default:
                         std::cerr << "ERROR: unknown flag" << flag << "\n";

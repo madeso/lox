@@ -14,8 +14,8 @@ source_group("" FILES ${src})
 
 # -----------------------------------------------------------------------------
 # generate expression
-set(EXPR_SOURCE "${CMAKE_CURRENT_BINARY_DIR}/expr.cc")
-set(EXPR_HEADER "${CMAKE_CURRENT_BINARY_DIR}/expr.h")
+set(EXPR_SOURCE "${CMAKE_CURRENT_BINARY_DIR}/lox_expression.cc")
+set(EXPR_HEADER "${CMAKE_CURRENT_BINARY_DIR}/lox_expression.h")
 add_custom_command(
     OUTPUT ${EXPR_SOURCE} ${EXPR_HEADER}
     MAIN_DEPENDENCY generate_ast
@@ -30,6 +30,7 @@ add_custom_command(
 # -----------------------------------------------------------------------------
 # main loxlib
 set(src
+    lox/ast.cc lox/ast.h
     lox/errorhandler.cc lox/errorhandler.h
     lox/object.cc lox/object.h
     lox/offset.h
@@ -45,7 +46,9 @@ target_link_libraries(liblox
     PRIVATE project_options project_warnings
 )
 target_include_directories(liblox
-    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_CURRENT_BINARY_DIR}
 )
 target_precompile_headers(liblox
     PUBLIC lox/pch.public.h

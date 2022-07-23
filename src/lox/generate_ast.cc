@@ -17,6 +17,14 @@ struct Vis { std::string name; std::string type; };
 constexpr std::string_view INDENT = "    ";
 
 
+bool
+is_value_type(const std::string& type)
+{
+    return type == "Token"
+        || type == "TokenType"
+        ;
+}
+
 void
 define_type
 (
@@ -28,9 +36,50 @@ define_type
 {
     header << "struct " << base_name << sub.name << " : " << base_name << "\n";
     header << "{\n";
+
+    source << "////////////////////////////////////////////////////////////\n";
+    source << "// " << base_name << sub.name << "\n";
+    source << "\n";
+    
+
+    const std::string_view expl = sub.members.size() == 1 ? "explicit " : "";
+
+    header << INDENT << expl << base_name << sub.name << "\n";
+    header << INDENT << "(\n";
+    source << base_name << sub.name << "::" << base_name << sub.name<< "\n";
+    source << "(\n";
+    { bool first = true;
     for(const auto& m: sub.members)
     {
-        const std::string type = m.type == "Token" ? "Token" : fmt::format("std::shared_ptr<{}>", m.type);
+        if(first) { first = false;}
+        else
+        {
+            header << ",\n";
+            source << ",\n";
+        }
+        const std::string type = is_value_type(m.type) ? m.type : fmt::format("std::shared_ptr<{}>", m.type);
+        header << INDENT << INDENT << type << " " << m.name;
+        source << INDENT << type << " " << "a" << m.name;
+    } if(first == false ) header << "\n"; source << "\n";}
+    header << INDENT << ");\n";
+    header << "\n";
+
+    source << ")\n";
+    { bool first = true;
+    for(const auto& m: sub.members)
+    {
+        const auto was_first = first;
+        if(first) { first = false;}
+
+        source << INDENT << (was_first ? ':' : ',' ) << " " << m.name << "(a" << m.name << ")\n";
+    }}
+    source << "{\n";
+    source << "}\n";
+    source << "\n\n";
+
+    for(const auto& m: sub.members)
+    {
+        const std::string type = is_value_type(m.type) ? m.type : fmt::format("std::shared_ptr<{}>", m.type);
         header << INDENT << type << " " << m.name << ";\n";
     }
 
@@ -164,13 +213,13 @@ main(int argc, char** argv)
 
     define_ast
     (
-        source, header, "Expr", "expr.h",
+        source, header, "Expr", "lox_expression.h",
         {
             {
                 "Binary",
                 {
                     {"Expr", "left"},
-                    {"Token", "op"},
+                    {"TokenType", "op"},
                     {"Expr", "right"}
                 }
             },
@@ -189,7 +238,7 @@ main(int argc, char** argv)
             {
                 "Unary",
                 {
-                    {"Token", "op"},
+                    {"TokenType", "op"},
                     {"Expr", "right"}
                 }
             }
