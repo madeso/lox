@@ -130,17 +130,17 @@ struct AstCodeRunner : CodeRunner
         // todo(Gustav): remove sample and parse code...
 
         std::shared_ptr<lox::Expr> expression =
-        std::make_shared<lox::ExprBinary>
+        std::make_unique<lox::ExprBinary>
         (
-            std::make_shared<lox::ExprUnary>
+            std::make_unique<lox::ExprUnary>
             (
                 lox::TokenType::MINUS,
-                std::make_shared<lox::ExprLiteral>(std::make_shared<lox::Number>(123.0f))
+                std::make_unique<lox::ExprLiteral>(std::make_unique<lox::Number>(123.0f))
             ),
             lox::TokenType::STAR,
-            std::make_shared<lox::ExprGrouping>
+            std::make_unique<lox::ExprGrouping>
             (
-                std::make_shared<lox::ExprLiteral>(std::make_shared<lox::Number>(45.67f))
+                std::make_unique<lox::ExprLiteral>(std::make_unique<lox::Number>(45.67f))
             )
         );
 

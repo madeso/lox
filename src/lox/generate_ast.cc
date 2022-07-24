@@ -57,7 +57,7 @@ define_type
             header << ",\n";
             source << ",\n";
         }
-        const std::string type = is_value_type(m.type) ? m.type : fmt::format("std::shared_ptr<{}>", m.type);
+        const std::string type = is_value_type(m.type) ? m.type : fmt::format("std::unique_ptr<{}>&&", m.type);
         header << INDENT << INDENT << type << " " << m.name;
         source << INDENT << type << " " << "a" << m.name;
     } if(first == false ) header << "\n"; source << "\n";}
@@ -71,7 +71,7 @@ define_type
         const auto was_first = first;
         if(first) { first = false;}
 
-        source << INDENT << (was_first ? ':' : ',' ) << " " << m.name << "(a" << m.name << ")\n";
+        source << INDENT << (was_first ? ':' : ',' ) << " " << m.name << "(std::move(a" << m.name << "))\n";
     }}
     source << "{\n";
     source << "}\n";
@@ -79,7 +79,7 @@ define_type
 
     for(const auto& m: sub.members)
     {
-        const std::string type = is_value_type(m.type) ? m.type : fmt::format("std::shared_ptr<{}>", m.type);
+        const std::string type = is_value_type(m.type) ? m.type : fmt::format("std::unique_ptr<{}>", m.type);
         header << INDENT << type << " " << m.name << ";\n";
     }
 
