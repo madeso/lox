@@ -113,7 +113,7 @@ struct Scanner
             scan_single_token();
         }
 
-        tokens.emplace_back(TokenType::EOF, "", nullptr, Offset{start, current});
+        tokens.emplace_back(TokenType::EOF, "", nullptr, Offset{current, current});
     }
 
     void
@@ -214,7 +214,7 @@ struct Scanner
         }
 
         const auto str = substr(source, start, current);
-        add_token(TokenType::NUMBER, std::make_shared<Number>(parse_double(str)));
+        add_token(TokenType::NUMBER, std::make_unique<Number>(parse_double(str)));
     }
 
     void
@@ -243,7 +243,7 @@ struct Scanner
         // Trim the surrounding quotes.
         assert(current > 0);
         auto value = substr(source, start + 1, current - 1);
-        add_token(TokenType::STRING, std::make_shared<String>(value));
+        add_token(TokenType::STRING, std::make_unique<String>(value));
     }
 
     void
@@ -324,10 +324,10 @@ struct Scanner
     }
 
     void
-    add_token(TokenType type, std::shared_ptr<Object> literal)
+    add_token(TokenType type, std::unique_ptr<Object> literal)
     {
         auto text = substr(source, start, current);
-        tokens.emplace_back(Token(type, text, literal, Offset{start, current}));
+        tokens.emplace_back(Token(type, text, std::move(literal), Offset{start, current}));
     }
 };
 } }
@@ -342,7 +342,7 @@ ScanTokens(std::string_view source, ErrorHandler* error_handler)
 {
     auto scanner = Scanner(source, error_handler);
     scanner.scan_many_tokens();
-    return scanner.tokens;
+    return std::move(scanner.tokens);
 }
 
 }

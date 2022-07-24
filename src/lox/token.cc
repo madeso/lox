@@ -5,10 +5,10 @@ namespace lox
 {
 
     
-Token::Token(TokenType the_type, std::string_view the_lexeme, std::shared_ptr<Object> the_literal, const Offset& the_offset)
+Token::Token(TokenType the_type, std::string_view the_lexeme, std::unique_ptr<Object> the_literal, const Offset& the_offset)
     : type(the_type)
     , lexeme(the_lexeme)
-    , literal(the_literal)
+    , literal(std::move(the_literal))
     , offset(the_offset)
 {
 }
@@ -16,13 +16,18 @@ Token::Token(TokenType the_type, std::string_view the_lexeme, std::shared_ptr<Ob
 
 std::string Token::to_string() const
 {
+    const std::string of = offset.start != offset.end
+        ? fmt::format("({} {})", offset.start, offset.end)
+        : fmt::format("({})", offset.start)
+        ;
+
     if(literal != nullptr)
     {
-        return fmt::format("{0}({1}) value=<{2}>", tokentype_to_string(type), lexeme, literal->to_string());
+        return fmt::format("{}({}) {} value=<{}>", tokentype_to_string(type), lexeme, of, literal->to_string());
     }
     else
     {
-        return fmt::format("{0}({1})", tokentype_to_string(type), lexeme);
+        return fmt::format("{}({}) {}", tokentype_to_string(type), of, lexeme);
     }
 }
 

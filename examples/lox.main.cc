@@ -10,6 +10,7 @@
 #include "lox/scanner.h"
 #include "lox/stringmap.h"
 #include "lox/ast.h"
+#include "lox/parser.h"
 
 
 struct PrintErrors : lox::ErrorHandler
@@ -129,24 +130,21 @@ struct AstCodeRunner : CodeRunner
     
     explicit AstCodeRunner(bool gv) : use_graphviz(gv) {}
 
-    bool run_code(const std::string&) override
+    bool run_code(const std::string& source) override
     {
-        // todo(Gustav): remove sample and parse code...
+        auto printer = PrintErrors{source};
+        auto tokens = lox::ScanTokens(source, &printer);
 
-        std::shared_ptr<lox::Expr> expression =
-        std::make_unique<lox::ExprBinary>
-        (
-            std::make_unique<lox::ExprUnary>
-            (
-                lox::TokenType::MINUS,
-                std::make_unique<lox::ExprLiteral>(std::make_unique<lox::Number>(123.0f))
-            ),
-            lox::TokenType::STAR,
-            std::make_unique<lox::ExprGrouping>
-            (
-                std::make_unique<lox::ExprLiteral>(std::make_unique<lox::Number>(45.67f))
-            )
-        );
+        if(printer.error_detected)
+        {
+            return false;
+        }
+
+        auto expression = lox::parse_expression(tokens, &printer);
+        if(printer.error_detected)
+        {
+            return false;
+        }
 
         if(use_graphviz)
         {
@@ -204,7 +202,7 @@ struct Lox
     int
     main(int argc, char** argv)
     {
-        std::function<std::unique_ptr<CodeRunner>()> run_creator = make_lexer;
+        std::function<std::unique_ptr<CodeRunner>()> run_creator = make_parser;
         bool is_code = false;
 
         for(int arg_index=1; arg_index<argc; arg_index+=1)
