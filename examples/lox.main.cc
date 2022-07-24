@@ -125,6 +125,10 @@ struct TokenizeCodeRunner : CodeRunner
 
 struct AstCodeRunner : CodeRunner
 {
+    bool use_graphviz;
+    
+    explicit AstCodeRunner(bool gv) : use_graphviz(gv) {}
+
     bool run_code(const std::string&) override
     {
         // todo(Gustav): remove sample and parse code...
@@ -144,7 +148,14 @@ struct AstCodeRunner : CodeRunner
             )
         );
 
-        std::cout << lox::print_ast(*expression) << "\n";
+        if(use_graphviz)
+        {
+            std::cout << lox::ast_to_grapviz(*expression) << "\n";
+        }
+        else
+        {
+            std::cout << lox::print_ast(*expression) << "\n";
+        }
         return true;
     }
 };
@@ -157,7 +168,12 @@ std::unique_ptr<CodeRunner> make_lexer()
 
 std::unique_ptr<CodeRunner> make_parser()
 {
-    return std::make_unique<AstCodeRunner>();
+    return std::make_unique<AstCodeRunner>(false);
+}
+
+std::unique_ptr<CodeRunner> make_parser_gv()
+{
+    return std::make_unique<AstCodeRunner>(true);
 }
 
 
@@ -175,6 +191,7 @@ struct Lox
         std::cout << "  -h - print help\n";
         std::cout << "  -L - run lexer only = tokenize input\n";
         std::cout << "  -P - run lexer/parser only = print ast tree\n";
+        std::cout << "  -G - run lexer/parser only = print ast tree in graphviz\n";
         std::cout << "\n";
 
         std::cout << "FILE/SCRIPT:\n";
@@ -215,6 +232,9 @@ struct Lox
                         break;
                     case 'P':
                         run_creator = make_parser;
+                        break;
+                    case 'G':
+                        run_creator = make_parser_gv;
                         break;
                     default:
                         std::cerr << "ERROR: unknown flag" << flag << "\n";
