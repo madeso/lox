@@ -160,17 +160,17 @@ struct Scanner
 
         // string literal
         case '"': case '\'':
-            parse_string(first_char);
+            scan_string(first_char);
             break;
 
         default:
             if (is_num_char(first_char))
             {
-                parse_number();
+                scan_number();
             }
             else if (is_alpha_char(first_char))
             {
-                parse_identifier_or_keyword();
+                scan_identifier_or_keyword();
             }
             else
             {
@@ -181,7 +181,7 @@ struct Scanner
     }
 
     void
-    parse_identifier_or_keyword()
+    scan_identifier_or_keyword()
     {
         while (is_alphanum_char(peek()))
         {
@@ -194,7 +194,7 @@ struct Scanner
     }
 
     void
-    parse_number()
+    scan_number()
     {
         while (is_num_char(peek()))
         {
@@ -218,7 +218,7 @@ struct Scanner
     }
 
     void
-    parse_string(char end_char)
+    scan_string(char end_char)
     {
         // todo(Gustav): add back-slash escaping
         // todo(Gustav): require string on single line?
@@ -233,7 +233,7 @@ struct Scanner
 
         if (is_at_end())
         {
-            error_handler->on_error(Offset{start, current}, "Unterminated parse_string.");
+            error_handler->on_error(Offset{start, current}, "Unterminated scan_string.");
             return;
         }
 
