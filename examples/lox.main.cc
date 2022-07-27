@@ -152,13 +152,8 @@ struct AstCodeRunner : CodeRunner
     {
         auto printer = PrintErrors{source};
         auto tokens = lox::ScanTokens(source, &printer);
-
-        if(printer.error_detected)
-        {
-            return RunError::syntax_error;
-        }
-
         auto expression = lox::parse_expression(tokens, &printer);
+
         if(printer.error_detected)
         {
             return RunError::syntax_error;
@@ -184,13 +179,8 @@ struct InterpreterRunner : CodeRunner
     {
         auto printer = PrintErrors{source};
         auto tokens = lox::ScanTokens(source, &printer);
-
-        if(printer.error_detected)
-        {
-            return RunError::syntax_error;
-        }
-
         auto expression = lox::parse_expression(tokens, &printer);
+        
         if(printer.error_detected)
         {
             return RunError::syntax_error;
