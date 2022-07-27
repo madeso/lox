@@ -22,6 +22,7 @@ is_value_type(const std::string& type)
 {
     return type == "Token"
         || type == "TokenType"
+        || type == "Offset"
         ;
 }
 
@@ -42,37 +43,32 @@ define_type
     source << "\n";
     
 
-    const std::string_view expl = sub.members.size() == 1 ? "explicit " : "";
+    const std::string_view expl = sub.members.size() == 0 ? "explicit " : "";
 
     header << INDENT << expl << base_name << sub.name << "\n";
     header << INDENT << "(\n";
     source << base_name << sub.name << "::" << base_name << sub.name<< "\n";
     source << "(\n";
-    { bool first = true;
+    header << INDENT << INDENT << "const Offset&" << " " << "offset";
+    source << INDENT << "const Offset&" << " " << "offset";
     for(const auto& m: sub.members)
     {
-        if(first) { first = false;}
-        else
-        {
-            header << ",\n";
-            source << ",\n";
-        }
+        
+        header << ",\n";
+        source << ",\n";
         const std::string type = is_value_type(m.type) ? m.type : fmt::format("std::unique_ptr<{}>&&", m.type);
         header << INDENT << INDENT << type << " " << m.name;
         source << INDENT << type << " " << "a" << m.name;
-    } if(first == false ) header << "\n"; source << "\n";}
+    } header << "\n"; source << "\n";
     header << INDENT << ");\n";
     header << "\n";
 
     source << ")\n";
-    { bool first = true;
+    source << INDENT << ':' << " " << base_name << "(offset)\n";
     for(const auto& m: sub.members)
     {
-        const auto was_first = first;
-        if(first) { first = false;}
-
-        source << INDENT << (was_first ? ':' : ',' ) << " " << m.name << "(std::move(a" << m.name << "))\n";
-    }}
+        source << INDENT << ',' << " " << m.name << "(std::move(a" << m.name << "))\n";
+    }
     source << "{\n";
     source << "}\n";
     source << "\n\n";
@@ -139,6 +135,8 @@ define_ast
     header << "#include <string>\n";
     header << "\n";
     header << "#include \"lox/token.h\"\n";
+    header << "#include \"lox/object.h\"\n";
+    header << "#include \"lox/offset.h\"\n";
     header << "\n\n";
     header << "namespace lox\n";
     header << "{\n";
@@ -157,7 +155,10 @@ define_ast
 
     header << "struct " << base_name << "\n";
     header << "{\n";
+    header << INDENT << "constexpr explicit " << base_name << "(const Offset& o) : offset(o) {}\n";
     header << INDENT << "virtual ~" << base_name << "() = default;\n";
+    header << "\n";
+    header << INDENT << "Offset offset;\n";
     header << "\n";
     for(const auto& vis: visitors)
     {
@@ -220,6 +221,7 @@ main(int argc, char** argv)
                 {
                     {"Expr", "left"},
                     {"TokenType", "op"},
+                    {"Offset", "op_offset"},
                     {"Expr", "right"}
                 }
             },
@@ -239,13 +241,15 @@ main(int argc, char** argv)
                 "Unary",
                 {
                     {"TokenType", "op"},
+                    {"Offset", "op_offset"},
                     {"Expr", "right"}
                 }
             }
         },
         {
             {"VoidVisitor", "void"},
-            {"StringVisitor", "std::string"}
+            {"StringVisitor", "std::string"},
+            {"ObjectVisitor", "std::shared_ptr<Object>"}
         }
     );
 

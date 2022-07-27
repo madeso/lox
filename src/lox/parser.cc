@@ -34,9 +34,11 @@ struct Parser
 
         while (match({TokenType::BANG_EQUAL, TokenType::EQUAL_EQUAL}))
         {
-            auto op = previous().type;
+            const auto start = expr->offset;
+            auto& op = previous();
             auto right = parse_comparison();
-            expr = std::make_unique<ExprBinary>(std::move(expr), op, std::move(right));
+            const auto end = right->offset;
+            expr = std::make_unique<ExprBinary>(Offset{start.start, end.end}, std::move(expr), op.type, op.offset, std::move(right));
         }
 
         return expr;
@@ -49,9 +51,11 @@ struct Parser
 
         while (match({TokenType::GREATER, TokenType::GREATER_EQUAL, TokenType::LESS, TokenType::LESS_EQUAL}))
         {
-            auto op = previous().type;
+            const auto start = expr->offset;
+            auto& op = previous();
             auto right = parse_term();
-            expr = std::make_unique<ExprBinary>(std::move(expr), op, std::move(right));
+            const auto end = right->offset;
+            expr = std::make_unique<ExprBinary>(Offset{start.start, end.end}, std::move(expr), op.type, op.offset, std::move(right));
         }
 
         return expr;
@@ -62,10 +66,13 @@ struct Parser
     {
         auto expr = parse_factor();
 
-        while (match({TokenType::MINUS, TokenType::PLUS})) {
-            auto op = previous().type;
+        while (match({TokenType::MINUS, TokenType::PLUS}))
+        {
+            const auto start = expr->offset;
+            auto& op = previous();
             auto right = parse_factor();
-            expr = std::make_unique<ExprBinary>(std::move(expr), op, std::move(right));
+            const auto end = right->offset;
+            expr = std::make_unique<ExprBinary>(Offset{start.start, end.end}, std::move(expr), op.type, op.offset, std::move(right));
         }
 
         return expr;
@@ -78,9 +85,11 @@ struct Parser
 
         while (match({TokenType::SLASH, TokenType::STAR}))
         {
-            auto op = previous().type;
+            const auto start = expr->offset;
+            auto& op = previous();
             auto right = parse_unary();
-            expr = std::make_unique<ExprBinary>(std::move(expr), op, std::move(right));
+            const auto end = right->offset;
+            expr = std::make_unique<ExprBinary>(Offset{start.start, end.end}, std::move(expr), op.type, op.offset, std::move(right));
         }
 
         return expr;
@@ -91,9 +100,9 @@ struct Parser
     {
         if (match({TokenType::BANG, TokenType::MINUS}))
         {
-            auto op = previous().type;
+            auto& op = previous();
             auto right = parse_unary();
-            return std::make_unique<ExprUnary>(op, std::move(right));
+            return std::make_unique<ExprUnary>(Offset{op.offset.start, right->offset.end}, op.type, op.offset, std::move(right));
         }
 
         return parse_primary();
@@ -102,20 +111,23 @@ struct Parser
     std::unique_ptr<Expr>
     parse_primary()
     {
-        if (match({TokenType::FALSE})) { return std::make_unique<ExprLiteral>(std::make_unique<Bool>(false)); }
-        if (match({TokenType::TRUE})) { return std::make_unique<ExprLiteral>(std::make_unique<Bool>(true)); }
-        if (match({TokenType::NIL})) { return std::make_unique<ExprLiteral>(std::make_unique<Nil>()); }
+        if (match({TokenType::FALSE})) { return std::make_unique<ExprLiteral>(previous().offset, std::make_unique<Bool>(false)); }
+        if (match({TokenType::TRUE})) { return std::make_unique<ExprLiteral>(previous().offset, std::make_unique<Bool>(true)); }
+        if (match({TokenType::NIL})) { return std::make_unique<ExprLiteral>(previous().offset, std::make_unique<Nil>()); }
 
         if (match({TokenType::NUMBER, TokenType::STRING}))
         {
-            return std::make_unique<ExprLiteral>(std::move(previous().literal));
+            auto& prev = previous();
+            return std::make_unique<ExprLiteral>(prev.offset, std::move(prev.literal));
         }
 
         if (match({TokenType::LEFT_PAREN}))
         {
+            const Offset left_paren = previous().offset;
             auto expr = parse_expression();
             consume(TokenType::RIGHT_PAREN, "Expect ')' after expression.");
-            return std::make_unique<ExprGrouping>(std::move(expr));
+            const Offset right_paren = previous().offset;
+            return std::make_unique<ExprGrouping>(Offset{left_paren.start, right_paren.end}, std::move(expr));
         }
 
         throw error(peek(), "Expected expression.");

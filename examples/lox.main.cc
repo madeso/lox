@@ -11,6 +11,7 @@
 #include "lox/stringmap.h"
 #include "lox/ast.h"
 #include "lox/parser.h"
+#include "lox/interpreter.h"
 
 
 struct PrintErrors : lox::ErrorHandler
@@ -95,23 +96,28 @@ struct PrintErrors : lox::ErrorHandler
     }
 };
 
+enum class RunError
+{
+    no_error, syntax_error, runtime_error
+};
+
 struct CodeRunner
 {
     virtual ~CodeRunner() = default;
 
-    virtual bool run_code(const std::string& str) = 0;
+    virtual RunError run_code(const std::string& str) = 0;
 };
 
 struct TokenizeCodeRunner : CodeRunner
 {
-    bool run_code(const std::string& source) override
+    RunError run_code(const std::string& source) override
     {
         auto printer = PrintErrors{source};
         auto tokens = lox::ScanTokens(source, &printer);
 
         if(printer.error_detected)
         {
-            return false;
+            return RunError::syntax_error;
         }
 
         for (const auto& token : tokens)
@@ -119,7 +125,7 @@ struct TokenizeCodeRunner : CodeRunner
             std::cout << token.to_string() << "\n";
         }
 
-        return true;
+        return RunError::no_error;
     }
 };
 
@@ -130,20 +136,20 @@ struct AstCodeRunner : CodeRunner
     
     explicit AstCodeRunner(bool gv) : use_graphviz(gv) {}
 
-    bool run_code(const std::string& source) override
+    RunError run_code(const std::string& source) override
     {
         auto printer = PrintErrors{source};
         auto tokens = lox::ScanTokens(source, &printer);
 
         if(printer.error_detected)
         {
-            return false;
+            return RunError::syntax_error;
         }
 
         auto expression = lox::parse_expression(tokens, &printer);
         if(printer.error_detected)
         {
-            return false;
+            return RunError::syntax_error;
         }
 
         if(use_graphviz)
@@ -154,9 +160,42 @@ struct AstCodeRunner : CodeRunner
         {
             std::cout << lox::print_ast(*expression) << "\n";
         }
-        return true;
+        return RunError::no_error;
     }
 };
+
+
+struct InterpreterRunner : CodeRunner
+{
+    RunError
+    run_code(const std::string& source) override
+    {
+        auto printer = PrintErrors{source};
+        auto tokens = lox::ScanTokens(source, &printer);
+
+        if(printer.error_detected)
+        {
+            return RunError::syntax_error;
+        }
+
+        auto expression = lox::parse_expression(tokens, &printer);
+        if(printer.error_detected)
+        {
+            return RunError::syntax_error;
+        }
+
+        const auto interpret_ok = lox::interpret(*expression, &printer);
+        if(interpret_ok)
+        {
+            return RunError::no_error;
+        }
+        else
+        {
+            return RunError::runtime_error;
+        }
+    }
+};
+
 
 
 std::unique_ptr<CodeRunner> make_lexer()
@@ -172,6 +211,11 @@ std::unique_ptr<CodeRunner> make_parser()
 std::unique_ptr<CodeRunner> make_parser_gv()
 {
     return std::make_unique<AstCodeRunner>(true);
+}
+
+std::unique_ptr<CodeRunner> make_interpreter()
+{
+    return std::make_unique<InterpreterRunner>();
 }
 
 
@@ -190,6 +234,7 @@ struct Lox
         std::cout << "  -L - run lexer only = tokenize input\n";
         std::cout << "  -P - run lexer/parser only = print ast tree\n";
         std::cout << "  -G - run lexer/parser only = print ast tree in graphviz\n";
+        std::cout << "  -I - run interpreter\n";
         std::cout << "\n";
 
         std::cout << "FILE/SCRIPT:\n";
@@ -202,7 +247,7 @@ struct Lox
     int
     main(int argc, char** argv)
     {
-        std::function<std::unique_ptr<CodeRunner>()> run_creator = make_parser;
+        std::function<std::unique_ptr<CodeRunner>()> run_creator = make_interpreter;
         bool is_code = false;
 
         for(int arg_index=1; arg_index<argc; arg_index+=1)
@@ -233,6 +278,9 @@ struct Lox
                         break;
                     case 'G':
                         run_creator = make_parser_gv;
+                        break;
+                    case 'I':
+                        run_creator = make_interpreter;
                         break;
                     default:
                         std::cerr << "ERROR: unknown flag" << flag << "\n";
@@ -344,13 +392,18 @@ struct Lox
     {
         const auto error_detected = runner->run_code(str);
 
-        if (error_detected)
+        switch(error_detected)
         {
-            return exit_codes::bad_input;
-        }
-        else
-        {
+        case RunError::no_error:
             return exit_codes::no_error;
+        case RunError::syntax_error:
+            return exit_codes::bad_input;
+        case RunError::runtime_error:
+            // hrm... jlox returns 70 but internal error feels wrong...
+            return exit_codes::internal_error;
+        default:
+            assert(false && "unhandled RunError in run_code_get_exitcode(...)");
+            return 42;
         }
     }
 

@@ -33,6 +33,7 @@ set(lox_src
     lox/errorhandler.cc lox/errorhandler.h
     lox/object.cc lox/object.h
     lox/offset.h
+    lox/interpreter.cc lox/interpreter.h
     lox/parser.cc lox/parser.h
     lox/scanner.cc lox/scanner.h
     lox/stringmap.cc lox/stringmap.h
