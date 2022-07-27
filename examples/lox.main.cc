@@ -25,13 +25,13 @@ struct PrintErrors : lox::ErrorHandler
     }
 
     std::string
-    get_line_gutter(std::size_t line)
+    get_line_gutter(std::size_t line) const
     {
         return fmt::format("   {} | ", line);
     }
 
     std::string
-    get_marker_at(const lox::LineData& line, std::size_t offset)
+    get_marker_at(const lox::LineData& line, std::size_t offset) const
     {
         assert(offset >= line.offset.start);
         assert(offset <= line.offset.end);
@@ -44,7 +44,7 @@ struct PrintErrors : lox::ErrorHandler
     }
 
     std::string
-    get_underline_for(const lox::LineData& line, const Offset& offset, char underline_char)
+    get_underline_for(const lox::LineData& line, const Offset& offset, char underline_char) const
     {
         assert(offset.end <= line.offset.end);
         assert(offset.start >= line.offset.start);
@@ -60,7 +60,7 @@ struct PrintErrors : lox::ErrorHandler
     }
 
     void
-    print_line(const lox::LineData& line)
+    print_line(const lox::LineData& line) const
     {
         std::cerr
             << get_line_gutter(line.line+1)
@@ -69,7 +69,7 @@ struct PrintErrors : lox::ErrorHandler
     }
 
     void
-    on_error(const Offset& offset, const std::string& message) override
+    print_message(std::string_view type, const Offset& offset, const std::string& message) const
     {
         const auto map = lox::StringMap{current_source};
         const auto start_line = map.get_line_from_offset(offset.start);
@@ -80,19 +80,31 @@ struct PrintErrors : lox::ErrorHandler
             print_line(start_line);
             std::cerr
                 << get_underline_for(start_line, offset, '^')
-                << "Error: " << message << "\n";
+                << type << ": " << message << "\n";
         }
         else
         {
             print_line(end_line);
             std::cerr
                 << get_marker_at(end_line, offset.end)
-                << "Error: " << message << "\n";
+                << type << ": " << message << "\n";
 
             print_line(start_line);
             std::cerr << get_marker_at(start_line, offset.start) << "note: starts here" << "\n";
         }
+    }
+
+    void
+    on_error(const Offset& offset, const std::string& message) override
+    {
+        print_message("Error", offset, message);
         error_detected = true;
+    }
+
+    void
+    on_note(const Offset& offset, const std::string& message) override
+    {
+        print_message("Note", offset, message);
     }
 };
 

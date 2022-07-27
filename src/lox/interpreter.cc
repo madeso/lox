@@ -33,8 +33,8 @@ check_binary_number_operand(ErrorHandler* error_handler, const Offset& op_offset
     if(lhs_type == ObjectType::number && rhs_type == ObjectType::number) { return; }
 
     error_handler->on_error(op_offset, "operands must be a numbers");
-    error_handler->on_error(lhs_offset, fmt::format("left hand evaluated to {}", objecttype_to_string(lhs_type)));
-    error_handler->on_error(rhs_offset, fmt::format("right hand evaluated to {}", objecttype_to_string(rhs_type)));
+    error_handler->on_note(lhs_offset, fmt::format("left hand evaluated to {}", objecttype_to_string(lhs_type)));
+    error_handler->on_note(rhs_offset, fmt::format("right hand evaluated to {}", objecttype_to_string(rhs_type)));
     throw RuntimeError();
 }
 
@@ -52,8 +52,8 @@ check_binary_number_or_string_operands(ErrorHandler* error_handler, const Offset
     { return; }
 
     error_handler->on_error(op_offset, "operands must be a numbers or strings");
-    error_handler->on_error(lhs_offset, fmt::format("left hand evaluated to {}", objecttype_to_string(lhs_type)));
-    error_handler->on_error(rhs_offset, fmt::format("right hand evaluated to {}", objecttype_to_string(rhs_type)));
+    error_handler->on_note(lhs_offset, fmt::format("left hand evaluated to {}", objecttype_to_string(lhs_type)));
+    error_handler->on_note(rhs_offset, fmt::format("right hand evaluated to {}", objecttype_to_string(rhs_type)));
     throw RuntimeError();
 }
 
