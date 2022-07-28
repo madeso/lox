@@ -5,6 +5,7 @@
 
 #include "lox/ast.h"
 #include "lox/token.h"
+#include "lox/program.h"
 
 
 namespace lox
@@ -15,8 +16,8 @@ struct ErrorHandler;
 
 // return nullptr when parsing failed
 
-std::unique_ptr<Expr>
-parse_expression(std::vector<Token>& tokens, ErrorHandler* error_handler);
+std::unique_ptr<Program>
+parse_program(std::vector<Token>& tokens, ErrorHandler* error_handler);
 
 }
 

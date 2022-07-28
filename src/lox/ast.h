@@ -8,8 +8,10 @@
 namespace lox
 {
 
-std::string print_ast(const Expr& ast);
-std::string ast_to_grapviz(const Expr& ast);
+struct Program;
+
+std::string print_ast(const Program& ast);
+std::string ast_to_grapviz(const Program& ast);
 
 }
 

@@ -152,7 +152,7 @@ struct AstCodeRunner : CodeRunner
     {
         auto printer = PrintErrors{source};
         auto tokens = lox::ScanTokens(source, &printer);
-        auto expression = lox::parse_expression(tokens, &printer);
+        auto program = lox::parse_program(tokens, &printer);
 
         if(printer.error_detected)
         {
@@ -161,11 +161,11 @@ struct AstCodeRunner : CodeRunner
 
         if(use_graphviz)
         {
-            std::cout << lox::ast_to_grapviz(*expression) << "\n";
+            std::cout << lox::ast_to_grapviz(*program) << "\n";
         }
         else
         {
-            std::cout << lox::print_ast(*expression) << "\n";
+            std::cout << lox::print_ast(*program) << "\n";
         }
         return RunError::no_error;
     }
@@ -179,14 +179,14 @@ struct InterpreterRunner : CodeRunner
     {
         auto printer = PrintErrors{source};
         auto tokens = lox::ScanTokens(source, &printer);
-        auto expression = lox::parse_expression(tokens, &printer);
+        auto program = lox::parse_program(tokens, &printer);
         
         if(printer.error_detected)
         {
             return RunError::syntax_error;
         }
 
-        const auto interpret_ok = lox::interpret(*expression, &printer);
+        const auto interpret_ok = lox::interpret(*program, &printer);
         if(interpret_ok)
         {
             return RunError::no_error;

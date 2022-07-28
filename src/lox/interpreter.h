@@ -1,21 +1,18 @@
 #pragma once
 
-
-#include "lox/ast.h"
-
-
 namespace lox
 {
 
 
 struct ErrorHandler;
+struct Program;
 
 
 // runtime errors are sent to the error handler
 // return false on runtime error
 
 bool
-interpret(Expr& expression, ErrorHandler* error_handler);
+interpret(Program& expression, ErrorHandler* error_handler);
 
 
 }

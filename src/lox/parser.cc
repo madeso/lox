@@ -21,6 +21,50 @@ struct Parser
     {
     }
 
+    std::unique_ptr<Program>
+    parse_program()
+    {
+        auto program = std::make_unique<Program>();
+
+        while(!is_at_end())
+        {
+            program->statements.emplace_back(parse_statement());
+        }
+
+        return program;
+    }
+
+    std::unique_ptr<Stmt>
+    parse_statement()
+    {
+        if(match({TokenType::PRINT}))
+        {
+            return parse_print_statement();
+        }
+
+        return parse_expression_statement();
+    }
+
+    std::unique_ptr<Stmt>
+    parse_print_statement()
+    {
+        const auto print = previous().offset;
+        auto value = parse_expression();
+        consume(TokenType::SEMICOLON, "Missing ';' after print statement");
+        const auto end = previous().offset;
+        return std::make_unique<StmtPrint>(Offset{print.start, end.end}, std::move(value));
+    }
+
+    std::unique_ptr<Stmt>
+    parse_expression_statement()
+    {
+        auto value = parse_expression();
+        const auto start = value->offset;
+        consume(TokenType::SEMICOLON, "Missing ';' after expression");
+        const auto end = previous().offset;
+        return std::make_unique<StmtExpression>(Offset{start.start, end.end}, std::move(value));
+    }
+
     std::unique_ptr<Expr>
     parse_expression()
     {
@@ -155,7 +199,7 @@ struct Parser
     bool
     check(TokenType type)
     {
-        if (isAtEnd())
+        if (is_at_end())
         {
             return false;
         }
@@ -169,7 +213,7 @@ struct Parser
     Token&
     advance()
     {
-        if (isAtEnd() == false)
+        if (is_at_end() == false)
         {
             current += 1;
         }
@@ -178,7 +222,7 @@ struct Parser
     }
 
     bool
-    isAtEnd() 
+    is_at_end() 
     {
         return peek().type == TokenType::EOF;
     }
@@ -220,7 +264,7 @@ struct Parser
     {
         advance();
 
-        while (isAtEnd() == false)
+        while (is_at_end() == false)
         {
             if (previous().type == TokenType::SEMICOLON)
             {
@@ -267,13 +311,13 @@ struct Parser
 namespace lox
 {
 
-std::unique_ptr<Expr>
-parse_expression(std::vector<Token>& tokens, ErrorHandler* error_handler)
+std::unique_ptr<Program>
+parse_program(std::vector<Token>& tokens, ErrorHandler* error_handler)
 {
     try
     {
         auto parser = Parser{tokens, error_handler};
-        return parser.parse_expression();
+        return parser.parse_program();
     }
     catch(const ParseError&)
     {

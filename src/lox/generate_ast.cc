@@ -124,23 +124,11 @@ void
 define_ast
 (
     std::ofstream& source, std::ofstream& header,
-    const std::string& base_name, const std::string& header_name,
+    const std::string& base_name,
     const std::vector<Sub>& subs,
     const std::vector<Vis>& visitors
 )
 {
-    header << "#pragma once\n";
-    header << "\n";
-    header << "#include <memory>\n";
-    header << "#include <string>\n";
-    header << "\n";
-    header << "#include \"lox/token.h\"\n";
-    header << "#include \"lox/object.h\"\n";
-    header << "#include \"lox/offset.h\"\n";
-    header << "\n\n";
-    header << "namespace lox\n";
-    header << "{\n";
-    header << "\n\n";
     for(const auto& sub: subs)
     {
         header << "struct " << base_name << sub.name << ";\n";
@@ -167,12 +155,7 @@ define_ast
     header << "};\n";
     header << "\n\n";
 
-    source << "#include \"" << header_name << "\"\n";
-    source << "\n";
-    source << "\n\n";
-    source << "namespace lox\n";
-    source << "{\n";
-    source << "\n\n";
+    
     
     header << "// ---------------------------------------------------------\n";
     header << "\n\n";
@@ -181,40 +164,40 @@ define_ast
     {
         define_type(source, header, base_name, sub, visitors);
     }
-
-    header << "}\n";
-    header << "\n\n";
-
-    source << "}\n";
-    source << "\n\n";
 }
 
 
-int
-main(int argc, char** argv)
+
+void
+write_code
+(
+    std::ofstream& source, std::ofstream& header,
+    const std::string& header_name
+)
 {
-    if(argc != 3)
-    {
-        std::cerr << "Invalid usage!\n";
-        std::cout << "Usage " << argv[0] << " source header\n";
-        return exit_codes::bad_input;
-    }
+    header << "#pragma once\n";
+    header << "\n";
+    header << "#include <memory>\n";
+    header << "#include <string>\n";
+    header << "\n";
+    header << "#include \"lox/token.h\"\n";
+    header << "#include \"lox/object.h\"\n";
+    header << "#include \"lox/offset.h\"\n";
+    header << "\n\n";
+    header << "namespace lox\n";
+    header << "{\n";
+    header << "\n\n";
 
-    const std::string source_path = argv[1];
-    const std::string header_path = argv[2];
-
-    std::ofstream source(source_path.c_str());
-    std::ofstream header(header_path.c_str());
-
-    if(source.good() == false || header.good() == false)
-    {
-        std::cerr << "Failed to either open " << source_path << " or " << header_path << " for writing\n";
-        return exit_codes::cant_create_output;
-    }
+    source << "#include \"" << header_name << "\"\n";
+    source << "\n";
+    source << "\n\n";
+    source << "namespace lox\n";
+    source << "{\n";
+    source << "\n\n";
 
     define_ast
     (
-        source, header, "Expr", "lox_expression.h",
+        source, header, "Expr",
         {
             {
                 "Binary",
@@ -247,11 +230,64 @@ main(int argc, char** argv)
             }
         },
         {
-            {"VoidVisitor", "void"},
             {"StringVisitor", "std::string"},
             {"ObjectVisitor", "std::shared_ptr<Object>"}
         }
     );
+    
+    define_ast
+    (
+        source, header, "Stmt",
+        {
+            {
+                "Expression",
+                {
+                    {"Expr", "expression"}
+                }
+            },
+            {
+                "Print",
+                {
+                    {"Expr", "expression"}
+                }
+            }
+        },
+        {
+            {"VoidVisitor", "void"},
+            {"StringVisitor", "std::string"}
+        }
+    );
+
+    header << "}\n";
+    header << "\n\n";
+    source << "}\n";
+    source << "\n\n";
+}
+
+
+int
+main(int argc, char** argv)
+{
+    if(argc != 3)
+    {
+        std::cerr << "Invalid usage!\n";
+        std::cout << "Usage " << argv[0] << " source header\n";
+        return exit_codes::bad_input;
+    }
+
+    const std::string source_path = argv[1];
+    const std::string header_path = argv[2];
+
+    std::ofstream source(source_path.c_str());
+    std::ofstream header(header_path.c_str());
+
+    if(source.good() == false || header.good() == false)
+    {
+        std::cerr << "Failed to either open " << source_path << " or " << header_path << " for writing\n";
+        return exit_codes::cant_create_output;
+    }
+    
+    write_code(source, header,  "lox_expression.h");
 
     return exit_codes::no_error;
 }

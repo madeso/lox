@@ -4,11 +4,12 @@
 #include <vector>
 
 #include "lox/object.h"
+#include "lox/program.h"
 
 
 namespace lox { namespace {
 
-struct AstPrinter : ExprStringVisitor
+struct AstPrinter : ExprStringVisitor, StmtStringVisitor
 {
     std::string parenthesize(const std::string& name, const std::vector<std::string>& par)
     {
@@ -54,11 +55,41 @@ struct AstPrinter : ExprStringVisitor
             {expr.right->accept(this)}
         );
     }
+
+    std::string
+    visitPrint(const StmtPrint& x) override
+    {
+        return parenthesize
+        (
+            "print", {x.expression->accept(this)}
+        );
+    }
+
+    std::string
+    visitExpression(const StmtExpression& x) override
+    {
+        return parenthesize
+        (
+            "expression", {x.expression->accept(this)}
+        );
+    }
+
+    std::string run(const Program& p)
+    {
+        std::vector<std::string> statements;
+
+        for(const auto& s: p.statements)
+        {
+            statements.emplace_back(s->accept(this));
+        }
+
+        return parenthesize("program", statements);
+    }
 };
 
 
 
-struct GraphvizPrinter : ExprStringVisitor
+struct GraphvizPrinter : ExprStringVisitor, StmtStringVisitor
 {
     int next_node_index = 1;
     std::ostringstream nodes;
@@ -113,22 +144,50 @@ struct GraphvizPrinter : ExprStringVisitor
         ss << "}\n";
         return ss.str();
     }
+
+    std::string
+    visitPrint(const StmtPrint& x) override
+    {
+        const auto n = new_node("print");
+        const auto r = x.expression->accept(this);
+        edges << n << " -> " << r << ";\n";
+        return n;
+    }
+
+    std::string
+    visitExpression(const StmtExpression& x) override
+    {
+        const auto n = new_node("expr");
+        const auto r = x.expression->accept(this);
+        edges << n << " -> " << r << ";\n";
+        return n;
+    }
+
+    void run(const Program& p)
+    {
+        const auto n = new_node("prog");
+        for(const auto& s: p.statements)
+        {
+            const auto r = s->accept(this);
+            edges << n << " -> " << r << ";\n";
+        }
+    }
 };
 
 }}
 
 namespace lox
 {
-    std::string print_ast(const Expr& ast)
+    std::string print_ast(const Program& ast)
     {
         AstPrinter printer;
-        return ast.accept(&printer);
+        return printer.run(ast);
     }
 
-    std::string ast_to_grapviz(const Expr& ast)
+    std::string ast_to_grapviz(const Program& ast)
     {
         GraphvizPrinter printer;
-        ast.accept(&printer);
+        printer.run(ast);
         return printer.to_graphviz();
     }
 }

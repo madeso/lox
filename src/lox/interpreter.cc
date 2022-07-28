@@ -5,6 +5,7 @@
 
 #include "lox/ast.h"
 #include "lox/errorhandler.h"
+#include "lox/program.h"
 
 
 namespace lox{ namespace
@@ -116,11 +117,25 @@ is_equal(std::shared_ptr<Object> lhs, std::shared_ptr<Object> rhs)
 }
 
 
-struct Interpreter : ExprObjectVisitor
+struct Interpreter : ExprObjectVisitor, StmtVoidVisitor
 {
     ErrorHandler* error_handler;
 
     explicit Interpreter(ErrorHandler* eh) : error_handler(eh) {}
+
+
+    void
+    visitPrint(const StmtPrint& x) override
+    {
+        auto value = x.expression->accept(this);
+        std::cout << value->to_string() << "\n";
+    }
+
+    void
+    visitExpression(const StmtExpression& x) override
+    {
+        x.expression->accept(this);
+    }
 
     std::shared_ptr<Object>
     visitBinary(const ExprBinary& x) override
@@ -220,14 +235,15 @@ namespace lox
 
 
 bool
-interpret(Expr& expression, ErrorHandler* error_handler)
+interpret(Program& program, ErrorHandler* error_handler)
 {
     auto interpreter = Interpreter{error_handler};
     try
     {
-        auto value = expression.accept(&interpreter);
-        std::cout << value->to_string() << "\n";
-        // System.out.println(stringify(value));
+        for(auto& s: program.statements)
+        {
+            s->accept(&interpreter);
+        }
         return true;
     }
     catch (RuntimeError error)
