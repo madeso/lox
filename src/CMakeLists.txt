@@ -30,6 +30,7 @@ add_custom_command(
 # main loxlib
 set(lox_src
     lox/ast.cc lox/ast.h
+    lox/enviroment.cc lox/enviroment.h
     lox/errorhandler.cc lox/errorhandler.h
     lox/interpreter.cc lox/interpreter.h
     lox/object.cc lox/object.h

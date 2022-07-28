@@ -28,10 +28,51 @@ struct Parser
 
         while(!is_at_end())
         {
-            program->statements.emplace_back(parse_statement());
+            auto dec = parse_declaration();
+            if(dec != nullptr)
+            {
+                program->statements.emplace_back(std::move(dec));
+            }
         }
 
         return program;
+    }
+
+    std::unique_ptr<Stmt>
+    parse_declaration()
+    {
+        try
+        {
+            if(match({TokenType::VAR}))
+            {
+                return parse_var_declaration();
+            }
+
+            return parse_statement();
+        }
+        catch(const ParseError&)
+        {
+            synchronize_parser_state();
+            return nullptr;
+        }
+    }
+
+    std::unique_ptr<Stmt>
+    parse_var_declaration()
+    {
+        const auto var = previous().offset;
+        auto& name = consume(TokenType::IDENTIFIER, "Expected variable name");
+
+        std::unique_ptr<Expr> initializer = nullptr;
+
+        if(match({TokenType::EQUAL}))
+        {
+            initializer = parse_expression();
+        }
+
+        consume(TokenType::SEMICOLON, "Missing ';' after print statement");
+        const auto end = previous().offset;
+        return std::make_unique<StmtVar>(Offset{var.start, end.end}, std::string(name.lexeme), std::move(initializer));
     }
 
     std::unique_ptr<Stmt>
@@ -163,6 +204,12 @@ struct Parser
         {
             auto& prev = previous();
             return std::make_unique<ExprLiteral>(prev.offset, std::move(prev.literal));
+        }
+
+        if (match({TokenType::IDENTIFIER}))
+        {
+            auto& prev = previous();
+            return std::make_unique<ExprVariable>(prev.offset, std::string(prev.lexeme));
         }
 
         if (match({TokenType::LEFT_PAREN}))

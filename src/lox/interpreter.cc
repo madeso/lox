@@ -6,6 +6,7 @@
 #include "lox/ast.h"
 #include "lox/errorhandler.h"
 #include "lox/program.h"
+#include "lox/enviroment.h"
 
 
 namespace lox{ namespace
@@ -120,9 +121,43 @@ is_equal(std::shared_ptr<Object> lhs, std::shared_ptr<Object> rhs)
 struct Interpreter : ExprObjectVisitor, StmtVoidVisitor
 {
     ErrorHandler* error_handler;
+    Enviroment global_enviroment;
+    Enviroment* current_enviroment;
 
-    explicit Interpreter(ErrorHandler* eh) : error_handler(eh) {}
+    std::shared_ptr<Object>
+    get_var(Enviroment& enviroment, const std::string& name, const Offset& off)
+    {
+        auto var = enviroment.get_or_null(name);
+        if(var == nullptr)
+        {
+            error_handler->on_error(off, "Undefined variable");
+            throw RuntimeError{};
+        }
+        return var;
+    }
 
+    explicit Interpreter(ErrorHandler* eh)
+        : error_handler(eh)
+    {
+        current_enviroment = &global_enviroment;
+    }
+
+    void
+    visitVar(const StmtVar& x) override
+    {
+        std::shared_ptr<Object> value = x.initializer != nullptr
+            ? x.initializer->accept(this)
+            : std::make_unique<Nil>()
+            ;
+        
+        current_enviroment->define(x.name, value);
+    }
+
+    std::shared_ptr<Object>
+    visitVariable(const ExprVariable& x) override
+    {
+        return get_var(*current_enviroment, x.name, x.offset);
+    }
 
     void
     visitPrint(const StmtPrint& x) override

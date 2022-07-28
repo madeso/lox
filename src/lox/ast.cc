@@ -74,6 +74,23 @@ struct AstPrinter : ExprStringVisitor, StmtStringVisitor
         );
     }
 
+    std::string
+    visitVariable(const ExprVariable& x) override
+    {
+        return parenthesize("get", {x.name});
+    }
+
+    std::string
+    visitVar(const StmtVar& x) override
+    {
+        std::vector<std::string> vars = {x.name};
+        if(x.initializer != nullptr)
+        {
+            vars.emplace_back(x.initializer->accept(this));
+        }
+        return parenthesize("decl", vars);
+    }
+
     std::string run(const Program& p)
     {
         std::vector<std::string> statements;
@@ -160,6 +177,31 @@ struct GraphvizPrinter : ExprStringVisitor, StmtStringVisitor
         const auto n = new_node("expr");
         const auto r = x.expression->accept(this);
         edges << n << " -> " << r << ";\n";
+        return n;
+    }
+
+    std::string
+    visitVariable(const ExprVariable& x) override
+    {
+        const auto n = new_node("get");
+        const auto r = new_node(x.name);
+        edges << n << " -> " << r << ";\n";
+        return n;
+    }
+
+    std::string
+    visitVar(const StmtVar& x) override
+    {
+        const auto n = new_node("decl");
+        const auto r = new_node(x.name);
+        edges << n << " -> " << r << ";\n";
+
+        if(x.initializer != nullptr)
+        {
+            const auto v = x.initializer->accept(this);
+            edges << r << " -> " << v << ";\n";
+        }
+
         return n;
     }
 

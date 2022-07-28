@@ -23,6 +23,7 @@ is_value_type(const std::string& type)
     return type == "Token"
         || type == "TokenType"
         || type == "Offset"
+        || type == "std::string"
         ;
 }
 
@@ -227,6 +228,12 @@ write_code
                     {"Offset", "op_offset"},
                     {"Expr", "right"}
                 }
+            },
+            {
+                "Variable",
+                {
+                    {"std::string", "name"}
+                }
             }
         },
         {
@@ -249,6 +256,13 @@ write_code
                 "Print",
                 {
                     {"Expr", "expression"}
+                }
+            },
+            {
+                "Var",
+                {
+                    {"std::string", "name"},
+                    {"Expr", "initializer"}
                 }
             }
         },
