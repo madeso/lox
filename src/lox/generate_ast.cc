@@ -58,7 +58,7 @@ define_type
     source << base_name << sub.name << "::" << base_name << sub.name<< "\n";
     source << "(\n";
     header << INDENT << INDENT << "const Offset&" << " " << "offset";
-    source << INDENT << "const Offset&" << " " << "offset";
+    source << INDENT << "const Offset&" << " " << "the_offset";
     for(const auto& m: sub.members)
     {
         
@@ -72,7 +72,7 @@ define_type
     header << "\n";
 
     source << ")\n";
-    source << INDENT << ':' << " " << base_name << "(offset)\n";
+    source << INDENT << ':' << " " << base_name << "(the_offset)\n";
     for(const auto& m: sub.members)
     {
         source << INDENT << ',' << " " << m.name << "(std::move(a" << m.name << "))\n";
