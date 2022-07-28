@@ -5,6 +5,11 @@ namespace lox
 {
 
 
+Enviroment::Enviroment(Enviroment* parent)
+    : enclosing(parent)
+{
+}
+
 
 void
 Enviroment::define(const std::string& name, std::shared_ptr<Object> value)
@@ -16,9 +21,21 @@ std::shared_ptr<Object>
 Enviroment::get_or_null(const std::string& name)
 {
     auto found = values.find(name);
-    if(found == values.end()) { return nullptr; }
-
-    return found->second;
+    if(found != values.end())
+    {
+        return found->second;
+    }
+    else
+    {
+        if(enclosing != nullptr)
+        {
+            return enclosing->get_or_null(name);
+        }
+        else
+        {
+            return nullptr;
+        }
+    }
 }
 
 

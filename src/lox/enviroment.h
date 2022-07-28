@@ -15,7 +15,10 @@ struct ErrorHandler;
 
 struct Enviroment
 {
+    Enviroment* enclosing;
     std::unordered_map<std::string, std::shared_ptr<Object>> values;
+
+    explicit Enviroment(Enviroment* parent);
 
     void define(const std::string& name, std::shared_ptr<Object> value);
     std::shared_ptr<Object> get_or_null(const std::string& name);

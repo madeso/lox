@@ -98,6 +98,17 @@ struct AstPrinter : ExprStringVisitor, StmtStringVisitor
         return parenthesize("=", {x.name, v});
     }
 
+    std::string
+    visitBlock(const StmtBlock& x) override
+    {
+        std::vector<std::string> blocks;
+        for(const auto& stmt: x.statements)
+        {
+            blocks.emplace_back(stmt->accept(this));
+        }
+        return parenthesize("block", blocks);
+    }
+
     std::string run(const Program& p)
     {
         std::vector<std::string> statements;
@@ -220,6 +231,18 @@ struct GraphvizPrinter : ExprStringVisitor, StmtStringVisitor
         const auto v = x.value->accept(this);
         edges << n << " -> " << r << ";\n";
         edges << r << " -> " << v << ";\n";
+        return n;
+    }
+
+    std::string
+    visitBlock(const StmtBlock& x) override
+    {
+        const auto n = new_node("{}");
+        for(const auto& stmt: x.statements)
+        {
+            const auto r = stmt->accept(this);
+            edges << n << " -> " << r << ";\n";
+        }
         return n;
     }
 

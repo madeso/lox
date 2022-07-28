@@ -1,0 +1,4 @@
+{
+    var a = "in block";
+}
+print a; // Error! No more "a".

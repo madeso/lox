@@ -118,6 +118,28 @@ is_equal(std::shared_ptr<Object> lhs, std::shared_ptr<Object> rhs)
 }
 
 
+struct EnviromentRaii
+{
+    Enviroment** parent;
+    Enviroment* last_child;
+
+    EnviromentRaii(Enviroment** p, Enviroment* child) : parent(p), last_child(*p)
+    {
+        *parent = child;
+    }
+
+    ~EnviromentRaii()
+    {
+        *parent = last_child;
+    }
+
+    EnviromentRaii(EnviromentRaii&&) = delete;
+    void operator=(EnviromentRaii&&) = delete;
+    EnviromentRaii(const EnviromentRaii&) = delete;
+    void operator=(const EnviromentRaii&) = delete;
+};
+
+
 struct Interpreter : ExprObjectVisitor, StmtVoidVisitor
 {
     ErrorHandler* error_handler;
@@ -149,8 +171,20 @@ struct Interpreter : ExprObjectVisitor, StmtVoidVisitor
 
     explicit Interpreter(ErrorHandler* eh)
         : error_handler(eh)
+        , global_enviroment(nullptr)
     {
         current_enviroment = &global_enviroment;
+    }
+
+    void
+    visitBlock(const StmtBlock& x) override
+    {
+        Enviroment block_env { current_enviroment };
+        auto raii = EnviromentRaii{&current_enviroment, &block_env};
+        for(const auto& st: x.statements)
+        {
+            st->accept(this);
+        }
     }
 
     void

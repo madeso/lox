@@ -18,12 +18,19 @@ constexpr std::string_view INDENT = "    ";
 
 
 bool
+starts_with(const std::string& lhs, const std::string& in)
+{
+    return lhs.substr(0, in.length()) == in;
+}
+
+bool
 is_value_type(const std::string& type)
 {
     return type == "Token"
         || type == "TokenType"
         || type == "Offset"
         || type == "std::string"
+        || starts_with(type, "std::vector<")
         ;
 }
 
@@ -275,6 +282,12 @@ write_code
     (
         source, header, "Stmt",
         {
+            {
+                "Block",
+                {
+                    {"std::vector<std::shared_ptr<Stmt>>", "statements"}
+                }
+            },
             {
                 "Expression",
                 {

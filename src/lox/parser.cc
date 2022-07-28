@@ -28,7 +28,7 @@ struct Parser
 
         while(!is_at_end())
         {
-            auto dec = parse_declaration();
+            auto dec = parse_declaration_or_null();
             if(dec != nullptr)
             {
                 program->statements.emplace_back(std::move(dec));
@@ -39,7 +39,7 @@ struct Parser
     }
 
     std::unique_ptr<Stmt>
-    parse_declaration()
+    parse_declaration_or_null()
     {
         try
         {
@@ -82,8 +82,31 @@ struct Parser
         {
             return parse_print_statement();
         }
+        if(match({TokenType::LEFT_BRACE}))
+        {
+            return parse_block_statement();
+        }
 
         return parse_expression_statement();
+    }
+
+    std::unique_ptr<Stmt>
+    parse_block_statement()
+    {
+        auto start = previous().offset;
+        std::vector<std::shared_ptr<Stmt>> statements;
+
+        while(check(TokenType::RIGHT_BRACE)==false && is_at_end() == false)
+        {
+            auto st = parse_declaration_or_null();
+            if(st != nullptr)
+            {
+                statements.emplace_back(std::move(st));
+            }
+        }
+
+        auto& end = consume(TokenType::RIGHT_BRACE, "Expected '}' after block.").offset;
+        return std::make_unique<StmtBlock>(Offset{start.start, end.end}, statements);
     }
 
     std::unique_ptr<Stmt>
