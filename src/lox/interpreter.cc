@@ -140,10 +140,10 @@ struct EnviromentRaii
 };
 
 
-struct Interpreter : ExprObjectVisitor, StmtVoidVisitor
+struct MainInterpreter : ExprObjectVisitor, StmtVoidVisitor
 {
     ErrorHandler* error_handler;
-    Enviroment global_enviroment;
+    Enviroment* global_enviroment;
     Enviroment* current_enviroment;
 
     std::shared_ptr<Object>
@@ -169,11 +169,11 @@ struct Interpreter : ExprObjectVisitor, StmtVoidVisitor
         }
     }
 
-    explicit Interpreter(ErrorHandler* eh)
+    explicit MainInterpreter(Enviroment* ge, ErrorHandler* eh)
         : error_handler(eh)
-        , global_enviroment(nullptr)
+        , global_enviroment(ge)
     {
-        current_enviroment = &global_enviroment;
+        current_enviroment = global_enviroment;
     }
 
     void
@@ -322,10 +322,16 @@ namespace lox
 {
 
 
-bool
-interpret(Program& program, ErrorHandler* error_handler)
+Interpreter::Interpreter()
+    : global_enviroment(nullptr)
 {
-    auto interpreter = Interpreter{error_handler};
+}
+
+
+bool
+interpret(Interpreter* main_interpreter, Program& program, ErrorHandler* error_handler)
+{
+    auto interpreter = MainInterpreter{&main_interpreter->global_enviroment, error_handler};
     try
     {
         for(auto& s: program.statements)

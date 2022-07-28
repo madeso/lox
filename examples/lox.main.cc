@@ -117,12 +117,13 @@ struct CodeRunner
 {
     virtual ~CodeRunner() = default;
 
-    virtual RunError run_code(const std::string& str) = 0;
+    virtual RunError run_code(lox::Interpreter* interpreter, const std::string& str) = 0;
 };
 
 struct TokenizeCodeRunner : CodeRunner
 {
-    RunError run_code(const std::string& source) override
+    RunError
+    run_code(lox::Interpreter*, const std::string& source) override
     {
         auto printer = PrintErrors{source};
         auto tokens = lox::ScanTokens(source, &printer);
@@ -148,7 +149,8 @@ struct AstCodeRunner : CodeRunner
     
     explicit AstCodeRunner(bool gv) : use_graphviz(gv) {}
 
-    RunError run_code(const std::string& source) override
+    RunError
+    run_code(lox::Interpreter*, const std::string& source) override
     {
         auto printer = PrintErrors{source};
         auto tokens = lox::ScanTokens(source, &printer);
@@ -175,7 +177,7 @@ struct AstCodeRunner : CodeRunner
 struct InterpreterRunner : CodeRunner
 {
     RunError
-    run_code(const std::string& source) override
+    run_code(lox::Interpreter* interpreter, const std::string& source) override
     {
         auto printer = PrintErrors{source};
         auto tokens = lox::ScanTokens(source, &printer);
@@ -186,7 +188,7 @@ struct InterpreterRunner : CodeRunner
             return RunError::syntax_error;
         }
 
-        const auto interpret_ok = lox::interpret(*program, &printer);
+        const auto interpret_ok = lox::interpret(interpreter, *program, &printer);
         if(interpret_ok)
         {
             return RunError::no_error;
@@ -337,6 +339,7 @@ struct Lox
     void
     run_prompt(const std::function<std::unique_ptr<CodeRunner>()>& run_creator)
     {
+        lox::Interpreter interpreter;
         std::cout << "REPL started. EOF (ctrl-d) to exit.\n";
         while (true)
         {
@@ -345,7 +348,7 @@ struct Lox
             if (std::getline(std::cin, line))
             {
                 auto run = run_creator();
-                run->run_code(line);
+                run->run_code(&interpreter, line);
             }
             else
             {
@@ -392,7 +395,8 @@ struct Lox
     [[nodiscard]] int
     run_code_get_exitcode(CodeRunner* runner, const std::string& str)
     {
-        const auto error_detected = runner->run_code(str);
+        lox::Interpreter interpreter;
+        const auto error_detected = runner->run_code(&interpreter, str);
 
         switch(error_detected)
         {
