@@ -136,6 +136,17 @@ struct Interpreter : ExprObjectVisitor, StmtVoidVisitor
         return var;
     }
 
+    void
+    set_var(Enviroment& enviroment, const std::string& name, const Offset& off, std::shared_ptr<Object> object)
+    {
+        const bool was_set = enviroment.set_or_false(name, object);
+        if(was_set == false)
+        {
+            error_handler->on_error(off, fmt::format("Undefined variable {}", name));
+            throw RuntimeError{};
+        }
+    }
+
     explicit Interpreter(ErrorHandler* eh)
         : error_handler(eh)
     {
@@ -151,6 +162,14 @@ struct Interpreter : ExprObjectVisitor, StmtVoidVisitor
             ;
         
         current_enviroment->define(x.name, value);
+    }
+
+    std::shared_ptr<Object>
+    visitAssign(const ExprAssign& x) override
+    {
+        auto value = x.value->accept(this);
+        set_var(*current_enviroment, x.name, x.name_offset, value);
+        return value;
     }
 
     std::shared_ptr<Object>

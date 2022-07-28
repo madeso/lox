@@ -19,6 +19,7 @@ struct Enviroment
 
     void define(const std::string& name, std::shared_ptr<Object> value);
     std::shared_ptr<Object> get_or_null(const std::string& name);
+    bool set_or_false(const std::string& name, std::shared_ptr<Object> value);
 };
 
 }

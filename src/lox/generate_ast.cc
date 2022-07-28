@@ -81,6 +81,14 @@ define_type
     }
 
     header << "\n";
+    header << INDENT << base_name << "Type get_type() const override;\n";
+    source << base_name << "Type " << base_name << sub.name << "::get_type() const\n";
+    source << "{\n";
+    source << INDENT << "return " << base_name << "Type::" << sub.name << ";\n";
+    source << "}\n";
+    source << "\n\n";
+
+    // header << "\n";
     for(const auto& v: visitors)
     {
         header << INDENT << v.type << " accept" << "(" << base_name << v.name << "* vis) const override;\n";
@@ -135,6 +143,17 @@ define_ast
         header << "struct " << base_name << sub.name << ";\n";
     }
     header << "\n\n";
+    header << "enum class " << base_name << "Type\n";
+    header << "{\n";
+    {bool first = true;
+    for(const auto& sub: subs)
+    {
+        if(first) first = false;
+        else header << ",\n";
+        header << INDENT << sub.name;
+    }}
+    header << "\n};\n";
+    header << "\n\n";
     for(const auto& vis: visitors)
     {
         define_visitor(header, base_name, vis, subs);
@@ -146,6 +165,8 @@ define_ast
     header << "{\n";
     header << INDENT << "constexpr explicit " << base_name << "(const Offset& o) : offset(o) {}\n";
     header << INDENT << "virtual ~" << base_name << "() = default;\n";
+    header << "\n";
+    header << INDENT << "virtual " << base_name << "Type get_type() const = 0;\n";
     header << "\n";
     header << INDENT << "Offset offset;\n";
     header << "\n";
@@ -200,6 +221,14 @@ write_code
     (
         source, header, "Expr",
         {
+            {
+                "Assign",
+                {
+                    {"std::string", "name"},
+                    {"Offset", "name_offset"},
+                    {"Expr", "value"}
+                }
+            },
             {
                 "Binary",
                 {

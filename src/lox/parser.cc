@@ -109,7 +109,29 @@ struct Parser
     std::unique_ptr<Expr>
     parse_expression()
     {
-        return parse_equality();
+        return parse_assignment();
+    }
+
+    std::unique_ptr<Expr>
+    parse_assignment()
+    {
+        auto expr = parse_equality();
+
+        if(match({TokenType::EQUAL}))
+        {
+            auto& equals = previous();
+            auto rhs = parse_assignment();
+
+            if(expr->get_type() == ExprType::Variable)
+            {
+                const auto name = static_cast<ExprVariable*>(expr.get())->name;
+                return std::make_unique<ExprAssign>(Offset{expr->offset.start, rhs->offset.end}, name, expr->offset, std::move(rhs));
+            }
+
+            error(equals, "Invalid assignment target.");
+        }
+
+        return expr;
     }
 
     std::unique_ptr<Expr>

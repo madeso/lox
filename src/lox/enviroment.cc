@@ -22,5 +22,15 @@ Enviroment::get_or_null(const std::string& name)
 }
 
 
+bool
+Enviroment::set_or_false(const std::string& name, std::shared_ptr<Object> value)
+{
+    auto found = values.find(name);
+    if(found == values.end()) { return false; }
+    found->second = value;
+    return true;
+}
+
+
 }
 

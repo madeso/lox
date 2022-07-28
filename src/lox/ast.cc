@@ -91,6 +91,13 @@ struct AstPrinter : ExprStringVisitor, StmtStringVisitor
         return parenthesize("decl", vars);
     }
 
+    std::string
+    visitAssign(const ExprAssign& x) override
+    {
+        const auto v = x.value->accept(this);
+        return parenthesize("=", {x.name, v});
+    }
+
     std::string run(const Program& p)
     {
         std::vector<std::string> statements;
@@ -202,6 +209,17 @@ struct GraphvizPrinter : ExprStringVisitor, StmtStringVisitor
             edges << r << " -> " << v << ";\n";
         }
 
+        return n;
+    }
+
+    std::string
+    visitAssign(const ExprAssign& x) override
+    {
+        const auto n = new_node("=");
+        const auto r = new_node(x.name);
+        const auto v = x.value->accept(this);
+        edges << n << " -> " << r << ";\n";
+        edges << r << " -> " << v << ";\n";
         return n;
     }
 
