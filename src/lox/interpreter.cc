@@ -340,7 +340,7 @@ interpret(Interpreter* main_interpreter, Program& program, ErrorHandler* error_h
         }
         return true;
     }
-    catch (RuntimeError error)
+    catch (const RuntimeError&)
     {
         return false;
     }
