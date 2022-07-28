@@ -340,6 +340,8 @@ struct Lox
     run_prompt(const std::function<std::unique_ptr<CodeRunner>()>& run_creator)
     {
         lox::Interpreter interpreter;
+        auto run = run_creator();
+
         std::cout << "REPL started. EOF (ctrl-d) to exit.\n";
         while (true)
         {
@@ -347,8 +349,11 @@ struct Lox
             std::string line;
             if (std::getline(std::cin, line))
             {
-                auto run = run_creator();
-                run->run_code(&interpreter, line);
+                const auto result = run->run_code(&interpreter, line);
+                if(result != RunError::no_error )
+                {
+                    std::cout << "EOF (ctrl-d) to exit.\n";
+                }
             }
             else
             {
