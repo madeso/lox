@@ -227,6 +227,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     void
     on_var_statement(const VarStatement& x) override
     {
+        // todo(Gustav): make usage of unitialized value an error
         std::shared_ptr<Object> value = x.initializer != nullptr
             ? x.initializer->accept(this)
             : std::make_unique<Nil>()
@@ -269,6 +270,8 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     std::shared_ptr<Object>
     on_binary_expression(const BinaryExpression& x) override
     {
+        // todo(Gustav): make binary operators more flexible string*int should duplicate string
+        // todo(Gustav): string + (other) should stringify other?
         auto left = x.left->accept(this);
         auto right = x.right->accept(this);
 
