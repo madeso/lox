@@ -145,7 +145,7 @@ struct Parser
             auto& equals = previous();
             auto rhs = parse_assignment();
 
-            if(expr->get_type() == ExpressionType::variable)
+            if(expr->get_type() == ExpressionType::variable_expression)
             {
                 const auto name = static_cast<VariableExpression*>(expr.get())->name;
                 return std::make_unique<AssignExpression>(Offset{expr->offset.start, rhs->offset.end}, name, expr->offset, std::move(rhs));

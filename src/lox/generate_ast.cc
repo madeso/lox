@@ -113,7 +113,7 @@ define_type
     header << INDENT << base_name << "Type get_type() const override;\n";
     source << base_name << "Type " << sub.name << base_name << "::get_type() const\n";
     source << "{\n";
-    source << INDENT << "return " << base_name << "Type::" << to_lower(sub.name) << ";\n";
+    source << INDENT << "return " << base_name << "Type::" << to_lower(sub.name) << "_" << to_lower(base_name) << ";\n";
     source << "}\n";
     source << "\n\n";
 
@@ -179,7 +179,7 @@ define_ast
     {
         if(first) first = false;
         else header << ",\n";
-        header << INDENT << to_lower(sub.name);
+        header << INDENT << to_lower(sub.name) << "_" << to_lower(base_name);
     }}
     header << "\n};\n";
     header << "\n\n";
