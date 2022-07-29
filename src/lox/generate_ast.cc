@@ -34,6 +34,28 @@ is_value_type(const std::string& type)
         ;
 }
 
+char ascii_to_lower(char in)
+{
+    if (in <= 'Z' && in >= 'A')
+    {
+        return in - ('Z' - 'z');
+    }
+    return in;
+}
+
+std::string
+to_lower(std::string data)
+{
+    std::transform(data.begin(), data.end(), data.begin(), ascii_to_lower);
+    return data;
+}
+
+std::string
+get_fun_visit_name(const std::string& name, const std::string& base)
+{
+    return fmt::format("on_{}_{}", to_lower(name), to_lower(base));
+}
+
 void
 define_type
 (
@@ -43,19 +65,19 @@ define_type
     const std::vector<Vis>& visitors
 )
 {
-    header << "struct " << base_name << sub.name << " : " << base_name << "\n";
+    header << "struct " << sub.name << base_name << " : " << base_name << "\n";
     header << "{\n";
 
     source << "////////////////////////////////////////////////////////////\n";
-    source << "// " << base_name << sub.name << "\n";
+    source << "// " << sub.name << base_name << "\n";
     source << "\n";
     
 
     const std::string_view expl = sub.members.size() == 0 ? "explicit " : "";
 
-    header << INDENT << expl << base_name << sub.name << "\n";
+    header << INDENT << expl << sub.name << base_name << "\n";
     header << INDENT << "(\n";
-    source << base_name << sub.name << "::" << base_name << sub.name<< "\n";
+    source << sub.name << base_name << "::" << sub.name << base_name << "\n";
     source << "(\n";
     header << INDENT << INDENT << "const Offset&" << " " << "offset";
     source << INDENT << "const Offset&" << " " << "the_offset";
@@ -89,9 +111,9 @@ define_type
 
     header << "\n";
     header << INDENT << base_name << "Type get_type() const override;\n";
-    source << base_name << "Type " << base_name << sub.name << "::get_type() const\n";
+    source << base_name << "Type " << sub.name << base_name << "::get_type() const\n";
     source << "{\n";
-    source << INDENT << "return " << base_name << "Type::" << sub.name << ";\n";
+    source << INDENT << "return " << base_name << "Type::" << to_lower(sub.name) << ";\n";
     source << "}\n";
     source << "\n\n";
 
@@ -100,10 +122,10 @@ define_type
     {
         header << INDENT << v.type << " accept" << "(" << base_name << v.name << "* vis) const override;\n";
         
-        source << v.type << " " << base_name << sub.name << "::accept(" << base_name << v.name << "* vis) const\n";
+        source << v.type << " " << sub.name << base_name << "::accept(" << base_name << v.name << "* vis) const\n";
         source << "{\n";
         const std::string ret = v.type == "void" ? "" : "return ";
-        source << INDENT << ret << "vis ->visit" << sub.name << "(*this);\n";
+        source << INDENT << ret << "vis->" << get_fun_visit_name(sub.name, base_name) << "(*this);\n";
         source << "}\n";
         source << "\n\n";
     }
@@ -128,8 +150,8 @@ define_visitor
     for(const auto& s: subs)
     {
         header
-            << INDENT << "virtual " << vis.type << " visit" << s.name
-            << "(const " << base_name << s.name <<"&) = 0;\n";
+            << INDENT << "virtual " << vis.type << " " << get_fun_visit_name(s.name, base_name)
+            << "(const "<< s.name << base_name <<"&) = 0;\n";
     }
     header << "};\n";
     header << "\n\n";
@@ -147,7 +169,7 @@ define_ast
 {
     for(const auto& sub: subs)
     {
-        header << "struct " << base_name << sub.name << ";\n";
+        header << "struct " << sub.name << base_name << ";\n";
     }
     header << "\n\n";
     header << "enum class " << base_name << "Type\n";
@@ -157,7 +179,7 @@ define_ast
     {
         if(first) first = false;
         else header << ",\n";
-        header << INDENT << sub.name;
+        header << INDENT << to_lower(sub.name);
     }}
     header << "\n};\n";
     header << "\n\n";
@@ -226,29 +248,29 @@ write_code
 
     define_ast
     (
-        source, header, "Expr",
+        source, header, "Expression",
         {
             {
                 "Assign",
                 {
                     {"std::string", "name"},
                     {"Offset", "name_offset"},
-                    {"Expr", "value"}
+                    {"Expression", "value"}
                 }
             },
             {
                 "Binary",
                 {
-                    {"Expr", "left"},
+                    {"Expression", "left"},
                     {"TokenType", "op"},
                     {"Offset", "op_offset"},
-                    {"Expr", "right"}
+                    {"Expression", "right"}
                 }
             },
             {
                 "Grouping",
                 {
-                    {"Expr", "expression"}
+                    {"Expression", "expression"}
                 }
             },
             {
@@ -262,7 +284,7 @@ write_code
                 {
                     {"TokenType", "op"},
                     {"Offset", "op_offset"},
-                    {"Expr", "right"}
+                    {"Expression", "right"}
                 }
             },
             {
@@ -280,31 +302,31 @@ write_code
     
     define_ast
     (
-        source, header, "Stmt",
+        source, header, "Statement",
         {
             {
                 "Block",
                 {
-                    {"std::vector<std::shared_ptr<Stmt>>", "statements"}
+                    {"std::vector<std::shared_ptr<Statement>>", "statements"}
                 }
             },
             {
                 "Expression",
                 {
-                    {"Expr", "expression"}
+                    {"Expression", "expression"}
                 }
             },
             {
                 "Print",
                 {
-                    {"Expr", "expression"}
+                    {"Expression", "expression"}
                 }
             },
             {
                 "Var",
                 {
                     {"std::string", "name"},
-                    {"Expr", "initializer"}
+                    {"Expression", "initializer"}
                 }
             }
         },

@@ -10,7 +10,7 @@ namespace lox
 
 struct Program
 {
-    std::vector<std::unique_ptr<Stmt>> statements;
+    std::vector<std::unique_ptr<Statement>> statements;
 };
 
 }

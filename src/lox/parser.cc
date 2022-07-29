@@ -38,7 +38,7 @@ struct Parser
         return program;
     }
 
-    std::unique_ptr<Stmt>
+    std::unique_ptr<Statement>
     parse_declaration_or_null()
     {
         try
@@ -57,13 +57,13 @@ struct Parser
         }
     }
 
-    std::unique_ptr<Stmt>
+    std::unique_ptr<Statement>
     parse_var_declaration()
     {
         const auto var = previous().offset;
         auto& name = consume(TokenType::IDENTIFIER, "Expected variable name");
 
-        std::unique_ptr<Expr> initializer = nullptr;
+        std::unique_ptr<Expression> initializer = nullptr;
 
         if(match({TokenType::EQUAL}))
         {
@@ -72,10 +72,10 @@ struct Parser
 
         consume(TokenType::SEMICOLON, "Missing ';' after print statement");
         const auto end = previous().offset;
-        return std::make_unique<StmtVar>(Offset{var.start, end.end}, std::string(name.lexeme), std::move(initializer));
+        return std::make_unique<VarStatement>(Offset{var.start, end.end}, std::string(name.lexeme), std::move(initializer));
     }
 
-    std::unique_ptr<Stmt>
+    std::unique_ptr<Statement>
     parse_statement()
     {
         if(match({TokenType::PRINT}))
@@ -90,11 +90,11 @@ struct Parser
         return parse_expression_statement();
     }
 
-    std::unique_ptr<Stmt>
+    std::unique_ptr<Statement>
     parse_block_statement()
     {
         auto start = previous().offset;
-        std::vector<std::shared_ptr<Stmt>> statements;
+        std::vector<std::shared_ptr<Statement>> statements;
 
         while(check(TokenType::RIGHT_BRACE)==false && is_at_end() == false)
         {
@@ -106,36 +106,36 @@ struct Parser
         }
 
         auto& end = consume(TokenType::RIGHT_BRACE, "Expected '}' after block.").offset;
-        return std::make_unique<StmtBlock>(Offset{start.start, end.end}, statements);
+        return std::make_unique<BlockStatement>(Offset{start.start, end.end}, statements);
     }
 
-    std::unique_ptr<Stmt>
+    std::unique_ptr<Statement>
     parse_print_statement()
     {
         const auto print = previous().offset;
         auto value = parse_expression();
         consume(TokenType::SEMICOLON, "Missing ';' after print statement");
         const auto end = previous().offset;
-        return std::make_unique<StmtPrint>(Offset{print.start, end.end}, std::move(value));
+        return std::make_unique<PrintStatement>(Offset{print.start, end.end}, std::move(value));
     }
 
-    std::unique_ptr<Stmt>
+    std::unique_ptr<Statement>
     parse_expression_statement()
     {
         auto value = parse_expression();
         const auto start = value->offset;
         consume(TokenType::SEMICOLON, "Missing ';' after expression");
         const auto end = previous().offset;
-        return std::make_unique<StmtExpression>(Offset{start.start, end.end}, std::move(value));
+        return std::make_unique<ExpressionStatement>(Offset{start.start, end.end}, std::move(value));
     }
 
-    std::unique_ptr<Expr>
+    std::unique_ptr<Expression>
     parse_expression()
     {
         return parse_assignment();
     }
 
-    std::unique_ptr<Expr>
+    std::unique_ptr<Expression>
     parse_assignment()
     {
         auto expr = parse_equality();
@@ -145,10 +145,10 @@ struct Parser
             auto& equals = previous();
             auto rhs = parse_assignment();
 
-            if(expr->get_type() == ExprType::Variable)
+            if(expr->get_type() == ExpressionType::variable)
             {
-                const auto name = static_cast<ExprVariable*>(expr.get())->name;
-                return std::make_unique<ExprAssign>(Offset{expr->offset.start, rhs->offset.end}, name, expr->offset, std::move(rhs));
+                const auto name = static_cast<VariableExpression*>(expr.get())->name;
+                return std::make_unique<AssignExpression>(Offset{expr->offset.start, rhs->offset.end}, name, expr->offset, std::move(rhs));
             }
 
             error(equals, "Invalid assignment target.");
@@ -157,7 +157,7 @@ struct Parser
         return expr;
     }
 
-    std::unique_ptr<Expr>
+    std::unique_ptr<Expression>
     parse_equality()
     {
         auto expr = parse_comparison();
@@ -168,13 +168,13 @@ struct Parser
             auto& op = previous();
             auto right = parse_comparison();
             const auto end = right->offset;
-            expr = std::make_unique<ExprBinary>(Offset{start.start, end.end}, std::move(expr), op.type, op.offset, std::move(right));
+            expr = std::make_unique<BinaryExpression>(Offset{start.start, end.end}, std::move(expr), op.type, op.offset, std::move(right));
         }
 
         return expr;
     }
 
-    std::unique_ptr<Expr>
+    std::unique_ptr<Expression>
     parse_comparison()
     {
         auto expr = parse_term();
@@ -185,13 +185,13 @@ struct Parser
             auto& op = previous();
             auto right = parse_term();
             const auto end = right->offset;
-            expr = std::make_unique<ExprBinary>(Offset{start.start, end.end}, std::move(expr), op.type, op.offset, std::move(right));
+            expr = std::make_unique<BinaryExpression>(Offset{start.start, end.end}, std::move(expr), op.type, op.offset, std::move(right));
         }
 
         return expr;
     }
 
-    std::unique_ptr<Expr>
+    std::unique_ptr<Expression>
     parse_term()
     {
         auto expr = parse_factor();
@@ -202,13 +202,13 @@ struct Parser
             auto& op = previous();
             auto right = parse_factor();
             const auto end = right->offset;
-            expr = std::make_unique<ExprBinary>(Offset{start.start, end.end}, std::move(expr), op.type, op.offset, std::move(right));
+            expr = std::make_unique<BinaryExpression>(Offset{start.start, end.end}, std::move(expr), op.type, op.offset, std::move(right));
         }
 
         return expr;
     }
 
-    std::unique_ptr<Expr>
+    std::unique_ptr<Expression>
     parse_factor()
     {
         auto expr = parse_unary();
@@ -219,42 +219,42 @@ struct Parser
             auto& op = previous();
             auto right = parse_unary();
             const auto end = right->offset;
-            expr = std::make_unique<ExprBinary>(Offset{start.start, end.end}, std::move(expr), op.type, op.offset, std::move(right));
+            expr = std::make_unique<BinaryExpression>(Offset{start.start, end.end}, std::move(expr), op.type, op.offset, std::move(right));
         }
 
         return expr;
     }
 
-    std::unique_ptr<Expr>
+    std::unique_ptr<Expression>
     parse_unary()
     {
         if (match({TokenType::BANG, TokenType::MINUS}))
         {
             auto& op = previous();
             auto right = parse_unary();
-            return std::make_unique<ExprUnary>(Offset{op.offset.start, right->offset.end}, op.type, op.offset, std::move(right));
+            return std::make_unique<UnaryExpression>(Offset{op.offset.start, right->offset.end}, op.type, op.offset, std::move(right));
         }
 
         return parse_primary();
     }
 
-    std::unique_ptr<Expr>
+    std::unique_ptr<Expression>
     parse_primary()
     {
-        if (match({TokenType::FALSE})) { return std::make_unique<ExprLiteral>(previous().offset, std::make_unique<Bool>(false)); }
-        if (match({TokenType::TRUE})) { return std::make_unique<ExprLiteral>(previous().offset, std::make_unique<Bool>(true)); }
-        if (match({TokenType::NIL})) { return std::make_unique<ExprLiteral>(previous().offset, std::make_unique<Nil>()); }
+        if (match({TokenType::FALSE})) { return std::make_unique<LiteralExpression>(previous().offset, std::make_unique<Bool>(false)); }
+        if (match({TokenType::TRUE})) { return std::make_unique<LiteralExpression>(previous().offset, std::make_unique<Bool>(true)); }
+        if (match({TokenType::NIL})) { return std::make_unique<LiteralExpression>(previous().offset, std::make_unique<Nil>()); }
 
         if (match({TokenType::NUMBER, TokenType::STRING}))
         {
             auto& prev = previous();
-            return std::make_unique<ExprLiteral>(prev.offset, std::move(prev.literal));
+            return std::make_unique<LiteralExpression>(prev.offset, std::move(prev.literal));
         }
 
         if (match({TokenType::IDENTIFIER}))
         {
             auto& prev = previous();
-            return std::make_unique<ExprVariable>(prev.offset, std::string(prev.lexeme));
+            return std::make_unique<VariableExpression>(prev.offset, std::string(prev.lexeme));
         }
 
         if (match({TokenType::LEFT_PAREN}))
@@ -263,7 +263,7 @@ struct Parser
             auto expr = parse_expression();
             consume(TokenType::RIGHT_PAREN, "Expect ')' after expression.");
             const Offset right_paren = previous().offset;
-            return std::make_unique<ExprGrouping>(Offset{left_paren.start, right_paren.end}, std::move(expr));
+            return std::make_unique<GroupingExpression>(Offset{left_paren.start, right_paren.end}, std::move(expr));
         }
 
         throw error(peek(), "Expected expression.");

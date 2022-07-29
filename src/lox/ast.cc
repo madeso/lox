@@ -9,7 +9,7 @@
 
 namespace lox { namespace {
 
-struct AstPrinter : ExprStringVisitor, StmtStringVisitor
+struct AstPrinter : ExpressionStringVisitor, StatementStringVisitor
 {
     std::string parenthesize(const std::string& name, const std::vector<std::string>& par)
     {
@@ -25,7 +25,7 @@ struct AstPrinter : ExprStringVisitor, StmtStringVisitor
         return ss.str();
     }
 
-    std::string visitBinary(const ExprBinary& expr) override
+    std::string on_binary_expression(const BinaryExpression& expr) override
     {
         return parenthesize
         (
@@ -37,17 +37,17 @@ struct AstPrinter : ExprStringVisitor, StmtStringVisitor
         );
     }
 
-    std::string visitGrouping(const ExprGrouping& expr) override
+    std::string on_grouping_expression(const GroupingExpression& expr) override
     {
         return parenthesize("group", {expr.expression->accept(this)});
     }
 
-    std::string visitLiteral(const ExprLiteral& expr) override
+    std::string on_literal_expression(const LiteralExpression& expr) override
     {
         return expr.value->to_string();
     }
 
-    std::string visitUnary(const ExprUnary& expr) override
+    std::string on_unary_expression(const UnaryExpression& expr) override
     {
         return parenthesize
         (
@@ -57,7 +57,7 @@ struct AstPrinter : ExprStringVisitor, StmtStringVisitor
     }
 
     std::string
-    visitPrint(const StmtPrint& x) override
+    on_print_statement(const PrintStatement& x) override
     {
         return parenthesize
         (
@@ -66,7 +66,7 @@ struct AstPrinter : ExprStringVisitor, StmtStringVisitor
     }
 
     std::string
-    visitExpression(const StmtExpression& x) override
+    on_expression_statement(const ExpressionStatement& x) override
     {
         return parenthesize
         (
@@ -75,13 +75,13 @@ struct AstPrinter : ExprStringVisitor, StmtStringVisitor
     }
 
     std::string
-    visitVariable(const ExprVariable& x) override
+    on_variable_expression(const VariableExpression& x) override
     {
         return parenthesize("get", {x.name});
     }
 
     std::string
-    visitVar(const StmtVar& x) override
+    on_var_statement(const VarStatement& x) override
     {
         std::vector<std::string> vars = {x.name};
         if(x.initializer != nullptr)
@@ -92,14 +92,14 @@ struct AstPrinter : ExprStringVisitor, StmtStringVisitor
     }
 
     std::string
-    visitAssign(const ExprAssign& x) override
+    on_assign_expression(const AssignExpression& x) override
     {
         const auto v = x.value->accept(this);
         return parenthesize("=", {x.name, v});
     }
 
     std::string
-    visitBlock(const StmtBlock& x) override
+    on_block_statement(const BlockStatement& x) override
     {
         std::vector<std::string> blocks;
         for(const auto& stmt: x.statements)
@@ -124,7 +124,7 @@ struct AstPrinter : ExprStringVisitor, StmtStringVisitor
 
 
 
-struct GraphvizPrinter : ExprStringVisitor, StmtStringVisitor
+struct GraphvizPrinter : ExpressionStringVisitor, StatementStringVisitor
 {
     int next_node_index = 1;
     std::ostringstream nodes;
@@ -137,7 +137,7 @@ struct GraphvizPrinter : ExprStringVisitor, StmtStringVisitor
         return self;
     }
 
-    std::string visitBinary(const ExprBinary& expr) override
+    std::string on_binary_expression(const BinaryExpression& expr) override
     {
         const auto self = new_node(tokentype_to_string_short(expr.op));
         const auto left = expr.left->accept(this);
@@ -148,7 +148,7 @@ struct GraphvizPrinter : ExprStringVisitor, StmtStringVisitor
         return self;
     }
 
-    std::string visitGrouping(const ExprGrouping& expr) override
+    std::string on_grouping_expression(const GroupingExpression& expr) override
     {
         const auto self = new_node("group");
         const auto node = expr.expression->accept(this);
@@ -156,12 +156,12 @@ struct GraphvizPrinter : ExprStringVisitor, StmtStringVisitor
         return self;
     }
 
-    std::string visitLiteral(const ExprLiteral& expr) override
+    std::string on_literal_expression(const LiteralExpression& expr) override
     {
         return new_node(expr.value->to_string());
     }
 
-    std::string visitUnary(const ExprUnary& expr) override
+    std::string on_unary_expression(const UnaryExpression& expr) override
     {
         const auto self = new_node(tokentype_to_string_short(expr.op));
         const auto right = expr.right->accept(this);
@@ -181,7 +181,7 @@ struct GraphvizPrinter : ExprStringVisitor, StmtStringVisitor
     }
 
     std::string
-    visitPrint(const StmtPrint& x) override
+    on_print_statement(const PrintStatement& x) override
     {
         const auto n = new_node("print");
         const auto r = x.expression->accept(this);
@@ -190,7 +190,7 @@ struct GraphvizPrinter : ExprStringVisitor, StmtStringVisitor
     }
 
     std::string
-    visitExpression(const StmtExpression& x) override
+    on_expression_statement(const ExpressionStatement& x) override
     {
         const auto n = new_node("expr");
         const auto r = x.expression->accept(this);
@@ -199,7 +199,7 @@ struct GraphvizPrinter : ExprStringVisitor, StmtStringVisitor
     }
 
     std::string
-    visitVariable(const ExprVariable& x) override
+    on_variable_expression(const VariableExpression& x) override
     {
         const auto n = new_node("get");
         const auto r = new_node(x.name);
@@ -208,7 +208,7 @@ struct GraphvizPrinter : ExprStringVisitor, StmtStringVisitor
     }
 
     std::string
-    visitVar(const StmtVar& x) override
+    on_var_statement(const VarStatement& x) override
     {
         const auto n = new_node("decl");
         const auto r = new_node(x.name);
@@ -224,7 +224,7 @@ struct GraphvizPrinter : ExprStringVisitor, StmtStringVisitor
     }
 
     std::string
-    visitAssign(const ExprAssign& x) override
+    on_assign_expression(const AssignExpression& x) override
     {
         const auto n = new_node("=");
         const auto r = new_node(x.name);
@@ -235,7 +235,7 @@ struct GraphvizPrinter : ExprStringVisitor, StmtStringVisitor
     }
 
     std::string
-    visitBlock(const StmtBlock& x) override
+    on_block_statement(const BlockStatement& x) override
     {
         const auto n = new_node("{}");
         for(const auto& stmt: x.statements)

@@ -140,7 +140,7 @@ struct EnviromentRaii
 };
 
 
-struct MainInterpreter : ExprObjectVisitor, StmtVoidVisitor
+struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
 {
     ErrorHandler* error_handler;
     Enviroment* global_enviroment;
@@ -177,7 +177,7 @@ struct MainInterpreter : ExprObjectVisitor, StmtVoidVisitor
     }
 
     void
-    visitBlock(const StmtBlock& x) override
+    on_block_statement(const BlockStatement& x) override
     {
         Enviroment block_env { current_enviroment };
         auto raii = EnviromentRaii{&current_enviroment, &block_env};
@@ -188,7 +188,7 @@ struct MainInterpreter : ExprObjectVisitor, StmtVoidVisitor
     }
 
     void
-    visitVar(const StmtVar& x) override
+    on_var_statement(const VarStatement& x) override
     {
         std::shared_ptr<Object> value = x.initializer != nullptr
             ? x.initializer->accept(this)
@@ -199,7 +199,7 @@ struct MainInterpreter : ExprObjectVisitor, StmtVoidVisitor
     }
 
     std::shared_ptr<Object>
-    visitAssign(const ExprAssign& x) override
+    on_assign_expression(const AssignExpression& x) override
     {
         auto value = x.value->accept(this);
         set_var(*current_enviroment, x.name, x.name_offset, value);
@@ -207,26 +207,26 @@ struct MainInterpreter : ExprObjectVisitor, StmtVoidVisitor
     }
 
     std::shared_ptr<Object>
-    visitVariable(const ExprVariable& x) override
+    on_variable_expression(const VariableExpression& x) override
     {
         return get_var(*current_enviroment, x.name, x.offset);
     }
 
     void
-    visitPrint(const StmtPrint& x) override
+    on_print_statement(const PrintStatement& x) override
     {
         auto value = x.expression->accept(this);
         std::cout << value->to_string() << "\n";
     }
 
     void
-    visitExpression(const StmtExpression& x) override
+    on_expression_statement(const ExpressionStatement& x) override
     {
         x.expression->accept(this);
     }
 
     std::shared_ptr<Object>
-    visitBinary(const ExprBinary& x) override
+    on_binary_expression(const BinaryExpression& x) override
     {
         auto left = x.left->accept(this);
         auto right = x.right->accept(this);
@@ -274,28 +274,28 @@ struct MainInterpreter : ExprObjectVisitor, StmtVoidVisitor
         case TokenType::EQUAL_EQUAL:
             return std::make_shared<Bool>( is_equal(left, right) );
         default:
-            assert(false && "unhandled token in Interpreter::visitBinary(...)");
+            assert(false && "unhandled token in Interpreter::on_binary_expression(...)");
             return nullptr;
         }
     }
 
 
     std::shared_ptr<Object>
-    visitGrouping(const ExprGrouping& x) override
+    on_grouping_expression(const GroupingExpression& x) override
     {
         return x.expression->accept(this);
     }
 
 
     std::shared_ptr<Object>
-    visitLiteral(const ExprLiteral& x) override
+    on_literal_expression(const LiteralExpression& x) override
     {
         return x.value->clone();
     }
 
 
     std::shared_ptr<Object>
-    visitUnary(const ExprUnary& x) override
+    on_unary_expression(const UnaryExpression& x) override
     {
         auto right = x.right->accept(this);
         switch(x.op)
