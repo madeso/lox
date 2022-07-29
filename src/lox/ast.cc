@@ -11,6 +11,24 @@ namespace lox { namespace {
 
 struct AstPrinter : ExpressionStringVisitor, StatementStringVisitor
 {
+    // --------------------------------------------------------------------------------------------
+    // entry functions
+
+    std::string run(const Program& p)
+    {
+        std::vector<std::string> statements;
+
+        for(const auto& s: p.statements)
+        {
+            statements.emplace_back(s->accept(this));
+        }
+
+        return parenthesize("program", statements);
+    }
+
+    // --------------------------------------------------------------------------------------------
+    // util functions
+
     std::string parenthesize(const std::string& name, const std::vector<std::string>& par)
     {
         std::ostringstream ss;
@@ -25,35 +43,18 @@ struct AstPrinter : ExpressionStringVisitor, StatementStringVisitor
         return ss.str();
     }
 
-    std::string on_binary_expression(const BinaryExpression& expr) override
-    {
-        return parenthesize
-        (
-            std::string{tokentype_to_string_short(expr.op)},
-            {
-                expr.left->accept(this),
-                expr.right->accept(this)
-            }
-        );
-    }
+    // --------------------------------------------------------------------------------------------
+    // statements
 
-    std::string on_grouping_expression(const GroupingExpression& expr) override
+    std::string
+    on_block_statement(const BlockStatement& x) override
     {
-        return parenthesize("group", {expr.expression->accept(this)});
-    }
-
-    std::string on_literal_expression(const LiteralExpression& expr) override
-    {
-        return expr.value->to_string();
-    }
-
-    std::string on_unary_expression(const UnaryExpression& expr) override
-    {
-        return parenthesize
-        (
-            std::string{tokentype_to_string_short(expr.op)},
-            {expr.right->accept(this)}
-        );
+        std::vector<std::string> blocks;
+        for(const auto& stmt: x.statements)
+        {
+            blocks.emplace_back(stmt->accept(this));
+        }
+        return parenthesize("block", blocks);
     }
 
     std::string
@@ -75,12 +76,6 @@ struct AstPrinter : ExpressionStringVisitor, StatementStringVisitor
     }
 
     std::string
-    on_variable_expression(const VariableExpression& x) override
-    {
-        return parenthesize("get", {x.name});
-    }
-
-    std::string
     on_var_statement(const VarStatement& x) override
     {
         std::vector<std::string> vars = {x.name};
@@ -91,34 +86,55 @@ struct AstPrinter : ExpressionStringVisitor, StatementStringVisitor
         return parenthesize("decl", vars);
     }
 
+    // --------------------------------------------------------------------------------------------
+    // expressions
+
+    std::string
+    on_binary_expression(const BinaryExpression& expr) override
+    {
+        return parenthesize
+        (
+            std::string{tokentype_to_string_short(expr.op)},
+            {
+                expr.left->accept(this),
+                expr.right->accept(this)
+            }
+        );
+    }
+
+    std::string
+    on_grouping_expression(const GroupingExpression& expr) override
+    {
+        return parenthesize("group", {expr.expression->accept(this)});
+    }
+
+    std::string
+    on_literal_expression(const LiteralExpression& expr) override
+    {
+        return expr.value->to_string();
+    }
+
+    std::string
+    on_unary_expression(const UnaryExpression& expr) override
+    {
+        return parenthesize
+        (
+            std::string{tokentype_to_string_short(expr.op)},
+            {expr.right->accept(this)}
+        );
+    }
+
+    std::string
+    on_variable_expression(const VariableExpression& x) override
+    {
+        return parenthesize("get", {x.name});
+    }
+
     std::string
     on_assign_expression(const AssignExpression& x) override
     {
         const auto v = x.value->accept(this);
         return parenthesize("=", {x.name, v});
-    }
-
-    std::string
-    on_block_statement(const BlockStatement& x) override
-    {
-        std::vector<std::string> blocks;
-        for(const auto& stmt: x.statements)
-        {
-            blocks.emplace_back(stmt->accept(this));
-        }
-        return parenthesize("block", blocks);
-    }
-
-    std::string run(const Program& p)
-    {
-        std::vector<std::string> statements;
-
-        for(const auto& s: p.statements)
-        {
-            statements.emplace_back(s->accept(this));
-        }
-
-        return parenthesize("program", statements);
     }
 };
 
@@ -130,43 +146,17 @@ struct GraphvizPrinter : ExpressionStringVisitor, StatementStringVisitor
     std::ostringstream nodes;
     std::ostringstream edges;
 
-    std::string new_node(std::string_view label)
-    {
-        const auto self = fmt::format("node_{}", next_node_index++);
-        nodes << self << "[label=\"" << label << "\"];\n";
-        return self;
-    }
+    // --------------------------------------------------------------------------------------------
+    // main functions
 
-    std::string on_binary_expression(const BinaryExpression& expr) override
+    void run(const Program& p)
     {
-        const auto self = new_node(tokentype_to_string_short(expr.op));
-        const auto left = expr.left->accept(this);
-        const auto right = expr.right->accept(this);
-
-        edges << self << " -> " << left << ";\n";
-        edges << self << " -> " << right << ";\n";
-        return self;
-    }
-
-    std::string on_grouping_expression(const GroupingExpression& expr) override
-    {
-        const auto self = new_node("group");
-        const auto node = expr.expression->accept(this);
-        edges << self << " -> " << node << ";\n";
-        return self;
-    }
-
-    std::string on_literal_expression(const LiteralExpression& expr) override
-    {
-        return new_node(expr.value->to_string());
-    }
-
-    std::string on_unary_expression(const UnaryExpression& expr) override
-    {
-        const auto self = new_node(tokentype_to_string_short(expr.op));
-        const auto right = expr.right->accept(this);
-        edges << self << " -> " << right << ";\n";
-        return self;
+        const auto n = new_node("prog");
+        for(const auto& s: p.statements)
+        {
+            const auto r = s->accept(this);
+            edges << n << " -> " << r << ";\n";
+        }
     }
 
     std::string to_graphviz() const
@@ -178,6 +168,31 @@ struct GraphvizPrinter : ExpressionStringVisitor, StatementStringVisitor
         ss << edges.str();
         ss << "}\n";
         return ss.str();
+    }
+
+    // --------------------------------------------------------------------------------------------
+    // util functions
+
+    std::string new_node(std::string_view label)
+    {
+        const auto self = fmt::format("node_{}", next_node_index++);
+        nodes << self << "[label=\"" << label << "\"];\n";
+        return self;
+    }
+
+    // --------------------------------------------------------------------------------------------
+    // statements
+
+    std::string
+    on_block_statement(const BlockStatement& x) override
+    {
+        const auto n = new_node("{}");
+        for(const auto& stmt: x.statements)
+        {
+            const auto r = stmt->accept(this);
+            edges << n << " -> " << r << ";\n";
+        }
+        return n;
     }
 
     std::string
@@ -199,15 +214,6 @@ struct GraphvizPrinter : ExpressionStringVisitor, StatementStringVisitor
     }
 
     std::string
-    on_variable_expression(const VariableExpression& x) override
-    {
-        const auto n = new_node("get");
-        const auto r = new_node(x.name);
-        edges << n << " -> " << r << ";\n";
-        return n;
-    }
-
-    std::string
     on_var_statement(const VarStatement& x) override
     {
         const auto n = new_node("decl");
@@ -223,6 +229,55 @@ struct GraphvizPrinter : ExpressionStringVisitor, StatementStringVisitor
         return n;
     }
 
+
+    // --------------------------------------------------------------------------------------------
+    // expressions
+
+    std::string
+    on_binary_expression(const BinaryExpression& expr) override
+    {
+        const auto self = new_node(tokentype_to_string_short(expr.op));
+        const auto left = expr.left->accept(this);
+        const auto right = expr.right->accept(this);
+
+        edges << self << " -> " << left << ";\n";
+        edges << self << " -> " << right << ";\n";
+        return self;
+    }
+
+    std::string
+    on_grouping_expression(const GroupingExpression& expr) override
+    {
+        const auto self = new_node("group");
+        const auto node = expr.expression->accept(this);
+        edges << self << " -> " << node << ";\n";
+        return self;
+    }
+
+    std::string
+    on_literal_expression(const LiteralExpression& expr) override
+    {
+        return new_node(expr.value->to_string());
+    }
+
+    std::string
+    on_unary_expression(const UnaryExpression& expr) override
+    {
+        const auto self = new_node(tokentype_to_string_short(expr.op));
+        const auto right = expr.right->accept(this);
+        edges << self << " -> " << right << ";\n";
+        return self;
+    }
+
+    std::string
+    on_variable_expression(const VariableExpression& x) override
+    {
+        const auto n = new_node("get");
+        const auto r = new_node(x.name);
+        edges << n << " -> " << r << ";\n";
+        return n;
+    }
+
     std::string
     on_assign_expression(const AssignExpression& x) override
     {
@@ -232,28 +287,6 @@ struct GraphvizPrinter : ExpressionStringVisitor, StatementStringVisitor
         edges << n << " -> " << r << ";\n";
         edges << r << " -> " << v << ";\n";
         return n;
-    }
-
-    std::string
-    on_block_statement(const BlockStatement& x) override
-    {
-        const auto n = new_node("{}");
-        for(const auto& stmt: x.statements)
-        {
-            const auto r = stmt->accept(this);
-            edges << n << " -> " << r << ";\n";
-        }
-        return n;
-    }
-
-    void run(const Program& p)
-    {
-        const auto n = new_node("prog");
-        for(const auto& s: p.statements)
-        {
-            const auto r = s->accept(this);
-            edges << n << " -> " << r << ";\n";
-        }
     }
 };
 
