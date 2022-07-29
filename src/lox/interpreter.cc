@@ -117,7 +117,7 @@ is_truthy(const Object& o)
     case ObjectType::boolean:
         return static_cast<const Bool&>(o).value;
     default:
-        return false;
+        return true;
     }
 }
 
@@ -268,6 +268,33 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
 
     //---------------------------------------------------------------------------------------------
     // expressions
+
+    std::shared_ptr<Object>
+    on_logical_expression(const LogicalExpression& x) override
+    {
+        auto left = x.left->accept(this);
+
+        switch(x.op)
+        {
+        case TokenType::OR:
+            if (is_truthy(*left))
+            {
+                return left;
+            }
+            break;
+        case TokenType::AND:
+            if (!is_truthy(*left))
+            {
+                return left;
+            }
+            break;
+        default:
+            assert(false && "unknown logical operator in on_logical_expression(...)");
+            break;
+        }
+
+        return x.right->accept(this);
+    }
 
     std::shared_ptr<Object>
     on_assign_expression(const AssignExpression& x) override

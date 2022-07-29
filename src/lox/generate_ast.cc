@@ -280,6 +280,14 @@ write_code
                 }
             },
             {
+                "Logical",
+                {
+                    {"Expression", "left"},
+                    {"TokenType", "op"},
+                    {"Expression", "right"}
+                }
+            },
+            {
                 "Unary",
                 {
                     {"TokenType", "op"},

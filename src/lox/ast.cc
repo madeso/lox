@@ -29,7 +29,7 @@ struct AstPrinter : ExpressionStringVisitor, StatementStringVisitor
     // --------------------------------------------------------------------------------------------
     // util functions
 
-    std::string parenthesize(const std::string& name, const std::vector<std::string>& par)
+    std::string parenthesize(std::string_view name, const std::vector<std::string>& par)
     {
         std::ostringstream ss;
 
@@ -147,6 +147,14 @@ struct AstPrinter : ExpressionStringVisitor, StatementStringVisitor
         const auto v = x.value->accept(this);
         return parenthesize("=", {x.name, v});
     }
+
+    std::string
+    on_logical_expression(const LogicalExpression& x) override
+    {
+        auto left = x.left->accept(this);
+        auto right = x.right->accept(this);
+        return parenthesize(tokentype_to_string_short(x.op), {left, right});
+    }
 };
 
 
@@ -240,6 +248,22 @@ struct GraphvizPrinter : ExpressionStringVisitor, StatementStringVisitor
         return n;
     }
 
+    std::string
+    on_if_statement(const IfStatement& x) override
+    {
+        const auto n = new_node("if");
+        const auto c = x.condition->accept(this);
+        edges << n << " -> " << c << ";\n";
+        const auto t = x.then_branch->accept(this);
+        edges << n << " -> " << t << ";\n";
+        if(x.else_branch != nullptr)
+        {
+            const auto e = x.else_branch->accept(this);
+            edges << n << " -> " << e << ";\n";
+        }
+        return n;
+    }
+
 
     // --------------------------------------------------------------------------------------------
     // expressions
@@ -301,18 +325,15 @@ struct GraphvizPrinter : ExpressionStringVisitor, StatementStringVisitor
     }
 
     std::string
-    on_if_statement(const IfStatement& x) override
+    on_logical_expression(const LogicalExpression& x) override
     {
-        const auto n = new_node("if");
-        const auto c = x.condition->accept(this);
-        edges << n << " -> " << c << ";\n";
-        const auto t = x.then_branch->accept(this);
-        edges << n << " -> " << t << ";\n";
-        if(x.else_branch != nullptr)
-        {
-            const auto e = x.else_branch->accept(this);
-            edges << n << " -> " << e << ";\n";
-        }
+        const auto n = new_node(tokentype_to_string_short(x.op));
+        auto left = x.left->accept(this);
+        auto right = x.right->accept(this);
+
+        edges << n << " -> " << left << ";\n";
+        edges << n << " -> " << right << ";\n";
+
         return n;
     }
 };

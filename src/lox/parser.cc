@@ -163,7 +163,7 @@ struct Parser
     std::unique_ptr<Expression>
     parse_assignment()
     {
-        auto expr = parse_equality();
+        auto expr = parse_or();
 
         if(match({TokenType::EQUAL}))
         {
@@ -180,6 +180,40 @@ struct Parser
         }
 
         return expr;
+    }
+
+    std::unique_ptr<Expression>
+    parse_or()
+    {
+        auto left = parse_and();
+        const auto start = left->offset;
+
+        while(match({TokenType::OR}))
+        {
+            auto& op = previous();
+            auto right = parse_and();
+            const auto end = right->offset;
+            left = std::make_unique<LogicalExpression>(Offset{start.start, end.end}, std::move(left), op.type, std::move(right));
+        }
+
+        return left;
+    }
+
+    std::unique_ptr<Expression>
+    parse_and()
+    {
+        auto left = parse_equality();
+        const auto start = left->offset;
+
+        while(match({TokenType::AND}))
+        {
+            auto& op = previous();
+            auto right = parse_equality();
+            const auto end = right->offset;
+            left = std::make_unique<LogicalExpression>(Offset{start.start, end.end}, std::move(left), op.type, std::move(right));
+        }
+
+        return left;
     }
 
     std::unique_ptr<Expression>
