@@ -9,14 +9,20 @@
 #include "lox/enviroment.h"
 
 
-namespace lox{ namespace
+namespace lox { namespace
 {
 
 struct RuntimeError {};
 
 
 void
-check_single_number_operand(ErrorHandler* error_handler, const Offset& op_offset, std::shared_ptr<Object> object, const Offset& object_offset)
+check_single_number_operand
+(
+    ErrorHandler* error_handler,
+    const Offset& op_offset,
+    std::shared_ptr<Object> object,
+    const Offset& object_offset
+)
 {
     const auto type = object->get_type();
     if(type == ObjectType::number) { return; }
@@ -28,7 +34,15 @@ check_single_number_operand(ErrorHandler* error_handler, const Offset& op_offset
 
 
 void
-check_binary_number_operand(ErrorHandler* error_handler, const Offset& op_offset, std::shared_ptr<Object> lhs, std::shared_ptr<Object> rhs, const Offset& lhs_offset, const Offset& rhs_offset)
+check_binary_number_operand
+(
+    ErrorHandler* error_handler,
+    const Offset& op_offset,
+    std::shared_ptr<Object> lhs,
+    std::shared_ptr<Object> rhs,
+    const Offset& lhs_offset,
+    const Offset& rhs_offset
+)
 {
     const auto lhs_type = lhs->get_type();
     const auto rhs_type = rhs->get_type();
@@ -42,11 +56,20 @@ check_binary_number_operand(ErrorHandler* error_handler, const Offset& op_offset
 
 
 void
-check_binary_number_or_string_operands(ErrorHandler* error_handler, const Offset& op_offset, std::shared_ptr<Object> lhs, std::shared_ptr<Object> rhs, const Offset& lhs_offset, const Offset& rhs_offset)
+check_binary_number_or_string_operands
+(
+    ErrorHandler* error_handler,
+    const Offset& op_offset,
+    std::shared_ptr<Object> lhs,
+    std::shared_ptr<Object> rhs,
+    const Offset& lhs_offset,
+    const Offset& rhs_offset
+)
 {
     const auto lhs_type = lhs->get_type();
     const auto rhs_type = rhs->get_type();
-    if(
+    if
+    (
         (lhs_type == ObjectType::number && rhs_type == ObjectType::number)
         ||
         (lhs_type == ObjectType::string && rhs_type == ObjectType::string)
@@ -60,27 +83,32 @@ check_binary_number_or_string_operands(ErrorHandler* error_handler, const Offset
 }
 
 
-float get_number(std::shared_ptr<Object> o)
+float
+get_number(std::shared_ptr<Object> o)
 {
     assert(o->get_type() == ObjectType::number);
     return static_cast<Number*>(o.get())->value;
 }
 
 
-std::string get_string(std::shared_ptr<Object> o)
+std::string
+get_string(std::shared_ptr<Object> o)
 {
     assert(o->get_type() == ObjectType::string);
     return static_cast<String*>(o.get())->value;
 }
 
-bool get_bool(std::shared_ptr<Object> o)
+
+bool
+get_bool(std::shared_ptr<Object> o)
 {
     assert(o->get_type() == ObjectType::boolean);
     return static_cast<Bool*>(o.get())->value;
 }
 
 
-bool is_truthy(const Object& o)
+bool
+is_truthy(const Object& o)
 {
     switch(o.get_type())
     {
@@ -146,6 +174,19 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     Enviroment* global_enviroment;
     Enviroment* current_enviroment;
 
+    //-------------------------------------------------------------------------
+    // constructor
+
+    explicit MainInterpreter(Enviroment* ge, ErrorHandler* eh)
+        : error_handler(eh)
+        , global_enviroment(ge)
+    {
+        current_enviroment = global_enviroment;
+    }
+
+    //---------------------------------------------------------------------------------------------
+    // util functions
+
     std::shared_ptr<Object>
     get_var(Enviroment& enviroment, const std::string& name, const Offset& off)
     {
@@ -169,12 +210,8 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
         }
     }
 
-    explicit MainInterpreter(Enviroment* ge, ErrorHandler* eh)
-        : error_handler(eh)
-        , global_enviroment(ge)
-    {
-        current_enviroment = global_enviroment;
-    }
+    //---------------------------------------------------------------------------------------------
+    // statements
 
     void
     on_block_statement(const BlockStatement& x) override
@@ -198,6 +235,23 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
         current_enviroment->define(x.name, value);
     }
 
+    void
+    on_print_statement(const PrintStatement& x) override
+    {
+        auto value = x.expression->accept(this);
+        std::cout << value->to_string() << "\n";
+    }
+
+    void
+    on_expression_statement(const ExpressionStatement& x) override
+    {
+        x.expression->accept(this);
+    }
+
+
+    //---------------------------------------------------------------------------------------------
+    // expressions
+
     std::shared_ptr<Object>
     on_assign_expression(const AssignExpression& x) override
     {
@@ -210,19 +264,6 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     on_variable_expression(const VariableExpression& x) override
     {
         return get_var(*current_enviroment, x.name, x.offset);
-    }
-
-    void
-    on_print_statement(const PrintStatement& x) override
-    {
-        auto value = x.expression->accept(this);
-        std::cout << value->to_string() << "\n";
-    }
-
-    void
-    on_expression_statement(const ExpressionStatement& x) override
-    {
-        x.expression->accept(this);
     }
 
     std::shared_ptr<Object>
@@ -279,20 +320,17 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
         }
     }
 
-
     std::shared_ptr<Object>
     on_grouping_expression(const GroupingExpression& x) override
     {
         return x.expression->accept(this);
     }
 
-
     std::shared_ptr<Object>
     on_literal_expression(const LiteralExpression& x) override
     {
         return x.value->clone();
     }
-
 
     std::shared_ptr<Object>
     on_unary_expression(const UnaryExpression& x) override
