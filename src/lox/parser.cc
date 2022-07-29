@@ -78,6 +78,10 @@ struct Parser
     std::unique_ptr<Statement>
     parse_statement()
     {
+        if(match({TokenType::IF}))
+        {
+            return parse_if_statement();
+        }
         if(match({TokenType::PRINT}))
         {
             return parse_print_statement();
@@ -88,6 +92,27 @@ struct Parser
         }
 
         return parse_expression_statement();
+    }
+
+    std::unique_ptr<Statement>
+    parse_if_statement()
+    {
+        const auto start = previous().offset;
+        consume(TokenType::LEFT_PAREN, "Expected '(' after if");
+        auto condition = parse_expression();
+        consume(TokenType::RIGHT_PAREN, "Expected ')' after if condition");
+
+        auto then_branch = parse_statement();
+        std::unique_ptr<Statement> else_branch = nullptr;
+
+        if(match({TokenType::ELSE}))
+        {
+            else_branch = parse_statement();
+        }
+
+        const auto end = previous().offset;
+        
+        return std::make_unique<IfStatement>(Offset{start.start, end.end}, std::move(condition), std::move(then_branch), std::move(else_branch));
     }
 
     std::unique_ptr<Statement>

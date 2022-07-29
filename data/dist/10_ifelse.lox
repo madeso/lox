@@ -1,0 +1,10 @@
+var first = true;
+var second = false;
+
+if (first)
+    if (second)
+        print "it's true";
+    else
+        print "it's false";
+else
+    print "it's super false";

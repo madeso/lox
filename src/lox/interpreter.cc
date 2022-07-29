@@ -214,6 +214,22 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     // statements
 
     void
+    on_if_statement(const IfStatement& x) override
+    {
+        if(is_truthy(*x.condition->accept(this)))
+        {
+            x.then_branch->accept(this);
+        }
+        else
+        {
+            if(x.else_branch != nullptr)
+            {
+                x.else_branch->accept(this);
+            }
+        }
+    }
+
+    void
     on_block_statement(const BlockStatement& x) override
     {
         Enviroment block_env { current_enviroment };

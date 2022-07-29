@@ -317,6 +317,14 @@ write_code
                 }
             },
             {
+                "If",
+                {
+                    {"Expression", "condition"},
+                    {"Statement", "then_branch"},
+                    {"Statement", "else_branch"}
+                }
+            },
+            {
                 "Print",
                 {
                     {"Expression", "expression"}

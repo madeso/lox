@@ -86,6 +86,17 @@ struct AstPrinter : ExpressionStringVisitor, StatementStringVisitor
         return parenthesize("decl", vars);
     }
 
+    std::string
+    on_if_statement(const IfStatement& x) override
+    {
+        std::vector<std::string> vars = {x.condition->accept(this), x.then_branch->accept(this)};
+        if(x.else_branch != nullptr)
+        {
+            vars.emplace_back(x.else_branch->accept(this));
+        }
+        return parenthesize("if", vars);
+    }
+
     // --------------------------------------------------------------------------------------------
     // expressions
 
@@ -286,6 +297,22 @@ struct GraphvizPrinter : ExpressionStringVisitor, StatementStringVisitor
         const auto v = x.value->accept(this);
         edges << n << " -> " << r << ";\n";
         edges << r << " -> " << v << ";\n";
+        return n;
+    }
+
+    std::string
+    on_if_statement(const IfStatement& x) override
+    {
+        const auto n = new_node("if");
+        const auto c = x.condition->accept(this);
+        edges << n << " -> " << c << ";\n";
+        const auto t = x.then_branch->accept(this);
+        edges << n << " -> " << t << ";\n";
+        if(x.else_branch != nullptr)
+        {
+            const auto e = x.else_branch->accept(this);
+            edges << n << " -> " << e << ";\n";
+        }
         return n;
     }
 };

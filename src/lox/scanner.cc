@@ -233,7 +233,7 @@ struct Scanner
 
         if (is_at_end())
         {
-            error_handler->on_error(Offset{start, current}, "Unterminated scan_string.");
+            error_handler->on_error(Offset{start, current}, "Unterminated string.");
             return;
         }
 
