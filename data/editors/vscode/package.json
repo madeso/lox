@@ -1,0 +1,25 @@
+{
+  "name": "lox",
+  "displayName": "lox",
+  "description": "Lox language",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.69.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [{
+      "id": "lox",
+      "aliases": ["Lox language"],
+      "extensions": [".lox"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "lox",
+      "scopeName": "source.lox",
+      "path": "./syntaxes/lox.tmLanguage.json"
+    }]
+  }
+}
