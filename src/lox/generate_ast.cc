@@ -344,6 +344,13 @@ write_code
                     {"std::string", "name"},
                     {"Expression", "initializer"}
                 }
+            },
+            {
+                "While",
+                {
+                    {"Expression", "condition"},
+                    {"Statement", "body"}
+                }
             }
         },
         {

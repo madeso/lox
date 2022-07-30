@@ -86,12 +86,31 @@ struct Parser
         {
             return parse_print_statement();
         }
+        if(match({TokenType::WHILE}))
+        {
+            return parse_while_statement();
+        }
         if(match({TokenType::LEFT_BRACE}))
         {
             return parse_block_statement();
         }
 
         return parse_expression_statement();
+    }
+
+    std::unique_ptr<Statement>
+    parse_while_statement()
+    {
+        const auto start = previous().offset;
+        consume(TokenType::LEFT_PAREN, "Expected '(' after for");
+        
+        auto condition = parse_expression();
+        consume(TokenType::RIGHT_PAREN, "Expected ')' after for condition");
+
+        auto body = parse_statement();
+        const auto end = previous().offset;
+        
+        return std::make_unique<WhileStatement>(Offset{start.start, end.end}, std::move(condition), std::move(body));
     }
 
     std::unique_ptr<Statement>

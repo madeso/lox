@@ -58,6 +58,12 @@ struct AstPrinter : ExpressionStringVisitor, StatementStringVisitor
     }
 
     std::string
+    on_while_statement(const WhileStatement& x) override
+    {
+        return parenthesize("while", {x.condition->accept(this), x.body->accept(this)});
+    }
+
+    std::string
     on_print_statement(const PrintStatement& x) override
     {
         return parenthesize
@@ -211,6 +217,17 @@ struct GraphvizPrinter : ExpressionStringVisitor, StatementStringVisitor
             const auto r = stmt->accept(this);
             edges << n << " -> " << r << ";\n";
         }
+        return n;
+    }
+
+    std::string
+    on_while_statement(const WhileStatement& x) override
+    {
+        const auto n = new_node("while");
+        const auto c = x.condition->accept(this);
+        const auto b = x.body->accept(this);
+        edges << n << " -> " << c << ";\n";
+        edges << n << " -> " << b << ";\n";
         return n;
     }
 

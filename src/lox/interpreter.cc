@@ -241,6 +241,15 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     }
 
     void
+    on_while_statement(const WhileStatement& x) override
+    {
+        while(is_truthy(*x.condition->accept(this)))
+        {
+            x.body->accept(this);
+        }
+    }
+
+    void
     on_var_statement(const VarStatement& x) override
     {
         // todo(Gustav): make usage of unitialized value an error
