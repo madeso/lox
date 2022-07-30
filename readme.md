@@ -16,6 +16,7 @@ This repo contains my implementation of the lox language parsers from [crafting 
 
 * add arrays and iterators
 * add switch-like if/else sugar
+* add break/continue
 * add constants
 * complete todo comments
 * modulus operator
