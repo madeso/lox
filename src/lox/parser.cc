@@ -90,12 +90,84 @@ struct Parser
         {
             return parse_while_statement();
         }
+        if(match({TokenType::FOR}))
+        {
+            return parse_for_statement();
+        }
         if(match({TokenType::LEFT_BRACE}))
         {
             return parse_block_statement();
         }
 
         return parse_expression_statement();
+    }
+
+    std::unique_ptr<Statement>
+    parse_for_statement()
+    {
+        const auto start = previous().offset;
+        consume(TokenType::LEFT_PAREN, "Expected '(' after for");
+        
+        std::unique_ptr<Statement> initializer;
+
+        if(match({TokenType::SEMICOLON}))
+        {
+            // pass
+        }
+        else if(match({TokenType::VAR}))
+        {
+            initializer = parse_var_declaration();
+        }
+        else
+        {
+            initializer = parse_expression_statement();
+        }
+
+        std::unique_ptr<Expression> condition;
+        if(check(TokenType::SEMICOLON) == false)
+        {
+            condition = parse_expression();
+        }
+        consume(TokenType::SEMICOLON, "Expected ';' after loop confition");
+
+
+        std::unique_ptr<Expression> increment;
+        if(check(TokenType::RIGHT_PAREN) == false)
+        {
+            increment = parse_expression();
+        }
+        consume(TokenType::RIGHT_PAREN, "Expected ')' after for condition");
+
+        auto body = parse_statement();
+        const auto end = previous().offset;
+
+        if(increment != nullptr)
+        {
+            const auto io = increment->offset;
+            std::vector<std::unique_ptr<Statement>> statements;
+            statements.emplace_back(std::move(body));
+            statements.emplace_back(std::make_unique<ExpressionStatement>(io, std::move(increment)));
+            body = std::make_unique<BlockStatement>(Offset{io.start, end.end}, std::move(statements));
+        }
+
+        {
+            const auto co_start = condition == nullptr ? body->offset.start : condition->offset.start;
+            if(condition == nullptr)
+            {
+                condition = std::make_unique<LiteralExpression>(Offset{0}, std::make_unique<Bool>(true));
+            }
+            body = std::make_unique<WhileStatement>(Offset{co_start, end.end}, std::move(condition), std::move(body));
+        }
+
+        if(initializer != nullptr)
+        {
+            std::vector<std::unique_ptr<Statement>> statements;
+            statements.emplace_back(std::move(initializer));
+            statements.emplace_back(std::move(body));
+            body = std::make_unique<BlockStatement>(Offset{start.start, end.end}, std::move(statements));
+        }
+        
+        return body;
     }
 
     std::unique_ptr<Statement>
@@ -138,7 +210,7 @@ struct Parser
     parse_block_statement()
     {
         auto start = previous().offset;
-        std::vector<std::shared_ptr<Statement>> statements;
+        std::vector<std::unique_ptr<Statement>> statements;
 
         while(check(TokenType::RIGHT_BRACE)==false && is_at_end() == false)
         {
@@ -150,7 +222,7 @@ struct Parser
         }
 
         auto& end = consume(TokenType::RIGHT_BRACE, "Expected '}' after block.").offset;
-        return std::make_unique<BlockStatement>(Offset{start.start, end.end}, statements);
+        return std::make_unique<BlockStatement>(Offset{start.start, end.end}, std::move(statements));
     }
 
     std::unique_ptr<Statement>

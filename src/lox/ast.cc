@@ -180,7 +180,7 @@ struct GraphvizPrinter : ExpressionStringVisitor, StatementStringVisitor
         for(const auto& s: p.statements)
         {
             const auto r = s->accept(this);
-            edges << n << " -> " << r << ";\n";
+            link(n, r);
         }
     }
 
@@ -205,6 +205,12 @@ struct GraphvizPrinter : ExpressionStringVisitor, StatementStringVisitor
         return self;
     }
 
+    std::string link(const std::string& from, const std::string& to)
+    {
+        edges << from << " -> " << to << ";\n";
+        return from;
+    }
+
     // --------------------------------------------------------------------------------------------
     // statements
 
@@ -214,8 +220,7 @@ struct GraphvizPrinter : ExpressionStringVisitor, StatementStringVisitor
         const auto n = new_node("{}");
         for(const auto& stmt: x.statements)
         {
-            const auto r = stmt->accept(this);
-            edges << n << " -> " << r << ";\n";
+            link(n, stmt->accept(this));
         }
         return n;
     }
@@ -224,29 +229,21 @@ struct GraphvizPrinter : ExpressionStringVisitor, StatementStringVisitor
     on_while_statement(const WhileStatement& x) override
     {
         const auto n = new_node("while");
-        const auto c = x.condition->accept(this);
-        const auto b = x.body->accept(this);
-        edges << n << " -> " << c << ";\n";
-        edges << n << " -> " << b << ";\n";
+        link(n, x.condition->accept(this));
+        link(n, x.body->accept(this));
         return n;
     }
 
     std::string
     on_print_statement(const PrintStatement& x) override
     {
-        const auto n = new_node("print");
-        const auto r = x.expression->accept(this);
-        edges << n << " -> " << r << ";\n";
-        return n;
+        return link(new_node("print"), x.expression->accept(this));
     }
 
     std::string
     on_expression_statement(const ExpressionStatement& x) override
     {
-        const auto n = new_node("expr");
-        const auto r = x.expression->accept(this);
-        edges << n << " -> " << r << ";\n";
-        return n;
+        return link(new_node("expr"), x.expression->accept(this));
     }
 
     std::string
@@ -254,12 +251,11 @@ struct GraphvizPrinter : ExpressionStringVisitor, StatementStringVisitor
     {
         const auto n = new_node("decl");
         const auto r = new_node(x.name);
-        edges << n << " -> " << r << ";\n";
+        link(n, r);
 
         if(x.initializer != nullptr)
         {
-            const auto v = x.initializer->accept(this);
-            edges << r << " -> " << v << ";\n";
+            link(r, x.initializer->accept(this));
         }
 
         return n;
@@ -269,14 +265,11 @@ struct GraphvizPrinter : ExpressionStringVisitor, StatementStringVisitor
     on_if_statement(const IfStatement& x) override
     {
         const auto n = new_node("if");
-        const auto c = x.condition->accept(this);
-        edges << n << " -> " << c << ";\n";
-        const auto t = x.then_branch->accept(this);
-        edges << n << " -> " << t << ";\n";
+        link(n, x.condition->accept(this));
+        link(n, x.then_branch->accept(this));
         if(x.else_branch != nullptr)
         {
-            const auto e = x.else_branch->accept(this);
-            edges << n << " -> " << e << ";\n";
+            link(n, x.else_branch->accept(this));
         }
         return n;
     }
@@ -289,21 +282,15 @@ struct GraphvizPrinter : ExpressionStringVisitor, StatementStringVisitor
     on_binary_expression(const BinaryExpression& expr) override
     {
         const auto self = new_node(tokentype_to_string_short(expr.op));
-        const auto left = expr.left->accept(this);
-        const auto right = expr.right->accept(this);
-
-        edges << self << " -> " << left << ";\n";
-        edges << self << " -> " << right << ";\n";
+        link(self, expr.left->accept(this));
+        link(self, expr.right->accept(this));
         return self;
     }
 
     std::string
     on_grouping_expression(const GroupingExpression& expr) override
     {
-        const auto self = new_node("group");
-        const auto node = expr.expression->accept(this);
-        edges << self << " -> " << node << ";\n";
-        return self;
+        return link(new_node("group"), expr.expression->accept(this));
     }
 
     std::string
@@ -315,19 +302,13 @@ struct GraphvizPrinter : ExpressionStringVisitor, StatementStringVisitor
     std::string
     on_unary_expression(const UnaryExpression& expr) override
     {
-        const auto self = new_node(tokentype_to_string_short(expr.op));
-        const auto right = expr.right->accept(this);
-        edges << self << " -> " << right << ";\n";
-        return self;
+        return link(new_node(tokentype_to_string_short(expr.op)), expr.right->accept(this));
     }
 
     std::string
     on_variable_expression(const VariableExpression& x) override
     {
-        const auto n = new_node("get");
-        const auto r = new_node(x.name);
-        edges << n << " -> " << r << ";\n";
-        return n;
+        return link(new_node("get"), new_node(x.name));
     }
 
     std::string
@@ -335,9 +316,8 @@ struct GraphvizPrinter : ExpressionStringVisitor, StatementStringVisitor
     {
         const auto n = new_node("=");
         const auto r = new_node(x.name);
-        const auto v = x.value->accept(this);
-        edges << n << " -> " << r << ";\n";
-        edges << r << " -> " << v << ";\n";
+        link(n, r);
+        link(r, x.value->accept(this));
         return n;
     }
 
@@ -345,11 +325,9 @@ struct GraphvizPrinter : ExpressionStringVisitor, StatementStringVisitor
     on_logical_expression(const LogicalExpression& x) override
     {
         const auto n = new_node(tokentype_to_string_short(x.op));
-        auto left = x.left->accept(this);
-        auto right = x.right->accept(this);
-
-        edges << n << " -> " << left << ";\n";
-        edges << n << " -> " << right << ";\n";
+        
+        link(n, x.left->accept(this));
+        link(n, x.right->accept(this));
 
         return n;
     }

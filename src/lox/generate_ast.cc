@@ -315,7 +315,7 @@ write_code
             {
                 "Block",
                 {
-                    {"std::vector<std::shared_ptr<Statement>>", "statements"}
+                    {"std::vector<std::unique_ptr<Statement>>", "statements"}
                 }
             },
             {
