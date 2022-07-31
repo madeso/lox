@@ -54,7 +54,7 @@ struct AstPrinter : ExpressionStringVisitor, StatementStringVisitor
         {
             blocks.emplace_back(stmt->accept(this));
         }
-        return parenthesize("block", blocks);
+        return parenthesize("{}", blocks);
     }
 
     std::string
@@ -77,7 +77,7 @@ struct AstPrinter : ExpressionStringVisitor, StatementStringVisitor
     {
         return parenthesize
         (
-            "expression", {x.expression->accept(this)}
+            "expr", {x.expression->accept(this)}
         );
     }
 

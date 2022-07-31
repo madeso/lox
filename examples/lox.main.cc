@@ -8,103 +8,23 @@
 
 #include "lox/errorhandler.h"
 #include "lox/scanner.h"
-#include "lox/stringmap.h"
 #include "lox/ast.h"
 #include "lox/parser.h"
 #include "lox/interpreter.h"
+#include "lox/printhandler.h"
 
 
-struct PrintErrors : lox::ErrorHandler
+struct PrintErrors : lox::PrintHandler
 {
-    bool error_detected = false;
-    std::string_view current_source;
-
     explicit PrintErrors(std::string_view source)
-        : current_source(source)
+        : lox::PrintHandler(source)
     {
-    }
-
-    std::string
-    get_line_gutter(std::size_t line) const
-    {
-        return fmt::format("   {} | ", line);
-    }
-
-    std::string
-    get_marker_at(const lox::LineData& line, std::size_t offset) const
-    {
-        assert(offset >= line.offset.start);
-        assert(offset <= line.offset.end);
-
-        const std::size_t line_length = offset - line.offset.start;
-        const std::string gutter = get_line_gutter(line.line+1);
-
-        const std::string dashes = std::string((gutter.length() + line_length) - 1, '-');
-        return fmt::format("{}^-- ", dashes);
-    }
-
-    std::string
-    get_underline_for(const lox::LineData& line, const Offset& offset, char underline_char) const
-    {
-        assert(offset.end <= line.offset.end);
-        assert(offset.start >= line.offset.start);
-
-        const std::string gutter = get_line_gutter(line.line+1);
-
-        const std::size_t start_char = offset.start - line.offset.start;
-        const std::size_t length = offset.end - offset.start + 1;
-
-        const std::string initial_spaces = std::string(gutter.length() + start_char, ' ');
-        const std::string underline_string = std::string(length, underline_char);
-        return fmt::format("{}{} ", initial_spaces, underline_string);
     }
 
     void
-    print_line(const lox::LineData& line) const
+    on_line(std::string_view line) override
     {
-        std::cerr
-            << get_line_gutter(line.line+1)
-            << current_source.substr(line.offset.start, line.offset.end - line.offset.start) << "\n"
-            ;
-    }
-
-    void
-    print_message(std::string_view type, const Offset& offset, const std::string& message) const
-    {
-        const auto map = lox::StringMap{current_source};
-        const auto start_line = map.get_line_from_offset(offset.start);
-        const auto end_line = map.get_line_from_offset(offset.end);
-
-        if(start_line.line == end_line.line)
-        {
-            print_line(start_line);
-            std::cerr
-                << get_underline_for(start_line, offset, '^')
-                << type << ": " << message << "\n";
-        }
-        else
-        {
-            print_line(end_line);
-            std::cerr
-                << get_marker_at(end_line, offset.end)
-                << type << ": " << message << "\n";
-
-            print_line(start_line);
-            std::cerr << get_marker_at(start_line, offset.start) << "note: starts here" << "\n";
-        }
-    }
-
-    void
-    on_error(const Offset& offset, const std::string& message) override
-    {
-        print_message("Error", offset, message);
-        error_detected = true;
-    }
-
-    void
-    on_note(const Offset& offset, const std::string& message) override
-    {
-        print_message("Note", offset, message);
+        std::cerr << line << "\n";
     }
 };
 
