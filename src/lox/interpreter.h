@@ -1,5 +1,7 @@
 #pragma once
 
+#include <functional>
+
 #include "lox/enviroment.h"
 
 
@@ -21,7 +23,7 @@ struct Interpreter
 };
 
 bool
-interpret(Interpreter* interpreter, Program& expression, ErrorHandler* error_handler);
+interpret(Interpreter* interpreter, Program& expression, ErrorHandler* error_handler, const std::function<void (std::string)>& on_line);
 
 
 }

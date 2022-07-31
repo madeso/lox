@@ -108,7 +108,7 @@ struct InterpreterRunner : CodeRunner
             return RunError::syntax_error;
         }
 
-        const auto interpret_ok = lox::interpret(interpreter, *program, &printer);
+        const auto interpret_ok = lox::interpret(interpreter, *program, &printer, [](const std::string& s){ std::cout << s << "\n";});
         if(interpret_ok)
         {
             return RunError::no_error;

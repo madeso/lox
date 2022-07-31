@@ -1,7 +1,7 @@
 #include "lox/interpreter.h"
 
 #include <cassert>
-#include <iostream>
+
 
 #include "lox/ast.h"
 #include "lox/errorhandler.h"
@@ -173,13 +173,15 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     ErrorHandler* error_handler;
     Enviroment* global_enviroment;
     Enviroment* current_enviroment;
+    const std::function<void (std::string)>& on_line;
 
     //-------------------------------------------------------------------------
     // constructor
 
-    explicit MainInterpreter(Enviroment* ge, ErrorHandler* eh)
+    explicit MainInterpreter(Enviroment* ge, ErrorHandler* eh, const std::function<void (std::string)>& ol)
         : error_handler(eh)
         , global_enviroment(ge)
+        , on_line(ol)
     {
         current_enviroment = global_enviroment;
     }
@@ -265,7 +267,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     on_print_statement(const PrintStatement& x) override
     {
         auto value = x.expression->accept(this);
-        std::cout << value->to_string() << "\n";
+        on_line(value->to_string());
     }
 
     void
@@ -422,9 +424,9 @@ Interpreter::Interpreter()
 
 
 bool
-interpret(Interpreter* main_interpreter, Program& program, ErrorHandler* error_handler)
+interpret(Interpreter* main_interpreter, Program& program, ErrorHandler* error_handler, const std::function<void (std::string)>& on_line)
 {
-    auto interpreter = MainInterpreter{&main_interpreter->global_enviroment, error_handler};
+    auto interpreter = MainInterpreter{&main_interpreter->global_enviroment, error_handler, on_line};
     try
     {
         for(auto& s: program.statements)
