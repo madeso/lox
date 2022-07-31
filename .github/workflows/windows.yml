@@ -32,16 +32,6 @@ jobs:
               working-directory: ${{github.workspace}}/build
               run: time cmake --build . --config ${{matrix.build_type}}
 
-            - name: Debug 1
-              shell: powershell
-              working-directory: ${{github.workspace}}/build/
-              run: ls src
-
-            - name: Debug 2
-              shell: powershell
-              working-directory: ${{github.workspace}}/build/
-              run: ls src/${{matrix.build_type}}
-
             - name: Run tests
               shell: powershell
               working-directory: ${{github.workspace}}/build/
