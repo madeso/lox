@@ -30,3 +30,8 @@ jobs:
               shell: bash
               working-directory: ${{github.workspace}}/build
               run: time cmake --build . --config ${{matrix.build_type}}
+
+            - name: Run tests
+              shell: bash
+              working-directory: ${{github.workspace}}/build/src
+              run: ./test
