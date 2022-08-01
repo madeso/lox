@@ -10,7 +10,7 @@ This repo contains my implementation of the lox language parsers from [crafting 
 * add language syntax sugaring
 * move error reporting from commandline to lib
 * make embeddable and extendable from c++
-
+* use [kgt](https://github.com/katef/kgt) to output railroad diagrams for syntax documentation inspired by the [awesomeness that is sqlite](https://mobile.twitter.com/captbaritone/status/1553973901251596288?t=FE8L2gjVX_ncbAe_EsPRAA&s=09)
 
 ## lox additions/upgrades
 
