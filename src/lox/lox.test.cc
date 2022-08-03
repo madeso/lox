@@ -424,6 +424,29 @@ TEST_CASE("interpret", "[interpret]")
         }));
     }
 
+
+    SECTION("reccursive fibonacci")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            fun fib(n)
+            {
+                if (n <= 1) return n;
+                return fib(n - 2) + fib(n - 1);
+            }
+
+            for(var i = 0; i < 10; i = i + 1)
+            {
+                print fib(i);
+            }
+        )lox");
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
+            "0", "1", "1", "2", "3", "5", "8", "13", "21", "34"
+        }));
+    }
+
     SECTION("local functions and closures")
     {
         const auto run_ok = run_string
