@@ -118,7 +118,7 @@ make_float(float f)
 std::shared_ptr<Object>
 make_int(int i)
 {
-    return std::make_shared<Number>(i);
+    return std::make_shared<Number>(static_cast<float>(i));
 }
 
 
