@@ -26,6 +26,11 @@ Nil::to_string() const
     return "nil";
 }
 
+std::shared_ptr<Object>
+make_nil()
+{
+    return std::make_shared<Nil>();
+}
 
 
 // ----------------------------------------------------------------------------
@@ -60,6 +65,11 @@ String::to_string() const
     return value;
 }
 
+std::shared_ptr<Object>
+make_string(const std::string& str)
+{
+    return std::make_shared<String>(str);
+}
 
 
 // ----------------------------------------------------------------------------
@@ -91,6 +101,11 @@ Bool::to_string() const
     else { return "false"; }
 }
 
+std::shared_ptr<Object>
+make_bool(bool b)
+{
+    return std::make_shared<Bool>(b);
+}
 
 
 // ----------------------------------------------------------------------------
@@ -120,8 +135,80 @@ Number::to_string() const
     return fmt::format("{0}", value);
 }
 
+std::shared_ptr<Object>
+make_float(float f)
+{
+    return std::make_shared<Number>(f);
+}
+
+std::shared_ptr<Object>
+make_int(int i)
+{
+    return std::make_shared<Number>(i);
+}
 
 
 // ----------------------------------------------------------------------------
+
+
+
+ObjectType Callable::get_type() const
+{
+    return ObjectType::callable;
+}
+
+
+
+// ----------------------------------------------------------------------------
+
+
+namespace
+{
+struct NativeFunction : Callable
+{
+    std::string name;
+    std::function<std::shared_ptr<Object>(const Arguments& arguments)> func;
+
+    NativeFunction
+    (
+        const std::string& n,
+        std::function<std::shared_ptr<Object>(const Arguments& arguments)> f
+    )
+        : name(n)
+        , func(f)
+    {
+    }
+
+    std::shared_ptr<Object>
+    clone() const override
+    {
+        return std::make_shared<NativeFunction>(name, func);
+    }
+
+    std::string
+    to_string() const override
+    {
+        return fmt::format("<native fun {}>", name);
+    }
+
+    std::shared_ptr<Object>
+    call(const Arguments& arguments) override
+    {
+        return func(arguments);
+    }
+};
+}
+
+
+std::shared_ptr<Object>
+make_native_function
+(
+    const std::string& name,
+    std::function<std::shared_ptr<Object>(const Arguments& arguments)> func
+)
+{
+    return std::make_shared<NativeFunction>(name, func);
+}
+
 
 }

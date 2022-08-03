@@ -9,10 +9,33 @@
 #include "lox/enviroment.h"
 
 
+namespace lox
+{
+
+
+struct Arguments
+{
+    std::vector<std::shared_ptr<Object>> arguments;
+};
+
+
+}
+
+
+
 namespace lox { namespace
 {
 
-struct RuntimeError {};
+struct CallError
+{
+    std::string error;
+    explicit CallError(const std::string& e);
+};
+
+
+struct RuntimeError
+{
+};
 
 
 void
@@ -281,6 +304,62 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     // expressions
 
     std::shared_ptr<Object>
+    on_call_expression(const CallExpression& x) override
+    {
+        auto callee = x.callee->accept(this);
+
+        if(callee->get_type() != ObjectType::callable)
+        {
+            error_handler->on_error
+            (
+                x.callee->offset,
+                fmt::format
+                (
+                    "{} is not a callable, evaluates to {}",
+                    objecttype_to_string(callee->get_type()),
+                    callee->to_string()
+                )
+            );
+            error_handler->on_note(x.offset, "call occured here");
+            throw RuntimeError{};
+        }
+
+        std::vector<std::shared_ptr<Object>> arguments;
+        for(auto& argument : x.arguments)
+        { 
+            arguments.emplace_back(argument->accept(this));
+        }
+
+        Callable* function = static_cast<Callable*>(callee.get());
+        try
+        {
+            auto return_value = function->call({arguments});
+            return return_value;
+        }
+        catch(const CallError& err)
+        {
+            error_handler->on_error(x.offset, err.error);
+            error_handler->on_note(x.callee->offset, fmt::format("called with {} arguments", x.arguments.size()));
+            for(std::size_t argument_index = 0; argument_index < x.arguments.size(); argument_index += 1)
+            {
+
+                error_handler->on_note
+                (
+                    x.arguments[argument_index]->offset,
+                    fmt::format
+                    (
+                        "argument {} evaluated to {}: {}",
+                        argument_index + 1,
+                        objecttype_to_string(arguments[argument_index]->get_type()),
+                        arguments[argument_index]->to_string()
+                    )
+                );
+            }
+            throw RuntimeError{};
+        }
+    }
+
+    std::shared_ptr<Object>
     on_logical_expression(const LogicalExpression& x) override
     {
         auto left = x.left->accept(this);
@@ -415,6 +494,31 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
 
 namespace lox
 {
+
+
+void
+verify_number_of_arguments(const Arguments& args, unsigned int arity)
+{
+    if(arity != args.arguments.size())
+    {
+        throw CallError
+        {
+            fmt::format
+            (
+                "Expected {} arguments but got {}",
+                arity,
+                args.arguments.size()
+            )
+        };
+    }
+}
+
+
+CallError::CallError(const std::string& err)
+    : error(err)
+{
+}
+
 
 
 Interpreter::Interpreter()

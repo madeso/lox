@@ -58,6 +58,17 @@ struct AstPrinter : ExpressionStringVisitor, StatementStringVisitor
     }
 
     std::string
+    on_call_expression(const CallExpression& x) override
+    {
+        std::vector<std::string> args { x.callee->accept(this)};
+        for(const auto& a: x.arguments)
+        {
+            args.emplace_back(a->accept(this));
+        }
+        return parenthesize("call", args);
+    }
+
+    std::string
     on_while_statement(const WhileStatement& x) override
     {
         return parenthesize("while", {x.condition->accept(this), x.body->accept(this)});
@@ -277,6 +288,24 @@ struct GraphvizPrinter : ExpressionStringVisitor, StatementStringVisitor
 
     // --------------------------------------------------------------------------------------------
     // expressions
+
+    std::string
+    on_call_expression(const CallExpression& x) override
+    {
+        const auto n = new_node("call");
+        link(n, x.callee->accept(this));
+
+        if(x.arguments.empty() == false)
+        {
+            const auto args = new_node("args");
+            link(n, args);
+            for(const auto& a: x.arguments)
+            {
+                link(args, a->accept(this));
+            }
+        }
+        return n;
+    }
 
     std::string
     on_binary_expression(const BinaryExpression& expr) override

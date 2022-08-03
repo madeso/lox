@@ -268,6 +268,13 @@ write_code
                 }
             },
             {
+                "Call",
+                {
+                    {"Expression", "callee"},
+                    {"std::vector<std::unique_ptr<Expression>>", "arguments"}
+                }
+            },
+            {
                 "Grouping",
                 {
                     {"Expression", "expression"}

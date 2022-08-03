@@ -353,4 +353,28 @@ TEST_CASE("interpret", "[interpret]")
             "144", "233", "377", "610", "987", "1597", "2584", "4181", "6765"
         }));
     }
+
+    SECTION("binding")
+    {
+
+        lx.global_enviroment.define("nat", lox::make_native_function("nat_name",
+            [](const lox::Arguments& args)
+            {
+                lox::verify_number_of_arguments(args, 0);
+                return lox::make_string("hello world");
+            }
+        ));
+
+        const auto out = run_string
+        (&lx, R"lox(
+            print nat;
+            print nat();
+        )lox");
+        CHECK(out.ok);
+        REQUIRE(StringEq(out.err, {}));
+        CHECK(StringEq(out.out,{
+            "<native fun nat_name>",
+            "hello world"
+        }));
+    }
 }

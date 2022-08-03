@@ -1,6 +1,7 @@
 #include "lox/parser.h"
 
 #include "lox/errorhandler.h"
+#include "lox/config.h"
 
 
 namespace lox { namespace {
@@ -385,7 +386,52 @@ struct Parser
             return std::make_unique<UnaryExpression>(Offset{op.offset.start, right->offset.end}, op.type, op.offset, std::move(right));
         }
 
-        return parse_primary();
+        return parse_call();
+    }
+
+    std::unique_ptr<Expression>
+    parse_call()
+    {
+        auto expr = parse_primary();
+
+        while (true)
+        {
+            if (match({TokenType::LEFT_PAREN}))
+            {
+                expr = finish_parsing_of_call(std::move(expr));
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        return expr;
+    }
+
+    std::unique_ptr<Expression>
+    finish_parsing_of_call(std::unique_ptr<Expression>&& callee)
+    {
+        const auto start = previous().offset;
+        std::vector<std::unique_ptr<Expression>> arguments;
+        if (check(TokenType::RIGHT_PAREN) == false)
+        {
+            do
+            {
+                arguments.emplace_back(parse_expression());
+            } while(match({TokenType::COMMA}));
+        }
+
+        const auto end = consume(TokenType::RIGHT_PAREN, "Expect ')' after arguments").offset;
+
+        const auto off = Offset{start.start, end.end};
+
+        if(arguments.size() > max_number_of_arguments)
+        {
+            error_handler->on_error(off, fmt::format("More than {} number of arguments, passed {}", max_number_of_arguments, arguments.size()));
+        }
+
+        return std::make_unique<CallExpression>(off, std::move(callee), std::move(arguments));
     }
 
     std::unique_ptr<Expression>
