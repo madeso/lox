@@ -20,29 +20,7 @@ execute_statements_with_environment
     const std::vector<std::shared_ptr<Statement>>& statements,
     std::shared_ptr<Environment> environment
 );
-}}
 
-
-
-
-
-
-
-namespace lox
-{
-struct Arguments
-{
-    MainInterpreter* interpreter;
-    std::vector<std::shared_ptr<Object>> arguments;
-};
-}
-
-
-
-
-
-namespace lox { namespace
-{
 
 struct CallError
 {
@@ -71,11 +49,13 @@ struct RuntimeError
 
 struct ScriptFunction : Callable
 {
+    MainInterpreter* interpreter;
     FunctionStatement declaration;
     std::shared_ptr<Environment> closure;
 
-    explicit ScriptFunction(const FunctionStatement& f, std::shared_ptr<Environment> c)
-        : declaration(f)
+    explicit ScriptFunction(MainInterpreter* i, const FunctionStatement& f, std::shared_ptr<Environment> c)
+        : interpreter(i)
+        , declaration(f)
         , closure(c)
     {
     }
@@ -100,7 +80,7 @@ struct ScriptFunction : Callable
 
         try
         {
-            execute_statements_with_environment(arguments.interpreter, declaration.body, environment);
+            execute_statements_with_environment(interpreter, declaration.body, environment);
         }
         catch(const ReturnValue& r)
         {
@@ -350,7 +330,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     void
     on_function_statement(const FunctionStatement& x) override
     {
-        current_environment->define(x.name, std::make_shared<ScriptFunction>(x, current_environment));
+        current_environment->define(x.name, std::make_shared<ScriptFunction>(this, x, current_environment));
     }
 
     void
@@ -430,7 +410,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
         Callable* function = static_cast<Callable*>(callee.get());
         try
         {
-            auto return_value = function->call({this, arguments});
+            auto return_value = function->call({arguments});
             return return_value;
         }
         catch(const CallError& err)
@@ -592,11 +572,65 @@ execute_statements_with_environment(MainInterpreter* main, const std::vector<std
 }
 
 
+struct PublicInterpreter : Interpreter
+{
+    ErrorHandler* error_handler;
+    std::shared_ptr<Environment> global_environment;
+    MainInterpreter interpreter;
+
+    PublicInterpreter(ErrorHandler* eh, const std::function<void (std::string)>& on_line)
+        : error_handler(eh)
+        , global_environment(std::make_shared<Environment>(nullptr))
+        , interpreter(global_environment, error_handler, on_line)
+    {
+    }
+
+    Environment& get_global_environment() override
+    {
+        return *global_environment;
+    }
+
+    ErrorHandler* get_error_handler() override
+    {
+        return error_handler;
+    }
+
+    bool
+    interpret(Program& program) override
+    {
+        try
+        {
+            for(auto& s: program.statements)
+            {
+                s->accept(&interpreter);
+            }
+            return true;
+        }
+        catch (const RuntimeError&)
+        {
+            return false;
+        }
+    }
+};
+
+
 }}
 
 
 namespace lox
 {
+
+
+std::shared_ptr<Interpreter>
+make_interpreter
+(
+    ErrorHandler* error_handler,
+    const std::function<void (std::string)>& on_line
+)
+{
+    return std::make_shared<PublicInterpreter>(error_handler, on_line);
+}
+
 
 
 void
@@ -617,29 +651,6 @@ verify_number_of_arguments(const Arguments& args, u64 arity)
 
 
 
-Interpreter::Interpreter()
-    : global_environment(std::make_shared<Environment>(nullptr))
-{
-}
-
-
-bool
-interpret(Interpreter* main_interpreter, Program& program, ErrorHandler* error_handler, const std::function<void (std::string)>& on_line)
-{
-    auto interpreter = MainInterpreter{main_interpreter->global_environment, error_handler, on_line};
-    try
-    {
-        for(auto& s: program.statements)
-        {
-            s->accept(&interpreter);
-        }
-        return true;
-    }
-    catch (const RuntimeError&)
-    {
-        return false;
-    }
-}
 
 
 }

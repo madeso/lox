@@ -32,16 +32,15 @@ struct CodeRunner
 {
     virtual ~CodeRunner() = default;
 
-    virtual RunError run_code(lox::Interpreter* interpreter, const std::string& str) = 0;
+    virtual RunError run_code(std::shared_ptr<lox::Interpreter> interpreter, const std::string& str) = 0;
 };
 
 struct TokenizeCodeRunner : CodeRunner
 {
     RunError
-    run_code(lox::Interpreter*, const std::string& source) override
+    run_code(std::shared_ptr<lox::Interpreter> interpreter, const std::string& source) override
     {
-        auto printer = PrintErrors{};
-        auto tokens = lox::scan_tokens(source, &printer);
+        auto tokens = lox::scan_tokens(source, interpreter->get_error_handler());
 
         if(tokens.errors > 0)
         {
@@ -65,11 +64,10 @@ struct AstCodeRunner : CodeRunner
     explicit AstCodeRunner(bool gv) : use_graphviz(gv) {}
 
     RunError
-    run_code(lox::Interpreter*, const std::string& source) override
+    run_code(std::shared_ptr<lox::Interpreter> interpreter, const std::string& source) override
     {
-        auto printer = PrintErrors{};
-        auto tokens = lox::scan_tokens(source, &printer);
-        auto program = lox::parse_program(tokens.tokens, &printer);
+        auto tokens = lox::scan_tokens(source, interpreter->get_error_handler());
+        auto program = lox::parse_program(tokens.tokens, interpreter->get_error_handler());
 
         if(tokens.errors > 0 || program.errors > 0)
         {
@@ -92,18 +90,17 @@ struct AstCodeRunner : CodeRunner
 struct InterpreterRunner : CodeRunner
 {
     RunError
-    run_code(lox::Interpreter* interpreter, const std::string& source) override
+    run_code(std::shared_ptr<lox::Interpreter> interpreter, const std::string& source) override
     {
-        auto printer = PrintErrors{};
-        auto tokens = lox::scan_tokens(source, &printer);
-        auto program = lox::parse_program(tokens.tokens, &printer);
+        auto tokens = lox::scan_tokens(source, interpreter->get_error_handler());
+        auto program = lox::parse_program(tokens.tokens, interpreter->get_error_handler());
         
         if(tokens.errors > 0 || program.errors > 0)
         {
             return RunError::syntax_error;
         }
 
-        const auto interpret_ok = lox::interpret(interpreter, *program.program, &printer, [](const std::string& s){ std::cout << s << "\n";});
+        const auto interpret_ok = interpreter->interpret(*program.program);
         if(interpret_ok)
         {
             return RunError::no_error;
@@ -254,7 +251,7 @@ struct Lox
     void
     run_prompt(const std::function<std::shared_ptr<CodeRunner>()>& run_creator)
     {
-        lox::Interpreter interpreter;
+        auto interpreter = create_interpreter();
         auto run = run_creator();
 
         std::cout << "REPL started. EOF (ctrl-d) to exit.\n";
@@ -264,7 +261,7 @@ struct Lox
             std::string line;
             if (std::getline(std::cin, line))
             {
-                const auto result = run->run_code(&interpreter, line);
+                const auto result = run->run_code(interpreter, line);
                 if(result != RunError::no_error )
                 {
                     std::cout << "EOF (ctrl-d) to exit.\n";
@@ -311,12 +308,18 @@ struct Lox
 
         return run_code_get_exitcode(runner, str);
     }
+    
+    PrintErrors printer;
+    std::shared_ptr<lox::Interpreter> create_interpreter()
+    {
+        return lox::make_interpreter(&printer, [](const std::string& s){ std::cout << s << "\n";});
+    }
 
     [[nodiscard]] int
     run_code_get_exitcode(CodeRunner* runner, const std::string& str)
     {
-        lox::Interpreter interpreter;
-        const auto error_detected = runner->run_code(&interpreter, str);
+        auto interpreter = create_interpreter();
+        const auto error_detected = runner->run_code(interpreter, str);
 
         switch(error_detected)
         {

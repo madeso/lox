@@ -16,13 +16,6 @@ namespace
         std::string out;
         std::vector<std::string> err;
     };
-    
-    struct RunOutput
-    {
-        bool ok;
-        std::vector<std::string> out;
-        std::vector<std::string> err;
-    };
 
     struct AddStringErrors : lox::PrintHandler
     {
@@ -57,21 +50,18 @@ namespace
         return output;
     }
 
-    RunOutput
-    run_string(lox::Interpreter* interpreter, const std::string& source)
+    bool
+    run_string(std::shared_ptr<lox::Interpreter> interpreter, const std::string& source)
     {
-        auto output = RunOutput {false, {}, {}};
-        auto printer = AddStringErrors{&output.err};
-        auto tokens = lox::scan_tokens(source, &printer);
-        auto program = lox::parse_program(tokens.tokens, &printer);
+        auto tokens = lox::scan_tokens(source, interpreter->get_error_handler());
+        auto program = lox::parse_program(tokens.tokens, interpreter->get_error_handler());
         
         if(tokens.errors > 0 || program.errors > 0)
         {
-            return output;
+            return false;
         }
 
-        output.ok = lox::interpret(interpreter, *program.program, &printer, [&](const std::string& s){ output.out.emplace_back(s); });
-        return output;
+        return interpreter->interpret(*program.program);
     }
 }
 
@@ -110,79 +100,82 @@ TEST_CASE("parser", "[parser]")
 
 TEST_CASE("interpret", "[interpret]")
 {
-    lox::Interpreter lx;
+    std::vector<std::string> console_out;
+    std::vector<std::string> error_list;
+    auto printer = AddStringErrors{&error_list};
+    auto lx = lox::make_interpreter(&printer, [&](const std::string& s){ console_out.emplace_back(s); });
 
     SECTION("hello world 1")
     {
-        const auto out = run_string
-        (&lx, R"lox(
+        const auto run_ok = run_string
+        (lx, R"lox(
             // Your first Lox program!
             print "Hello, world!";
         )lox");
-        CHECK(out.ok);
-        REQUIRE(StringEq(out.err, {}));
-        CHECK(StringEq(out.out,{
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
             "Hello, world!"
         }));
     }
     
     SECTION("hello world 2")
     {
-        const auto out = run_string
-        (&lx, R"lox(
+        const auto run_ok = run_string
+        (lx, R"lox(
             var hello = 'Hello, world!';
             print hello;
         )lox");
-        CHECK(out.ok);
-        REQUIRE(StringEq(out.err, {}));
-        CHECK(StringEq(out.out,{
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
             "Hello, world!"
         }));
     }
     
     SECTION("declare var")
     {
-        const auto out = run_string
-        (&lx, R"lox(
+        const auto run_ok = run_string
+        (lx, R"lox(
             var a = 1;
             var b = 2;
             print a + b;
         )lox");
-        CHECK(out.ok);
-        REQUIRE(StringEq(out.err, {}));
-        CHECK(StringEq(out.out,{
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
             "3"
         }));
     }
     
     SECTION("assignment")
     {
-        const auto out = run_string
-        (&lx, R"lox(
+        const auto run_ok = run_string
+        (lx, R"lox(
             var a;
             var b;
             a = b = 21;
             print a + b;
         )lox");
-        CHECK(out.ok);
-        REQUIRE(StringEq(out.err, {}));
-        CHECK(StringEq(out.out,{
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
             "42"
         }));
     }
     
     SECTION("print assignment")
     {
-        const auto out = run_string
-        (&lx, R"lox(
+        const auto run_ok = run_string
+        (lx, R"lox(
             var a = 1;
             print a;
             print a = 2;
             print a;
         )lox");
-        CHECK(out.ok);
-        REQUIRE(StringEq(out.err, {}));
-        CHECK(StringEq(out.out,{
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
             "1", "2", "2"
         }));
     }
@@ -191,8 +184,8 @@ TEST_CASE("interpret", "[interpret]")
 
     SECTION("scoping")
     {
-        const auto out = run_string
-        (&lx, R"lox(
+        const auto run_ok = run_string
+        (lx, R"lox(
             // How loud?
             var volume = 11;
             // Calculate size of 3x4x5 cuboid.
@@ -208,9 +201,9 @@ TEST_CASE("interpret", "[interpret]")
                 print global + local;
             }
         )lox");
-        CHECK(out.ok);
-        REQUIRE(StringEq(out.err, {}));
-        CHECK(StringEq(out.out,{
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
             "60",
             "11",
             "outsideinside"
@@ -219,8 +212,8 @@ TEST_CASE("interpret", "[interpret]")
 
     SECTION("more scoping")
     {
-        const auto out = run_string
-        (&lx, R"lox(
+        const auto run_ok = run_string
+        (lx, R"lox(
             var a = "global a";
             var b = "global b";
             var c = "global c";
@@ -243,9 +236,9 @@ TEST_CASE("interpret", "[interpret]")
             print b;
             print c;
         )lox");
-        CHECK(out.ok);
-        REQUIRE(StringEq(out.err, {}));
-        CHECK(StringEq(out.out,{
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
             "inner a", "outer b", "global c",
             "------",
             "outer a", "outer b", "global c",
@@ -256,8 +249,8 @@ TEST_CASE("interpret", "[interpret]")
 
     SECTION("while loop")
     {
-        const auto out = run_string
-        (&lx, R"lox(
+        const auto run_ok = run_string
+        (lx, R"lox(
             var a = 1;
             var b = 2;
             {
@@ -267,9 +260,9 @@ TEST_CASE("interpret", "[interpret]")
                 print b;
             }
         )lox");
-        CHECK(out.ok);
-        REQUIRE(StringEq(out.err, {}));
-        CHECK(StringEq(out.out,{
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
             "3", "4"
         }));
     }
@@ -277,8 +270,8 @@ TEST_CASE("interpret", "[interpret]")
     // todo(Gustav): infuse first and second to test all combinations
     SECTION("if else")
     {
-        const auto out = run_string
-        (&lx, R"lox(
+        const auto run_ok = run_string
+        (lx, R"lox(
             var first = true;
             var second = false;
 
@@ -290,23 +283,23 @@ TEST_CASE("interpret", "[interpret]")
             else
                 print "it's super false";
         )lox");
-        CHECK(out.ok);
-        REQUIRE(StringEq(out.err, {}));
-        CHECK(StringEq(out.out,{
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
             "it's false"
         }));
     }
 
     SECTION("or")
     {
-        const auto out = run_string
-        (&lx, R"lox(
+        const auto run_ok = run_string
+        (lx, R"lox(
             print "hi" or 2; // "hi".
             print nil or "yes"; // "yes".
         )lox");
-        CHECK(out.ok);
-        REQUIRE(StringEq(out.err, {}));
-        CHECK(StringEq(out.out,{
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
             "hi",
             "yes"
         }));
@@ -314,8 +307,8 @@ TEST_CASE("interpret", "[interpret]")
 
     SECTION("while loop")
     {
-        const auto out = run_string
-        (&lx, R"lox(
+        const auto run_ok = run_string
+        (lx, R"lox(
             var i = 0;
             while (i < 10)
             {
@@ -323,17 +316,17 @@ TEST_CASE("interpret", "[interpret]")
                 i = i + 1;
             }
         )lox");
-        CHECK(out.ok);
-        REQUIRE(StringEq(out.err, {}));
-        CHECK(StringEq(out.out,{
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
             "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"
         }));
     }
 
     SECTION("fibonacci")
     {
-        const auto out = run_string
-        (&lx, R"lox(
+        const auto run_ok = run_string
+        (lx, R"lox(
             // print the first 21 elements in the fibonacci sequence
             var a = 0;
             var temp;
@@ -345,9 +338,9 @@ TEST_CASE("interpret", "[interpret]")
                 a = b;
             }
         )lox");
-        CHECK(out.ok);
-        REQUIRE(StringEq(out.err, {}));
-        CHECK(StringEq(out.out,{
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
             "0", "1", "1", "2", "3", "5", "8", "13", "21", "34", "55", "89",
             "144", "233", "377", "610", "987", "1597", "2584", "4181", "6765"
         }));
@@ -355,8 +348,8 @@ TEST_CASE("interpret", "[interpret]")
 
     SECTION("add 3 numbers via function")
     {
-        const auto out = run_string
-        (&lx, R"lox(
+        const auto run_ok = run_string
+        (lx, R"lox(
             fun add(a, b, c)
             {
                 print a + b + c;
@@ -364,9 +357,9 @@ TEST_CASE("interpret", "[interpret]")
             add(1, 2, 3);
             print add;
         )lox");
-        CHECK(out.ok);
-        REQUIRE(StringEq(out.err, {}));
-        CHECK(StringEq(out.out,{
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
             "6",
             "<fn add>",
         }));
@@ -374,8 +367,8 @@ TEST_CASE("interpret", "[interpret]")
 
     SECTION("count to 3")
     {
-        const auto out = run_string
-        (&lx, R"lox(
+        const auto run_ok = run_string
+        (lx, R"lox(
             fun count(n)
             {
                 if (n > 1) count(n - 1);
@@ -383,17 +376,17 @@ TEST_CASE("interpret", "[interpret]")
             }
             count(3);
         )lox");
-        CHECK(out.ok);
-        REQUIRE(StringEq(out.err, {}));
-        CHECK(StringEq(out.out,{
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
             "1", "2", "3"
         }));
     }
 
     SECTION("print void function")
     {
-        const auto out = run_string
-        (&lx, R"lox(
+        const auto run_ok = run_string
+        (lx, R"lox(
             fun procedure()
             {
                 print "don't return anything";
@@ -401,9 +394,9 @@ TEST_CASE("interpret", "[interpret]")
             var result = procedure();
             print result;
         )lox");
-        CHECK(out.ok);
-        REQUIRE(StringEq(out.err, {}));
-        CHECK(StringEq(out.out,{
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
             "don't return anything",
             "nil"
         }));
@@ -411,8 +404,8 @@ TEST_CASE("interpret", "[interpret]")
     
     SECTION("early return")
     {
-        const auto out = run_string
-        (&lx, R"lox(
+        const auto run_ok = run_string
+        (lx, R"lox(
             fun count(n)
             {
                 while (n < 100)
@@ -424,17 +417,17 @@ TEST_CASE("interpret", "[interpret]")
             }
             count(1);
         )lox");
-        CHECK(out.ok);
-        REQUIRE(StringEq(out.err, {}));
-        CHECK(StringEq(out.out,{
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
             "1", "2"
         }));
     }
 
     SECTION("local functions and closures")
     {
-        const auto out = run_string
-        (&lx, R"lox(
+        const auto run_ok = run_string
+        (lx, R"lox(
             fun makeCounter()
             {
                 var i = 0;
@@ -450,16 +443,16 @@ TEST_CASE("interpret", "[interpret]")
             counter();
             counter();
         )lox");
-        CHECK(out.ok);
-        REQUIRE(StringEq(out.err, {}));
-        CHECK(StringEq(out.out,{
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
             "1", "2"
         }));
     }
 
-    SECTION("binding")
+    SECTION("lox -> cpp binding")
     {
-        lx.global_environment->define("nat", lox::make_native_function("nat_name",
+        lx->get_global_environment().define("nat", lox::make_native_function("nat_name",
             [](const lox::Arguments& args)
             {
                 lox::verify_number_of_arguments(args, 0);
@@ -467,16 +460,41 @@ TEST_CASE("interpret", "[interpret]")
             }
         ));
 
-        const auto out = run_string
-        (&lx, R"lox(
+        const auto run_ok = run_string
+        (lx, R"lox(
             print nat;
             print nat();
         )lox");
-        CHECK(out.ok);
-        REQUIRE(StringEq(out.err, {}));
-        CHECK(StringEq(out.out,{
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
             "<native fun nat_name>",
             "hello world"
         }));
+    }
+
+    SECTION("cpp -> lox binding")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            fun hello(name)
+            {
+                return "goodbye cruel " + name;
+            }
+        )lox");
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{}));
+
+        auto fun = lx->get_global_environment().get_or_null("hello");
+        REQUIRE(fun != nullptr);
+        REQUIRE(fun->get_type() == lox::ObjectType::callable);
+        auto& callable = static_cast<lox::Callable&>(*fun.get());
+        auto res = callable.call({ {lox::make_string("world")} });
+
+        REQUIRE(res != nullptr);
+        REQUIRE(res->get_type() == lox::ObjectType::string);
+        auto& str = static_cast<lox::String&>(*res.get());
+        REQUIRE(str.value == "goodbye cruel world");
     }
 }
