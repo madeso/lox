@@ -46,12 +46,12 @@ namespace
         auto output = ParseOutput{"<syntax errors>", {}};
 
         auto printer = AddStringErrors{&output.err};
-        auto tokens = lox::ScanTokens(source, &printer);
-        auto program = lox::parse_program(tokens, &printer);
+        auto tokens = lox::scan_tokens(source, &printer);
+        auto program = lox::parse_program(tokens.tokens, &printer);
 
-        if(printer.error_detected == false)
+        if(tokens.errors == 0 && program.errors == 0)
         {
-            output.out = lox::print_ast(*program);
+            output.out = lox::print_ast(*program.program);
         }
 
         return output;
@@ -62,15 +62,15 @@ namespace
     {
         auto output = RunOutput {false, {}, {}};
         auto printer = AddStringErrors{&output.err};
-        auto tokens = lox::ScanTokens(source, &printer);
-        auto program = lox::parse_program(tokens, &printer);
+        auto tokens = lox::scan_tokens(source, &printer);
+        auto program = lox::parse_program(tokens.tokens, &printer);
         
-        if(printer.error_detected)
+        if(tokens.errors > 0 || program.errors > 0)
         {
             return output;
         }
 
-        output.ok = lox::interpret(interpreter, *program, &printer, [&](const std::string& s){ output.out.emplace_back(s); });
+        output.ok = lox::interpret(interpreter, *program.program, &printer, [&](const std::string& s){ output.out.emplace_back(s); });
         return output;
     }
 }

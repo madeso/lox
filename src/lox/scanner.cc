@@ -93,7 +93,7 @@ struct Scanner
     std::shared_ptr<Source> file;
     ErrorHandler* error_handler;
 
-    std::vector<Token> tokens; // output "variable"
+    ScanResult result; // output "variable"
 
     std::size_t start = 0; // first character in lexeme being scanned
     std::size_t current = 0; // character currently being scanned
@@ -115,7 +115,7 @@ struct Scanner
             scan_single_token();
         }
 
-        tokens.emplace_back(TokenType::EOF, "", nullptr, Offset{file, current, current});
+        result.tokens.emplace_back(TokenType::EOF, "", nullptr, Offset{file, current, current});
     }
 
     void
@@ -176,6 +176,7 @@ struct Scanner
             }
             else
             {
+                result.errors += 1;
                 error_handler->on_error(Offset{file, start}, "Unexpected character.");
             }
             break;
@@ -235,6 +236,7 @@ struct Scanner
 
         if (is_at_end())
         {
+            result.errors += 1;
             error_handler->on_error(Offset{file, start, current}, "Unterminated string.");
             return;
         }
@@ -329,7 +331,7 @@ struct Scanner
     add_token(TokenType type, std::shared_ptr<Object> literal)
     {
         auto text = substr(source, start, current);
-        tokens.emplace_back(Token(type, text, std::move(literal), Offset{file, start, current}));
+        result.tokens.emplace_back(Token(type, text, std::move(literal), Offset{file, start, current}));
     }
 };
 } }
@@ -339,12 +341,12 @@ struct Scanner
 namespace lox
 {
 
-std::vector<Token>
-ScanTokens(std::string_view source, ErrorHandler* error_handler)
+ScanResult
+scan_tokens(std::string_view source, ErrorHandler* error_handler)
 {
     auto scanner = Scanner(source, error_handler);
     scanner.scan_many_tokens();
-    return std::move(scanner.tokens);
+    return std::move(scanner.result);
 }
 
 }

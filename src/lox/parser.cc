@@ -60,6 +60,7 @@ struct Parser
     std::vector<Token>& tokens;
     ErrorHandler* error_handler;
     std::size_t current = 0;
+    int error_count = 0;
 
     explicit Parser(std::vector<Token>& t, ErrorHandler* eh)
         : tokens(t)
@@ -517,6 +518,7 @@ struct Parser
 
         if(arguments.size() > max_number_of_arguments)
         {
+            error_count += 1;
             error_handler->on_error(off, "More than {} number of arguments, passed {}"_format(max_number_of_arguments, arguments.size()));
         }
 
@@ -689,6 +691,7 @@ struct Parser
     void
     report_error(const Offset& offset, const std::string& message)
     {
+        error_count += 1;
         error_handler->on_error(offset, message);
     }
 };
@@ -700,17 +703,18 @@ struct Parser
 namespace lox
 {
 
-std::shared_ptr<Program>
+ParseResult
 parse_program(std::vector<Token>& tokens, ErrorHandler* error_handler)
 {
+    auto parser = Parser{tokens, error_handler};
     try
     {
-        auto parser = Parser{tokens, error_handler};
-        return parser.parse_program();
+        auto prog = parser.parse_program();
+        return {parser.error_count, prog};
     }
     catch(const ParseError&)
     {
-        return nullptr;
+        return {parser.error_count, nullptr};
     }
 }
 

@@ -107,7 +107,6 @@ namespace lox
 void
 PrintHandler::on_error(const Offset& offset, const std::string& message)
 {
-    error_detected = true;
     print_message(this, "Error", offset, message);
 }
 

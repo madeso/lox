@@ -41,14 +41,14 @@ struct TokenizeCodeRunner : CodeRunner
     run_code(lox::Interpreter*, const std::string& source) override
     {
         auto printer = PrintErrors{};
-        auto tokens = lox::ScanTokens(source, &printer);
+        auto tokens = lox::scan_tokens(source, &printer);
 
-        if(printer.error_detected)
+        if(tokens.errors > 0)
         {
             return RunError::syntax_error;
         }
 
-        for (const auto& token : tokens)
+        for (const auto& token : tokens.tokens)
         {
             std::cout << token.to_string() << "\n";
         }
@@ -68,21 +68,21 @@ struct AstCodeRunner : CodeRunner
     run_code(lox::Interpreter*, const std::string& source) override
     {
         auto printer = PrintErrors{};
-        auto tokens = lox::ScanTokens(source, &printer);
-        auto program = lox::parse_program(tokens, &printer);
+        auto tokens = lox::scan_tokens(source, &printer);
+        auto program = lox::parse_program(tokens.tokens, &printer);
 
-        if(printer.error_detected)
+        if(tokens.errors > 0 || program.errors > 0)
         {
             return RunError::syntax_error;
         }
 
         if(use_graphviz)
         {
-            std::cout << lox::ast_to_grapviz(*program) << "\n";
+            std::cout << lox::ast_to_grapviz(*program.program) << "\n";
         }
         else
         {
-            std::cout << lox::print_ast(*program) << "\n";
+            std::cout << lox::print_ast(*program.program) << "\n";
         }
         return RunError::no_error;
     }
@@ -95,15 +95,15 @@ struct InterpreterRunner : CodeRunner
     run_code(lox::Interpreter* interpreter, const std::string& source) override
     {
         auto printer = PrintErrors{};
-        auto tokens = lox::ScanTokens(source, &printer);
-        auto program = lox::parse_program(tokens, &printer);
+        auto tokens = lox::scan_tokens(source, &printer);
+        auto program = lox::parse_program(tokens.tokens, &printer);
         
-        if(printer.error_detected)
+        if(tokens.errors > 0 || program.errors > 0)
         {
             return RunError::syntax_error;
         }
 
-        const auto interpret_ok = lox::interpret(interpreter, *program, &printer, [](const std::string& s){ std::cout << s << "\n";});
+        const auto interpret_ok = lox::interpret(interpreter, *program.program, &printer, [](const std::string& s){ std::cout << s << "\n";});
         if(interpret_ok)
         {
             return RunError::no_error;

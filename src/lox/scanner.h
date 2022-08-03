@@ -6,6 +6,13 @@ namespace lox
 {
 
 struct ErrorHandler;
-std::vector<Token> ScanTokens(const std::string_view source, ErrorHandler* error_handler);
+
+struct ScanResult
+{
+    int errors = 0;
+    std::vector<Token> tokens;
+};
+
+ScanResult scan_tokens(const std::string_view source, ErrorHandler* error_handler);
 
 }

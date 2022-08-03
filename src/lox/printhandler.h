@@ -10,8 +10,6 @@ namespace lox
 
 struct PrintHandler : ErrorHandler
 {
-    bool error_detected = false;
-
     PrintHandler() = default;
     virtual ~PrintHandler() = default;
 
