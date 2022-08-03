@@ -10,6 +10,34 @@ namespace lox { namespace {
 struct ParseError{};
 
 
+Offset
+offset_for_error(const Token& token)
+{
+    if (token.type == TokenType::EOF)
+    {
+        return {token.offset.start};
+    }
+    else
+    {
+        return token.offset;
+    }
+}
+
+
+Offset
+offset_for_range_error(const Offset& previous, const Token& token)
+{
+    if (token.type == TokenType::EOF)
+    {
+        return {token.offset.start};
+    }
+    else
+    {
+        return {previous.end, token.offset.start};
+    }
+}
+
+
 struct Parser
 {
     std::vector<Token>& tokens;
@@ -71,7 +99,7 @@ struct Parser
             initializer = parse_expression();
         }
 
-        consume(TokenType::SEMICOLON, "Missing ';' after print statement");
+        consume_semicolon("print statement");
         const auto end = previous().offset;
         return std::make_unique<VarStatement>(Offset{var.start, end.end}, std::string(name.lexeme), std::move(initializer));
     }
@@ -231,7 +259,7 @@ struct Parser
     {
         const auto print = previous().offset;
         auto value = parse_expression();
-        consume(TokenType::SEMICOLON, "Missing ';' after print statement");
+        consume_semicolon("print statement");
         const auto end = previous().offset;
         return std::make_unique<PrintStatement>(Offset{print.start, end.end}, std::move(value));
     }
@@ -241,7 +269,7 @@ struct Parser
     {
         auto value = parse_expression();
         const auto start = value->offset;
-        consume(TokenType::SEMICOLON, "Missing ';' after expression");
+        consume_semicolon("expression");
         const auto end = previous().offset;
         return std::make_unique<ExpressionStatement>(Offset{start.start, end.end}, std::move(value));
     }
@@ -268,7 +296,7 @@ struct Parser
                 return std::make_unique<AssignExpression>(Offset{expr->offset.start, rhs->offset.end}, name, expr->offset, std::move(rhs));
             }
 
-            error(equals, "Invalid assignment target.");
+            error(offset_for_error(equals), "Invalid assignment target.");
         }
 
         return expr;
@@ -462,7 +490,7 @@ struct Parser
             return std::make_unique<GroupingExpression>(Offset{left_paren.start, right_paren.end}, std::move(expr));
         }
 
-        throw error(peek(), "Expected expression.");
+        throw error(offset_for_range_error(previous().offset, peek()), "Expected expression.");
     }
 
 
@@ -527,8 +555,19 @@ struct Parser
         return tokens[current - 1];
     }
 
+    void
+    consume_semicolon(const std::string& after)
+    {
+        consume
+        (
+            TokenType::SEMICOLON,
+            fmt::format("Missing ';' after {}", after),
+            {previous().offset}
+        );
+    }
+
     Token&
-    consume(TokenType type, const std::string& message)
+    consume(TokenType type, const std::string& message, std::optional<Offset> offset = std::nullopt)
     {
         if(check(type))
         {
@@ -536,14 +575,21 @@ struct Parser
         }
         else
         {
-            throw error(peek(), message);
+            if(offset)
+            {
+                throw error(*offset, message);
+            }
+            else
+            {
+                throw error(offset_for_error(peek()), message);
+            }
         }
     }
 
     ParseError
-    error(const Token& token, const std::string& message)
+    error(const Offset& offset, const std::string& message)
     {
-        report_error(token, message);
+        report_error(offset, message);
         return ParseError{};
     }
 
@@ -578,17 +624,11 @@ struct Parser
         }
     }
 
+
     void
-    report_error(const Token& token, const std::string& message)
+    report_error(const Offset& offset, const std::string& message)
     {
-        if (token.type == TokenType::EOF)
-        {
-            error_handler->on_error({token.offset.start}, message);
-        }
-        else
-        {
-            error_handler->on_error(token.offset, message);
-        }
+        error_handler->on_error(offset, message);
     }
 };
 
