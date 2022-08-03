@@ -21,7 +21,7 @@ struct Interpreter
 {
     Interpreter();
     
-    Environment global_environment;
+    std::shared_ptr<Environment> global_environment;
 };
 
 

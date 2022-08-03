@@ -432,9 +432,35 @@ TEST_CASE("interpret", "[interpret]")
         }));
     }
 
+    SECTION("local functions and closures")
+    {
+        const auto out = run_string
+        (&lx, R"lox(
+            fun makeCounter()
+            {
+                var i = 0;
+                fun count()
+                {
+                    i = i + 1;
+                    print i;
+                }
+                return count;
+            }
+
+            var counter = makeCounter();
+            counter();
+            counter();
+        )lox");
+        CHECK(out.ok);
+        REQUIRE(StringEq(out.err, {}));
+        CHECK(StringEq(out.out,{
+            "1", "2"
+        }));
+    }
+
     SECTION("binding")
     {
-        lx.global_environment.define("nat", lox::make_native_function("nat_name",
+        lx.global_environment->define("nat", lox::make_native_function("nat_name",
             [](const lox::Arguments& args)
             {
                 lox::verify_number_of_arguments(args, 0);

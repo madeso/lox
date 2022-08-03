@@ -18,11 +18,8 @@ execute_statements_with_environment
 (
     MainInterpreter* main,
     const std::vector<std::shared_ptr<Statement>>& statements,
-    Environment* environment
+    std::shared_ptr<Environment> environment
 );
-
-Environment*
-get_global_environment(MainInterpreter* main);
 }}
 
 
@@ -75,8 +72,13 @@ struct RuntimeError
 struct ScriptFunction : Callable
 {
     FunctionStatement declaration;
+    std::shared_ptr<Environment> closure;
 
-    explicit ScriptFunction(const FunctionStatement& f) : declaration(f) {}
+    explicit ScriptFunction(const FunctionStatement& f, std::shared_ptr<Environment> c)
+        : declaration(f)
+        , closure(c)
+    {
+    }
 
     std::string
     to_string() const override
@@ -89,16 +91,16 @@ struct ScriptFunction : Callable
     {
         verify_number_of_arguments(arguments, declaration.params.size());
         
-        auto environment = Environment{ get_global_environment(arguments.interpreter) };
+        auto environment = std::make_shared<Environment>(closure);
 
         for(std::size_t param_index = 0; param_index < declaration.params.size(); param_index += 1)
         {
-            environment.define(declaration.params[param_index], arguments.arguments[param_index]);
+            environment->define(declaration.params[param_index], arguments.arguments[param_index]);
         }
 
         try
         {
-            execute_statements_with_environment(arguments.interpreter, declaration.body, &environment);
+            execute_statements_with_environment(arguments.interpreter, declaration.body, environment);
         }
         catch(const ReturnValue& r)
         {
@@ -242,10 +244,10 @@ is_equal(std::shared_ptr<Object> lhs, std::shared_ptr<Object> rhs)
 
 struct EnvironmentRaii
 {
-    Environment** parent;
-    Environment* last_child;
+    std::shared_ptr<Environment>* parent;
+    std::shared_ptr<Environment> last_child;
 
-    EnvironmentRaii(Environment** p, Environment* child) : parent(p), last_child(*p)
+    EnvironmentRaii(std::shared_ptr<Environment>* p, std::shared_ptr<Environment> child) : parent(p), last_child(*p)
     {
         *parent = child;
     }
@@ -265,14 +267,14 @@ struct EnvironmentRaii
 struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
 {
     ErrorHandler* error_handler;
-    Environment* global_environment;
-    Environment* current_environment;
+    std::shared_ptr<Environment> global_environment;
+    std::shared_ptr<Environment> current_environment;
     const std::function<void (std::string)>& on_line;
 
     //-------------------------------------------------------------------------
     // constructor
 
-    explicit MainInterpreter(Environment* ge, ErrorHandler* eh, const std::function<void (std::string)>& ol)
+    explicit MainInterpreter(std::shared_ptr<Environment> ge, ErrorHandler* eh, const std::function<void (std::string)>& ol)
         : error_handler(eh)
         , global_environment(ge)
         , on_line(ol)
@@ -341,18 +343,18 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     void
     on_block_statement(const BlockStatement& x) override
     {
-        Environment block_env { current_environment };
-        execute_statements_with_environment(x.statements, &block_env);
+        auto block_env = std::make_shared<Environment>(current_environment);
+        execute_statements_with_environment(x.statements, block_env);
     }
 
     void
     on_function_statement(const FunctionStatement& x) override
     {
-        current_environment->define(x.name, std::make_shared<ScriptFunction>(x));
+        current_environment->define(x.name, std::make_shared<ScriptFunction>(x, current_environment));
     }
 
     void
-    execute_statements_with_environment(const std::vector<std::shared_ptr<Statement>>& statements, Environment* environment)
+    execute_statements_with_environment(const std::vector<std::shared_ptr<Statement>>& statements, std::shared_ptr<Environment> environment)
     {
         auto raii = EnvironmentRaii{&current_environment, environment};
         for(const auto& st: statements)
@@ -584,16 +586,9 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
 
 
 void
-execute_statements_with_environment(MainInterpreter* main, const std::vector<std::shared_ptr<Statement>>& statements, Environment* environment)
+execute_statements_with_environment(MainInterpreter* main, const std::vector<std::shared_ptr<Statement>>& statements, std::shared_ptr<Environment> environment)
 {
     main->execute_statements_with_environment(statements, environment);
-}
-
-
-Environment*
-get_global_environment(MainInterpreter* main)
-{
-    return main->global_environment;
 }
 
 
@@ -623,7 +618,7 @@ verify_number_of_arguments(const Arguments& args, u64 arity)
 
 
 Interpreter::Interpreter()
-    : global_environment(nullptr)
+    : global_environment(std::make_shared<Environment>(nullptr))
 {
 }
 
@@ -631,7 +626,7 @@ Interpreter::Interpreter()
 bool
 interpret(Interpreter* main_interpreter, Program& program, ErrorHandler* error_handler, const std::function<void (std::string)>& on_line)
 {
-    auto interpreter = MainInterpreter{&main_interpreter->global_environment, error_handler, on_line};
+    auto interpreter = MainInterpreter{main_interpreter->global_environment, error_handler, on_line};
     try
     {
         for(auto& s: program.statements)

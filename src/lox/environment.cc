@@ -5,7 +5,7 @@ namespace lox
 {
 
 
-Environment::Environment(Environment* parent)
+Environment::Environment(std::shared_ptr<Environment> parent)
     : enclosing(parent)
 {
 }
