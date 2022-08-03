@@ -86,6 +86,12 @@ struct AstPrinter : ExpressionStringVisitor, StatementStringVisitor
     }
 
     std::string
+    on_return_statement(const ReturnStatement& x) override
+    {
+        return parenthesize("return", {x.value->accept(this)});
+    }
+
+    std::string
     on_print_statement(const PrintStatement& x) override
     {
         return parenthesize
@@ -261,6 +267,12 @@ struct GraphvizPrinter : ExpressionStringVisitor, StatementStringVisitor
             }
         }
         return n;
+    }
+
+    std::string
+    on_return_statement(const ReturnStatement& x) override
+    {
+        return link_from(new_node("return"), x.value->accept(this));
     }
 
     std::string

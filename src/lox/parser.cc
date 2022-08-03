@@ -141,28 +141,30 @@ struct Parser
     std::shared_ptr<Statement>
     parse_statement()
     {
-        if(match({TokenType::IF}))
-        {
-            return parse_if_statement();
-        }
-        if(match({TokenType::PRINT}))
-        {
-            return parse_print_statement();
-        }
-        if(match({TokenType::WHILE}))
-        {
-            return parse_while_statement();
-        }
-        if(match({TokenType::FOR}))
-        {
-            return parse_for_statement();
-        }
-        if(match({TokenType::LEFT_BRACE}))
-        {
-            return parse_block_statement();
-        }
+        if(match({TokenType::IF})) { return parse_if_statement(); }
+        if(match({TokenType::PRINT})) { return parse_print_statement(); }
+        if(match({TokenType::RETURN})) { return parse_return_statement(); }
+        if(match({TokenType::WHILE})) { return parse_while_statement(); }
+        if(match({TokenType::FOR})) { return parse_for_statement(); }
+        if(match({TokenType::LEFT_BRACE})) { return parse_block_statement(); }
 
         return parse_expression_statement();
+    }
+
+    std::shared_ptr<Statement>
+    parse_return_statement()
+    {
+        const auto start = previous().offset;
+
+        std::shared_ptr<Expression> value;
+        if(check(TokenType::SEMICOLON) == false)
+        {
+            value = parse_expression();
+        }
+
+        consume(TokenType::SEMICOLON, "Expected ';' after return value");
+        const auto end = previous().offset;
+        return std::make_shared<ReturnStatement>(Offset{start.start, end.end}, std::move(value));
     }
 
     std::shared_ptr<Statement>

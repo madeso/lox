@@ -50,7 +50,20 @@ namespace lox { namespace
 struct CallError
 {
     std::string error;
-    explicit CallError(const std::string& e);
+    explicit CallError(const std::string& err)
+        : error(err)
+    {
+    }
+};
+
+
+struct ReturnValue
+{
+    std::shared_ptr<Object> value;
+    explicit ReturnValue(std::shared_ptr<Object> v)
+        : value(v)
+    {
+    }
 };
 
 
@@ -83,7 +96,14 @@ struct ScriptFunction : Callable
             environment.define(declaration.params[param_index], arguments.arguments[param_index]);
         }
 
-        execute_statements_with_environment(arguments.interpreter, declaration.body, &environment);
+        try
+        {
+            execute_statements_with_environment(arguments.interpreter, declaration.body, &environment);
+        }
+        catch(const ReturnValue& r)
+        {
+            return r.value;
+        }
         return make_nil();
     }
 };
@@ -288,6 +308,19 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
 
     //---------------------------------------------------------------------------------------------
     // statements
+
+    void
+    on_return_statement(const ReturnStatement& x) override
+    {
+        std::shared_ptr<Object> value;
+
+        if(x.value != nullptr)
+        {
+            value = x.value->accept(this);
+        }
+
+        throw ReturnValue{value};
+    }
 
     void
     on_if_statement(const IfStatement& x) override
@@ -585,12 +618,6 @@ verify_number_of_arguments(const Arguments& args, u64 arity)
             )
         };
     }
-}
-
-
-CallError::CallError(const std::string& err)
-    : error(err)
-{
 }
 
 

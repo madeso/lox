@@ -357,6 +357,12 @@ write_code
                 }
             },
             {
+                "Return",
+                {
+                    {"Expression", "value"}
+                }
+            },
+            {
                 "Var",
                 {
                     {"std::string", "name"},

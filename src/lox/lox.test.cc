@@ -391,6 +391,47 @@ TEST_CASE("interpret", "[interpret]")
         }));
     }
 
+    SECTION("print void function")
+    {
+        const auto out = run_string
+        (&lx, R"lox(
+            fun procedure()
+            {
+                print "don't return anything";
+            }
+            var result = procedure();
+            print result;
+        )lox");
+        CHECK(out.ok);
+        REQUIRE(StringEq(out.err, {}));
+        CHECK(StringEq(out.out,{
+            "don't return anything",
+            "nil"
+        }));
+    }
+    
+    SECTION("early return")
+    {
+        const auto out = run_string
+        (&lx, R"lox(
+            fun count(n)
+            {
+                while (n < 100)
+                {
+                    if (n == 3) return n;
+                    print n;
+                    n = n + 1;
+                }
+            }
+            count(1);
+        )lox");
+        CHECK(out.ok);
+        REQUIRE(StringEq(out.err, {}));
+        CHECK(StringEq(out.out,{
+            "1", "2"
+        }));
+    }
+
     SECTION("binding")
     {
         lx.global_environment.define("nat", lox::make_native_function("nat_name",
