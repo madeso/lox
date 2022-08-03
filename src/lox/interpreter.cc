@@ -249,7 +249,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     ErrorHandler* error_handler;
     std::shared_ptr<Environment> global_environment;
     std::shared_ptr<Environment> current_environment;
-    const std::function<void (std::string)>& on_line;
+    std::function<void (std::string)> on_line;
 
     //-------------------------------------------------------------------------
     // constructor
@@ -368,7 +368,8 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     on_print_statement(const PrintStatement& x) override
     {
         auto value = x.expression->accept(this);
-        on_line(value->to_string());
+        const auto to_print = value->to_string();
+        on_line(to_print);
     }
 
     void
