@@ -11,7 +11,7 @@ namespace lox { namespace
 std::string
 get_line_gutter(std::size_t line)
 {
-    return fmt::format("   {} | ", line);
+    return "   {} | "_format(line);
 }
 
 
@@ -26,7 +26,7 @@ get_marker_at(const LineData& line, std::size_t offset)
     const std::string gutter = get_line_gutter(line.line+1);
 
     const std::string dashes = std::string((gutter.length() + line_length) - 1, '-');
-    return fmt::format("{}^-- ", dashes);
+    return "{}^-- "_format(dashes);
 }
 
 
@@ -44,7 +44,7 @@ get_underline_for(const LineData& line, const Offset& offset, char underline_cha
 
     const std::string initial_spaces = std::string(gutter.length() + start_char, ' ');
     const std::string underline_string = std::string(length, underline_char);
-    return fmt::format("{}{} ", initial_spaces, underline_string);
+    return "{}{} "_format(initial_spaces, underline_string);
 }
 
 
@@ -52,8 +52,8 @@ get_underline_for(const LineData& line, const Offset& offset, char underline_cha
 void
 print_line(PrintHandler* print, std::string_view current_source, const LineData& line)
 {
-    print->on_line(fmt::format(
-        "{}{}",
+    print->on_line("{}{}"_format
+    (
         get_line_gutter(line.line+1),
         current_source.substr(line.offset.start, line.offset.end - line.offset.start)
     ));
@@ -71,8 +71,7 @@ print_message(PrintHandler* print, std::string_view current_source, std::string_
     if(start_line.line == end_line.line)
     {
         print_line(print, current_source, start_line);
-        print->on_line(fmt::format(
-            "{}{}: {}",
+        print->on_line("{}{}: {}"_format(
             get_underline_for(start_line, offset, '^'),
             type, message
         ));
@@ -80,15 +79,13 @@ print_message(PrintHandler* print, std::string_view current_source, std::string_
     else
     {
         print_line(print, current_source, end_line);
-        print->on_line(fmt::format(
-            "{}{}: {}",
+        print->on_line("{}{}: {}"_format(
             get_marker_at(end_line, offset.end),
             type, message
         ));
 
         print_line(print, current_source, start_line);
-        print->on_line(fmt::format(
-             "{} starts here",
+        print->on_line("{} starts here"_format(
             get_marker_at(start_line, offset.start)
         ));
     }

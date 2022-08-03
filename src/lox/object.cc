@@ -7,13 +7,6 @@ namespace lox
 // ----------------------------------------------------------------------------
 
 
-
-std::shared_ptr<Object>
-Nil::clone() const
-{
-    return std::make_shared<Nil>();
-}
-
 ObjectType
 Nil::get_type() const
 {
@@ -47,12 +40,6 @@ String::String(const std::string_view& s)
 {
 }
 
-std::shared_ptr<Object>
-String::clone() const
-{
-    return std::make_shared<String>(value);
-}
-
 ObjectType
 String::get_type() const
 {
@@ -79,13 +66,6 @@ make_string(const std::string& str)
 Bool::Bool(bool b)
     : value(b)
 {
-}
-
-
-std::shared_ptr<Object>
-Bool::clone() const
-{
-    return std::make_shared<Bool>(value);
 }
 
 ObjectType
@@ -117,12 +97,6 @@ Number::Number(float f)
 {
 }
 
-std::shared_ptr<Object>
-Number::clone() const
-{
-    return std::make_shared<Number>(value);
-}
-
 ObjectType
 Number::get_type() const
 {
@@ -132,7 +106,7 @@ Number::get_type() const
 std::string
 Number::to_string() const
 {
-    return fmt::format("{0}", value);
+    return "{0}"_format(value);
 }
 
 std::shared_ptr<Object>
@@ -179,16 +153,10 @@ struct NativeFunction : Callable
     {
     }
 
-    std::shared_ptr<Object>
-    clone() const override
-    {
-        return std::make_shared<NativeFunction>(name, func);
-    }
-
     std::string
     to_string() const override
     {
-        return fmt::format("<native fun {}>", name);
+        return "<native fun {}>"_format(name);
     }
 
     std::shared_ptr<Object>

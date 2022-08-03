@@ -31,9 +31,10 @@ add_custom_command(
 set(lox_src
     lox/ast.cc lox/ast.h
     lox/config.h
-    lox/enviroment.cc lox/enviroment.h
+    lox/environment.cc lox/environment.h
     lox/errorhandler.cc lox/errorhandler.h
     lox/interpreter.cc lox/interpreter.h
+    lox/ints.h
     lox/object.cc lox/object.h
     lox/offset.h
     lox/parser.cc lox/parser.h

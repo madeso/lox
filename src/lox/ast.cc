@@ -47,6 +47,17 @@ struct AstPrinter : ExpressionStringVisitor, StatementStringVisitor
     // statements
 
     std::string
+    on_function_statement(const FunctionStatement& x) override
+    {
+        std::vector<std::string> body;
+        for(const auto& stmt: x.body)
+        {
+            body.emplace_back(stmt->accept(this));
+        }
+        return parenthesize("fun", {x.name, parenthesize("params", x.params), parenthesize("{}", body)});
+    }
+
+    std::string
     on_block_statement(const BlockStatement& x) override
     {
         std::vector<std::string> blocks;
@@ -211,19 +222,46 @@ struct GraphvizPrinter : ExpressionStringVisitor, StatementStringVisitor
 
     std::string new_node(std::string_view label)
     {
-        const auto self = fmt::format("node_{}", next_node_index++);
+        const auto self = "node_{}"_format(next_node_index++);
         nodes << self << "[label=\"" << label << "\"];\n";
         return self;
     }
 
-    std::string link(const std::string& from, const std::string& to)
+    void link(const std::string& from, const std::string& to)
     {
         edges << from << " -> " << to << ";\n";
+    }
+
+    std::string link_from(const std::string& from, const std::string& to)
+    {
+        link(from, to);
         return from;
+    }
+
+    std::string link_to(const std::string& from, const std::string& to)
+    {
+        link(from, to);
+        return to;
     }
 
     // --------------------------------------------------------------------------------------------
     // statements
+
+    std::string
+    on_function_statement(const FunctionStatement& x) override
+    {
+        const auto n = link_from(new_node("fun"), x.name);
+        const auto body = link_to(n, new_node("body"));
+        if(x.params.empty() == false)
+        {
+            const auto params = link_to(n, new_node("params"));
+            for(auto p: x.params)
+            {
+                link(params, p);
+            }
+        }
+        return n;
+    }
 
     std::string
     on_block_statement(const BlockStatement& x) override
@@ -248,13 +286,13 @@ struct GraphvizPrinter : ExpressionStringVisitor, StatementStringVisitor
     std::string
     on_print_statement(const PrintStatement& x) override
     {
-        return link(new_node("print"), x.expression->accept(this));
+        return link_from(new_node("print"), x.expression->accept(this));
     }
 
     std::string
     on_expression_statement(const ExpressionStatement& x) override
     {
-        return link(new_node("expr"), x.expression->accept(this));
+        return link_from(new_node("expr"), x.expression->accept(this));
     }
 
     std::string
@@ -319,7 +357,7 @@ struct GraphvizPrinter : ExpressionStringVisitor, StatementStringVisitor
     std::string
     on_grouping_expression(const GroupingExpression& expr) override
     {
-        return link(new_node("group"), expr.expression->accept(this));
+        return link_from(new_node("group"), expr.expression->accept(this));
     }
 
     std::string
@@ -331,13 +369,13 @@ struct GraphvizPrinter : ExpressionStringVisitor, StatementStringVisitor
     std::string
     on_unary_expression(const UnaryExpression& expr) override
     {
-        return link(new_node(tokentype_to_string_short(expr.op)), expr.right->accept(this));
+        return link_from(new_node(tokentype_to_string_short(expr.op)), expr.right->accept(this));
     }
 
     std::string
     on_variable_expression(const VariableExpression& x) override
     {
-        return link(new_node("get"), new_node(x.name));
+        return link_from(new_node("get"), new_node(x.name));
     }
 
     std::string

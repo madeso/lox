@@ -9,6 +9,9 @@
 #include "exit_codes/exit_codes.h"
 
 
+using namespace fmt::literals;
+
+
 
 struct Var { std::string type; std::string name; };
 struct Sub { std::string name; std::vector<Var> members;};
@@ -53,7 +56,7 @@ to_lower(std::string data)
 std::string
 get_fun_visit_name(const std::string& name, const std::string& base)
 {
-    return fmt::format("on_{}_{}", to_lower(name), to_lower(base));
+    return "on_{}_{}"_format(to_lower(name), to_lower(base));
 }
 
 void
@@ -86,7 +89,7 @@ define_type
         
         header << ",\n";
         source << ",\n";
-        const std::string type = is_value_type(m.type) ? m.type : fmt::format("std::unique_ptr<{}>&&", m.type);
+        const std::string type = is_value_type(m.type) ? m.type : "std::shared_ptr<{}>&&"_format(m.type);
         header << INDENT << INDENT << type << " " << m.name;
         source << INDENT << type << " " << "a" << m.name;
     } header << "\n"; source << "\n";
@@ -97,7 +100,7 @@ define_type
     source << INDENT << ':' << " " << base_name << "(the_offset)\n";
     for(const auto& m: sub.members)
     {
-        source << INDENT << ',' << " " << m.name << "(std::move(a" << m.name << "))\n";
+        source << INDENT << ',' << " " << m.name << "(a" << m.name << ")\n";
     }
     source << "{\n";
     source << "}\n";
@@ -105,7 +108,7 @@ define_type
 
     for(const auto& m: sub.members)
     {
-        const std::string type = is_value_type(m.type) ? m.type : fmt::format("std::unique_ptr<{}>", m.type);
+        const std::string type = is_value_type(m.type) ? m.type : "std::shared_ptr<{}>"_format(m.type);
         header << INDENT << type << " " << m.name << ";\n";
     }
 
@@ -271,7 +274,7 @@ write_code
                 "Call",
                 {
                     {"Expression", "callee"},
-                    {"std::vector<std::unique_ptr<Expression>>", "arguments"}
+                    {"std::vector<std::shared_ptr<Expression>>", "arguments"}
                 }
             },
             {
@@ -322,7 +325,15 @@ write_code
             {
                 "Block",
                 {
-                    {"std::vector<std::unique_ptr<Statement>>", "statements"}
+                    {"std::vector<std::shared_ptr<Statement>>", "statements"}
+                }
+            },
+            {
+                "Function",
+                {
+                    {"std::string", "name"},
+                    {"std::vector<std::string>", "params"},
+                    {"std::vector<std::shared_ptr<Statement>>", "body"}
                 }
             },
             {

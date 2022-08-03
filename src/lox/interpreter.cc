@@ -6,20 +6,41 @@
 #include "lox/ast.h"
 #include "lox/errorhandler.h"
 #include "lox/program.h"
-#include "lox/enviroment.h"
+#include "lox/environment.h"
+
+
+namespace lox { namespace
+{
+struct MainInterpreter;
+
+void
+execute_statements_with_environment
+(
+    MainInterpreter* main,
+    const std::vector<std::shared_ptr<Statement>>& statements,
+    Environment* environment
+);
+
+Environment*
+get_global_environment(MainInterpreter* main);
+}}
+
+
+
+
+
 
 
 namespace lox
 {
-
-
 struct Arguments
 {
+    MainInterpreter* interpreter;
     std::vector<std::shared_ptr<Object>> arguments;
 };
-
-
 }
+
+
 
 
 
@@ -38,6 +59,36 @@ struct RuntimeError
 };
 
 
+struct ScriptFunction : Callable
+{
+    FunctionStatement declaration;
+
+    explicit ScriptFunction(const FunctionStatement& f) : declaration(f) {}
+
+    std::string
+    to_string() const override
+    {
+        return "<fn {}>"_format(declaration.name);
+    }
+
+    std::shared_ptr<Object>
+    call(const Arguments& arguments) override
+    {
+        verify_number_of_arguments(arguments, declaration.params.size());
+        
+        auto environment = Environment{ get_global_environment(arguments.interpreter) };
+
+        for(std::size_t param_index = 0; param_index < declaration.params.size(); param_index += 1)
+        {
+            environment.define(declaration.params[param_index], arguments.arguments[param_index]);
+        }
+
+        execute_statements_with_environment(arguments.interpreter, declaration.body, &environment);
+        return make_nil();
+    }
+};
+
+
 void
 check_single_number_operand
 (
@@ -51,7 +102,7 @@ check_single_number_operand
     if(type == ObjectType::number) { return; }
 
     error_handler->on_error(op_offset, "operand must be a number");
-    error_handler->on_error(object_offset, fmt::format("This evaluated to {}", objecttype_to_string(type)));
+    error_handler->on_error(object_offset, "This evaluated to {}"_format(objecttype_to_string(type)));
     throw RuntimeError();
 }
 
@@ -72,8 +123,8 @@ check_binary_number_operand
     if(lhs_type == ObjectType::number && rhs_type == ObjectType::number) { return; }
 
     error_handler->on_error(op_offset, "operands must be a numbers");
-    error_handler->on_note(lhs_offset, fmt::format("left hand evaluated to {}", objecttype_to_string(lhs_type)));
-    error_handler->on_note(rhs_offset, fmt::format("right hand evaluated to {}", objecttype_to_string(rhs_type)));
+    error_handler->on_note(lhs_offset, "left hand evaluated to {}"_format(objecttype_to_string(lhs_type)));
+    error_handler->on_note(rhs_offset, "right hand evaluated to {}"_format(objecttype_to_string(rhs_type)));
     throw RuntimeError();
 }
 
@@ -100,8 +151,8 @@ check_binary_number_or_string_operands
     { return; }
 
     error_handler->on_error(op_offset, "operands must be a numbers or strings");
-    error_handler->on_note(lhs_offset, fmt::format("left hand evaluated to {}", objecttype_to_string(lhs_type)));
-    error_handler->on_note(rhs_offset, fmt::format("right hand evaluated to {}", objecttype_to_string(rhs_type)));
+    error_handler->on_note(lhs_offset, "left hand evaluated to {}"_format(objecttype_to_string(lhs_type)));
+    error_handler->on_note(rhs_offset, "right hand evaluated to {}"_format(objecttype_to_string(rhs_type)));
     throw RuntimeError();
 }
 
@@ -169,53 +220,53 @@ is_equal(std::shared_ptr<Object> lhs, std::shared_ptr<Object> rhs)
 }
 
 
-struct EnviromentRaii
+struct EnvironmentRaii
 {
-    Enviroment** parent;
-    Enviroment* last_child;
+    Environment** parent;
+    Environment* last_child;
 
-    EnviromentRaii(Enviroment** p, Enviroment* child) : parent(p), last_child(*p)
+    EnvironmentRaii(Environment** p, Environment* child) : parent(p), last_child(*p)
     {
         *parent = child;
     }
 
-    ~EnviromentRaii()
+    ~EnvironmentRaii()
     {
         *parent = last_child;
     }
 
-    EnviromentRaii(EnviromentRaii&&) = delete;
-    void operator=(EnviromentRaii&&) = delete;
-    EnviromentRaii(const EnviromentRaii&) = delete;
-    void operator=(const EnviromentRaii&) = delete;
+    EnvironmentRaii(EnvironmentRaii&&) = delete;
+    void operator=(EnvironmentRaii&&) = delete;
+    EnvironmentRaii(const EnvironmentRaii&) = delete;
+    void operator=(const EnvironmentRaii&) = delete;
 };
 
 
 struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
 {
     ErrorHandler* error_handler;
-    Enviroment* global_enviroment;
-    Enviroment* current_enviroment;
+    Environment* global_environment;
+    Environment* current_environment;
     const std::function<void (std::string)>& on_line;
 
     //-------------------------------------------------------------------------
     // constructor
 
-    explicit MainInterpreter(Enviroment* ge, ErrorHandler* eh, const std::function<void (std::string)>& ol)
+    explicit MainInterpreter(Environment* ge, ErrorHandler* eh, const std::function<void (std::string)>& ol)
         : error_handler(eh)
-        , global_enviroment(ge)
+        , global_environment(ge)
         , on_line(ol)
     {
-        current_enviroment = global_enviroment;
+        current_environment = global_environment;
     }
 
     //---------------------------------------------------------------------------------------------
     // util functions
 
     std::shared_ptr<Object>
-    get_var(Enviroment& enviroment, const std::string& name, const Offset& off)
+    get_var(Environment& environment, const std::string& name, const Offset& off)
     {
-        auto var = enviroment.get_or_null(name);
+        auto var = environment.get_or_null(name);
         if(var == nullptr)
         {
             error_handler->on_error(off, "Undefined variable");
@@ -225,12 +276,12 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     }
 
     void
-    set_var(Enviroment& enviroment, const std::string& name, const Offset& off, std::shared_ptr<Object> object)
+    set_var(Environment& environment, const std::string& name, const Offset& off, std::shared_ptr<Object> object)
     {
-        const bool was_set = enviroment.set_or_false(name, object);
+        const bool was_set = environment.set_or_false(name, object);
         if(was_set == false)
         {
-            error_handler->on_error(off, fmt::format("Undefined variable {}", name));
+            error_handler->on_error(off, "Undefined variable {}"_format(name));
             throw RuntimeError{};
         }
     }
@@ -257,9 +308,21 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     void
     on_block_statement(const BlockStatement& x) override
     {
-        Enviroment block_env { current_enviroment };
-        auto raii = EnviromentRaii{&current_enviroment, &block_env};
-        for(const auto& st: x.statements)
+        Environment block_env { current_environment };
+        execute_statements_with_environment(x.statements, &block_env);
+    }
+
+    void
+    on_function_statement(const FunctionStatement& x) override
+    {
+        current_environment->define(x.name, std::make_shared<ScriptFunction>(x));
+    }
+
+    void
+    execute_statements_with_environment(const std::vector<std::shared_ptr<Statement>>& statements, Environment* environment)
+    {
+        auto raii = EnvironmentRaii{&current_environment, environment};
+        for(const auto& st: statements)
         {
             st->accept(this);
         }
@@ -280,10 +343,10 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
         // todo(Gustav): make usage of unitialized value an error
         std::shared_ptr<Object> value = x.initializer != nullptr
             ? x.initializer->accept(this)
-            : std::make_unique<Nil>()
+            : std::make_shared<Nil>()
             ;
         
-        current_enviroment->define(x.name, value);
+        current_environment->define(x.name, value);
     }
 
     void
@@ -313,9 +376,8 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
             error_handler->on_error
             (
                 x.callee->offset,
-                fmt::format
+                "{} is not a callable, evaluates to {}"_format
                 (
-                    "{} is not a callable, evaluates to {}",
                     objecttype_to_string(callee->get_type()),
                     callee->to_string()
                 )
@@ -333,22 +395,21 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
         Callable* function = static_cast<Callable*>(callee.get());
         try
         {
-            auto return_value = function->call({arguments});
+            auto return_value = function->call({this, arguments});
             return return_value;
         }
         catch(const CallError& err)
         {
             error_handler->on_error(x.offset, err.error);
-            error_handler->on_note(x.callee->offset, fmt::format("called with {} arguments", x.arguments.size()));
+            error_handler->on_note(x.callee->offset, "called with {} arguments"_format(x.arguments.size()));
             for(std::size_t argument_index = 0; argument_index < x.arguments.size(); argument_index += 1)
             {
 
                 error_handler->on_note
                 (
                     x.arguments[argument_index]->offset,
-                    fmt::format
+                    "argument {} evaluated to {}: {}"_format
                     (
-                        "argument {} evaluated to {}: {}",
                         argument_index + 1,
                         objecttype_to_string(arguments[argument_index]->get_type()),
                         arguments[argument_index]->to_string()
@@ -390,14 +451,14 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     on_assign_expression(const AssignExpression& x) override
     {
         auto value = x.value->accept(this);
-        set_var(*current_enviroment, x.name, x.name_offset, value);
+        set_var(*current_environment, x.name, x.name_offset, value);
         return value;
     }
 
     std::shared_ptr<Object>
     on_variable_expression(const VariableExpression& x) override
     {
-        return get_var(*current_enviroment, x.name, x.offset);
+        return get_var(*current_environment, x.name, x.offset);
     }
 
     std::shared_ptr<Object>
@@ -465,7 +526,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     std::shared_ptr<Object>
     on_literal_expression(const LiteralExpression& x) override
     {
-        return x.value->clone();
+        return x.value;
     }
 
     std::shared_ptr<Object>
@@ -489,6 +550,20 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
 };
 
 
+void
+execute_statements_with_environment(MainInterpreter* main, const std::vector<std::shared_ptr<Statement>>& statements, Environment* environment)
+{
+    main->execute_statements_with_environment(statements, environment);
+}
+
+
+Environment*
+get_global_environment(MainInterpreter* main)
+{
+    return main->global_environment;
+}
+
+
 }}
 
 
@@ -497,15 +572,14 @@ namespace lox
 
 
 void
-verify_number_of_arguments(const Arguments& args, unsigned int arity)
+verify_number_of_arguments(const Arguments& args, u64 arity)
 {
     if(arity != args.arguments.size())
     {
         throw CallError
         {
-            fmt::format
+            "Expected {} arguments but got {}"_format
             (
-                "Expected {} arguments but got {}",
                 arity,
                 args.arguments.size()
             )
@@ -522,7 +596,7 @@ CallError::CallError(const std::string& err)
 
 
 Interpreter::Interpreter()
-    : global_enviroment(nullptr)
+    : global_environment(nullptr)
 {
 }
 
@@ -530,7 +604,7 @@ Interpreter::Interpreter()
 bool
 interpret(Interpreter* main_interpreter, Program& program, ErrorHandler* error_handler, const std::function<void (std::string)>& on_line)
 {
-    auto interpreter = MainInterpreter{&main_interpreter->global_enviroment, error_handler, on_line};
+    auto interpreter = MainInterpreter{&main_interpreter->global_environment, error_handler, on_line};
     try
     {
         for(auto& s: program.statements)

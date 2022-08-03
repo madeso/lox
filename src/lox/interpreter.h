@@ -2,7 +2,8 @@
 
 #include <functional>
 
-#include "lox/enviroment.h"
+#include "lox/ints.h"
+#include "lox/environment.h"
 
 
 namespace lox
@@ -20,12 +21,12 @@ struct Interpreter
 {
     Interpreter();
     
-    Enviroment global_enviroment;
+    Environment global_environment;
 };
 
 
 void
-verify_number_of_arguments(const Arguments& args, unsigned int arity);
+verify_number_of_arguments(const Arguments& args, u64 arity);
 
 
 bool

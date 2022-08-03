@@ -13,10 +13,10 @@ struct Token
 {
     TokenType type;
     std::string_view lexeme;
-    std::unique_ptr<Object> literal;
+    std::shared_ptr<Object> literal;
     Offset offset;
 
-    Token(TokenType type, std::string_view lexeme, std::unique_ptr<Object> literal, const Offset& offset);
+    Token(TokenType type, std::string_view lexeme, std::shared_ptr<Object> literal, const Offset& offset);
 
     std::string
     to_string() const;

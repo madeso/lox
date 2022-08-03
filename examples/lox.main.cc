@@ -122,24 +122,24 @@ struct InterpreterRunner : CodeRunner
 
 
 
-std::unique_ptr<CodeRunner> make_lexer()
+std::shared_ptr<CodeRunner> make_lexer()
 {
-    return std::make_unique<TokenizeCodeRunner>();
+    return std::make_shared<TokenizeCodeRunner>();
 }
 
-std::unique_ptr<CodeRunner> make_parser()
+std::shared_ptr<CodeRunner> make_parser()
 {
-    return std::make_unique<AstCodeRunner>(false);
+    return std::make_shared<AstCodeRunner>(false);
 }
 
-std::unique_ptr<CodeRunner> make_parser_gv()
+std::shared_ptr<CodeRunner> make_parser_gv()
 {
-    return std::make_unique<AstCodeRunner>(true);
+    return std::make_shared<AstCodeRunner>(true);
 }
 
-std::unique_ptr<CodeRunner> make_interpreter()
+std::shared_ptr<CodeRunner> make_interpreter()
 {
-    return std::make_unique<InterpreterRunner>();
+    return std::make_shared<InterpreterRunner>();
 }
 
 
@@ -171,7 +171,7 @@ struct Lox
     int
     main(int argc, char** argv)
     {
-        std::function<std::unique_ptr<CodeRunner>()> run_creator = make_interpreter;
+        std::function<std::shared_ptr<CodeRunner>()> run_creator = make_interpreter;
         bool is_code = false;
 
         for(int arg_index=1; arg_index<argc; arg_index+=1)
@@ -257,7 +257,7 @@ struct Lox
     }
 
     void
-    run_prompt(const std::function<std::unique_ptr<CodeRunner>()>& run_creator)
+    run_prompt(const std::function<std::shared_ptr<CodeRunner>()>& run_creator)
     {
         lox::Interpreter interpreter;
         auto run = run_creator();

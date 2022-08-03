@@ -13,12 +13,12 @@ namespace lox
 struct ErrorHandler;
 
 
-struct Enviroment
+struct Environment
 {
-    Enviroment* enclosing;
+    Environment* enclosing;
     std::unordered_map<std::string, std::shared_ptr<Object>> values;
 
-    explicit Enviroment(Enviroment* parent);
+    explicit Environment(Environment* parent);
 
     void define(const std::string& name, std::shared_ptr<Object> value);
     std::shared_ptr<Object> get_or_null(const std::string& name);

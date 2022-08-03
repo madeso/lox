@@ -16,7 +16,7 @@ struct ErrorHandler;
 
 // return nullptr when parsing failed
 
-std::unique_ptr<Program>
+std::shared_ptr<Program>
 parse_program(std::vector<Token>& tokens, ErrorHandler* error_handler);
 
 }

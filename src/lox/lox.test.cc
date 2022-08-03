@@ -354,10 +354,46 @@ TEST_CASE("interpret", "[interpret]")
         }));
     }
 
+    SECTION("add 3 numbers via function")
+    {
+        const auto out = run_string
+        (&lx, R"lox(
+            fun add(a, b, c)
+            {
+                print a + b + c;
+            }
+            add(1, 2, 3);
+            print add;
+        )lox");
+        CHECK(out.ok);
+        REQUIRE(StringEq(out.err, {}));
+        CHECK(StringEq(out.out,{
+            "6",
+            "<fn add>",
+        }));
+    }
+
+    SECTION("count to 3")
+    {
+        const auto out = run_string
+        (&lx, R"lox(
+            fun count(n)
+            {
+                if (n > 1) count(n - 1);
+                print n;
+            }
+            count(3);
+        )lox");
+        CHECK(out.ok);
+        REQUIRE(StringEq(out.err, {}));
+        CHECK(StringEq(out.out,{
+            "1", "2", "3"
+        }));
+    }
+
     SECTION("binding")
     {
-
-        lx.global_enviroment.define("nat", lox::make_native_function("nat_name",
+        lx.global_environment.define("nat", lox::make_native_function("nat_name",
             [](const lox::Arguments& args)
             {
                 lox::verify_number_of_arguments(args, 0);

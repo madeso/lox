@@ -1,18 +1,18 @@
-#include "lox/enviroment.h"
+#include "lox/environment.h"
 
 
 namespace lox
 {
 
 
-Enviroment::Enviroment(Enviroment* parent)
+Environment::Environment(Environment* parent)
     : enclosing(parent)
 {
 }
 
 
 void
-Enviroment::define(const std::string& name, std::shared_ptr<Object> value)
+Environment::define(const std::string& name, std::shared_ptr<Object> value)
 {
     values[name] = value;
 }
@@ -21,7 +21,7 @@ Enviroment::define(const std::string& name, std::shared_ptr<Object> value)
 // can edit-distance search for potentiall misspelled vars when a miss occurs
 
 std::shared_ptr<Object>
-Enviroment::get_or_null(const std::string& name)
+Environment::get_or_null(const std::string& name)
 {
     auto found = values.find(name);
     if(found != values.end())
@@ -43,7 +43,7 @@ Enviroment::get_or_null(const std::string& name)
 
 
 bool
-Enviroment::set_or_false(const std::string& name, std::shared_ptr<Object> value)
+Environment::set_or_false(const std::string& name, std::shared_ptr<Object> value)
 {
     auto found = values.find(name);
     if(found == values.end())
