@@ -1,9 +1,44 @@
-#include "lox/stringmap.h"
-
-
+#include "lox/source.h"
 
 namespace lox
 {
+
+
+Offset::Offset(std::shared_ptr<Source> src, std::size_t s, std::size_t e)
+    : source(src)
+    , start(s)
+    , end(e)
+{
+}
+
+
+Offset::Offset(std::shared_ptr<Source> src, std::size_t where)
+    : source(src)
+    , start(where)
+    , end(where)
+{
+}
+
+
+Source::Source(std::string str)
+    : source(std::move(str))
+{
+}
+
+
+StringMap&
+Source::get_or_create_map()
+{
+    if(map)
+    {
+        return *map;
+    }
+    else
+    {
+        map = StringMap{source};
+        return *map;
+    }
+}
 
 
 StringMap::StringMap(std::string_view source)
@@ -16,7 +51,7 @@ StringMap::StringMap(std::string_view source)
     {
         if(source[index] == '\n')
         {
-            lines.emplace_back(LineData{line, Offset{start, index}});
+            lines.emplace_back(LineData{line, OffsetNoSource{start, index}});
             start = index + 1;
             line += 1;
         }
@@ -24,7 +59,7 @@ StringMap::StringMap(std::string_view source)
 
     if( start + 1 != index)
     {
-        lines.emplace_back(LineData{line, Offset{start, index}});
+        lines.emplace_back(LineData{line, OffsetNoSource{start, index}});
     }
 
     assert(lines.empty() == false);
@@ -47,5 +82,5 @@ StringMap::get_line_from_offset(std::size_t offset) const
     return lines[lines.size() - 1];
 }
 
-}
 
+}

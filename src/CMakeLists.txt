@@ -29,6 +29,7 @@ add_custom_command(
 # -----------------------------------------------------------------------------
 # main loxlib
 set(lox_src
+    lox/source.cc lox/source.h
     lox/ast.cc lox/ast.h
     lox/config.h
     lox/environment.cc lox/environment.h
@@ -36,12 +37,10 @@ set(lox_src
     lox/interpreter.cc lox/interpreter.h
     lox/ints.h
     lox/object.cc lox/object.h
-    lox/offset.h
     lox/parser.cc lox/parser.h
     lox/printhandler.cc lox/printhandler.h
     lox/program.cc lox/program.h
     lox/scanner.cc lox/scanner.h
-    lox/stringmap.cc lox/stringmap.h
     lox/token.cc lox/token.h
     lox/tokentype.h
 )

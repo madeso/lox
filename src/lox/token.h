@@ -2,7 +2,7 @@
 
 
 #include "lox/object.h"
-#include "lox/offset.h"
+#include "lox/source.h"
 #include "lox/tokentype.h"
 
 namespace lox

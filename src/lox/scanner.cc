@@ -90,6 +90,7 @@ find_keyword_or_null(std::string_view str)
 struct Scanner
 {
     std::string_view source;
+    std::shared_ptr<Source> file;
     ErrorHandler* error_handler;
 
     std::vector<Token> tokens; // output "variable"
@@ -99,6 +100,7 @@ struct Scanner
 
     explicit Scanner(std::string_view s, ErrorHandler* eh)
         : source(s)
+        , file(std::make_shared<Source>(std::string(s)))
         , error_handler(eh)
     {
     }
@@ -113,7 +115,7 @@ struct Scanner
             scan_single_token();
         }
 
-        tokens.emplace_back(TokenType::EOF, "", nullptr, Offset{current, current});
+        tokens.emplace_back(TokenType::EOF, "", nullptr, Offset{file, current, current});
     }
 
     void
@@ -174,7 +176,7 @@ struct Scanner
             }
             else
             {
-                error_handler->on_error(start, "Unexpected character.");
+                error_handler->on_error(Offset{file, start}, "Unexpected character.");
             }
             break;
         }
@@ -233,7 +235,7 @@ struct Scanner
 
         if (is_at_end())
         {
-            error_handler->on_error(Offset{start, current}, "Unterminated string.");
+            error_handler->on_error(Offset{file, start, current}, "Unterminated string.");
             return;
         }
 
@@ -327,7 +329,7 @@ struct Scanner
     add_token(TokenType type, std::shared_ptr<Object> literal)
     {
         auto text = substr(source, start, current);
-        tokens.emplace_back(Token(type, text, std::move(literal), Offset{start, current}));
+        tokens.emplace_back(Token(type, text, std::move(literal), Offset{file, start, current}));
     }
 };
 } }

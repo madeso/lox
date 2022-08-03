@@ -27,10 +27,9 @@ namespace
     struct AddStringErrors : lox::PrintHandler
     {
         std::vector<std::string>* errors;
-        bool error_detected = false;
 
-        AddStringErrors(std::vector<std::string>* o, std::string_view source)
-            : lox::PrintHandler(source), errors(o)
+        explicit AddStringErrors(std::vector<std::string>* o)
+            : errors(o)
         {
         }
 
@@ -46,7 +45,7 @@ namespace
     {
         auto output = ParseOutput{"<syntax errors>", {}};
 
-        auto printer = AddStringErrors{&output.err, source};
+        auto printer = AddStringErrors{&output.err};
         auto tokens = lox::ScanTokens(source, &printer);
         auto program = lox::parse_program(tokens, &printer);
 
@@ -62,7 +61,7 @@ namespace
     run_string(lox::Interpreter* interpreter, const std::string& source)
     {
         auto output = RunOutput {false, {}, {}};
-        auto printer = AddStringErrors{&output.err, source};
+        auto printer = AddStringErrors{&output.err};
         auto tokens = lox::ScanTokens(source, &printer);
         auto program = lox::parse_program(tokens, &printer);
         

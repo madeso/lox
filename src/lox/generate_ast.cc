@@ -193,9 +193,14 @@ define_ast
     header << "// ---------------------------------------------------------\n";
     header << "\n\n";
 
+    source << "//////////////////////////////////////////////////////////////\n";
+    source << "// " << base_name << " \n\n";
+    source << base_name << "::" << base_name << "(const Offset& o) : offset(o) {}\n";
+    source << "\n\n\n";
+
     header << "struct " << base_name << "\n";
     header << "{\n";
-    header << INDENT << "constexpr explicit " << base_name << "(const Offset& o) : offset(o) {}\n";
+    header << INDENT << "explicit " << base_name << "(const Offset& o);\n";
     header << INDENT << "virtual ~" << base_name << "() = default;\n";
     header << "\n";
     header << INDENT << "virtual " << base_name << "Type get_type() const = 0;\n";
@@ -236,7 +241,7 @@ write_code
     header << "\n";
     header << "#include \"lox/token.h\"\n";
     header << "#include \"lox/object.h\"\n";
-    header << "#include \"lox/offset.h\"\n";
+    header << "#include \"lox/source.h\"\n";
     header << "\n\n";
     header << "namespace lox\n";
     header << "{\n";

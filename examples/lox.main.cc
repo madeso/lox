@@ -16,11 +16,6 @@
 
 struct PrintErrors : lox::PrintHandler
 {
-    explicit PrintErrors(std::string_view source)
-        : lox::PrintHandler(source)
-    {
-    }
-
     void
     on_line(std::string_view line) override
     {
@@ -45,7 +40,7 @@ struct TokenizeCodeRunner : CodeRunner
     RunError
     run_code(lox::Interpreter*, const std::string& source) override
     {
-        auto printer = PrintErrors{source};
+        auto printer = PrintErrors{};
         auto tokens = lox::ScanTokens(source, &printer);
 
         if(printer.error_detected)
@@ -72,7 +67,7 @@ struct AstCodeRunner : CodeRunner
     RunError
     run_code(lox::Interpreter*, const std::string& source) override
     {
-        auto printer = PrintErrors{source};
+        auto printer = PrintErrors{};
         auto tokens = lox::ScanTokens(source, &printer);
         auto program = lox::parse_program(tokens, &printer);
 
@@ -99,7 +94,7 @@ struct InterpreterRunner : CodeRunner
     RunError
     run_code(lox::Interpreter* interpreter, const std::string& source) override
     {
-        auto printer = PrintErrors{source};
+        auto printer = PrintErrors{};
         auto tokens = lox::ScanTokens(source, &printer);
         auto program = lox::parse_program(tokens, &printer);
         

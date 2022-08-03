@@ -10,11 +10,9 @@ namespace lox
 
 struct PrintHandler : ErrorHandler
 {
-    std::string_view current_source;
     bool error_detected = false;
 
-
-    explicit PrintHandler(std::string_view source);
+    PrintHandler() = default;
     virtual ~PrintHandler() = default;
 
     virtual void

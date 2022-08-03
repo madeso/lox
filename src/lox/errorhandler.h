@@ -1,6 +1,6 @@
 #pragma once
 
-#include "lox/offset.h"
+#include "lox/source.h"
 
 
 namespace lox

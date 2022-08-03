@@ -1,6 +1,6 @@
 #include "lox/printhandler.h"
 
-#include "lox/stringmap.h"
+#include "lox/source.h"
 
 
 namespace lox { namespace
@@ -62,9 +62,10 @@ print_line(PrintHandler* print, std::string_view current_source, const LineData&
 
 
 void
-print_message(PrintHandler* print, std::string_view current_source, std::string_view type, const Offset& offset, const std::string& message)
+print_message(PrintHandler* print, std::string_view type, const Offset& offset, const std::string& message)
 {
-    const auto map = StringMap{current_source};
+    const auto& map = offset.source->get_or_create_map();
+    std::string_view current_source = offset.source->source;
     const auto start_line = map.get_line_from_offset(offset.start);
     const auto end_line = map.get_line_from_offset(offset.end);
 
@@ -103,24 +104,17 @@ print_message(PrintHandler* print, std::string_view current_source, std::string_
 namespace lox
 {
 
-
-
-PrintHandler::PrintHandler(std::string_view source)
-    : current_source(source)
-{
-}
-
 void
 PrintHandler::on_error(const Offset& offset, const std::string& message)
 {
     error_detected = true;
-    print_message(this, current_source, "Error", offset, message);
+    print_message(this, "Error", offset, message);
 }
 
 void
 PrintHandler::on_note(const Offset& offset, const std::string& message)
 {
-    print_message(this, current_source, "Note", offset, message);
+    print_message(this, "Note", offset, message);
 }
 
 
