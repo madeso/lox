@@ -1,25 +1,29 @@
 {
-  "name": "lox",
-  "displayName": "lox",
-  "description": "Lox language",
-  "version": "0.0.1",
-  "engines": {
-    "vscode": "^1.69.0"
-  },
-  "categories": [
-    "Programming Languages"
-  ],
-  "contributes": {
-    "languages": [{
-      "id": "lox",
-      "aliases": ["Lox language"],
-      "extensions": [".lox"],
-      "configuration": "./language-configuration.json"
-    }],
-    "grammars": [{
-      "language": "lox",
-      "scopeName": "source.lox",
-      "path": "./syntaxes/lox.tmLanguage.json"
-    }]
-  }
+    "name": "lox",
+    "publisher": "madeso",
+    "displayName": "Lox language",
+    "description": "Provides syntax highlighting for the lox language",
+    "version": "0.0.1",
+    "license": "MIT",
+    "engines": {
+        "vscode": "^1.30.0"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/madeso/lox/"
+    },
+    "categories": ["Programming Languages"],
+    "contributes": {
+        "languages": [{
+            "id": "lox",
+            "aliases": ["Lox", "lox", "LOX"],
+            "extensions": [".lox"],
+            "configuration": "./language-configuration.json"
+        }],
+        "grammars": [{
+            "language": "lox",
+            "scopeName": "source.lox",
+            "path": "./syntaxes/lox.tmLanguage.json"
+        }]
+    }
 }
