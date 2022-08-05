@@ -159,45 +159,6 @@ check_binary_number_or_string_operands
 }
 
 
-float
-get_number(std::shared_ptr<Object> o)
-{
-    assert(o->get_type() == ObjectType::number);
-    return static_cast<Number*>(o.get())->value;
-}
-
-
-std::string
-get_string(std::shared_ptr<Object> o)
-{
-    assert(o->get_type() == ObjectType::string);
-    return static_cast<String*>(o.get())->value;
-}
-
-
-bool
-get_bool(std::shared_ptr<Object> o)
-{
-    assert(o->get_type() == ObjectType::boolean);
-    return static_cast<Bool*>(o.get())->value;
-}
-
-
-bool
-is_truthy(const Object& o)
-{
-    switch(o.get_type())
-    {
-    case ObjectType::nil:
-        return false;
-    case ObjectType::boolean:
-        return static_cast<const Bool&>(o).value;
-    default:
-        return true;
-    }
-}
-
-
 bool
 is_equal(std::shared_ptr<Object> lhs, std::shared_ptr<Object> rhs)
 {
@@ -210,11 +171,11 @@ is_equal(std::shared_ptr<Object> lhs, std::shared_ptr<Object> rhs)
     {
     case ObjectType::nil: return true;
     case ObjectType::number:
-        return get_number(lhs) == get_number(rhs);
+        return get_number_or_ub(lhs) == get_number_or_ub(rhs);
     case ObjectType::boolean:
-        return get_bool(lhs) == get_bool(rhs);
+        return get_bool_or_ub(lhs) == get_bool_or_ub(rhs);
     case ObjectType::string:
-        return get_string(lhs) == get_string(rhs);
+        return get_string_or_ub(lhs) == get_string_or_ub(rhs);
     default:
         assert(false && "unhandled type in is_equal(...)");
         return false;
@@ -307,7 +268,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     void
     on_if_statement(const IfStatement& x) override
     {
-        if(is_truthy(*x.condition->accept(this)))
+        if(is_truthy(x.condition->accept(this)))
         {
             x.then_branch->accept(this);
         }
@@ -346,7 +307,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     void
     on_while_statement(const WhileStatement& x) override
     {
-        while(is_truthy(*x.condition->accept(this)))
+        while(is_truthy(x.condition->accept(this)))
         {
             x.body->accept(this);
         }
@@ -386,8 +347,9 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     on_call_expression(const CallExpression& x) override
     {
         auto callee = x.callee->accept(this);
-
-        if(callee->get_type() != ObjectType::callable)
+        
+        auto function = as_callable(callee);
+        if(function == nullptr)
         {
             error_handler->on_error
             (
@@ -408,7 +370,6 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
             arguments.emplace_back(argument->accept(this));
         }
 
-        Callable* function = static_cast<Callable*>(callee.get());
         try
         {
             auto return_value = function->call({arguments});
@@ -444,13 +405,13 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
         switch(x.op)
         {
         case TokenType::OR:
-            if (is_truthy(*left))
+            if (is_truthy(left))
             {
                 return left;
             }
             break;
         case TokenType::AND:
-            if (!is_truthy(*left))
+            if (!is_truthy(left))
             {
                 return left;
             }
@@ -489,22 +450,22 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
         {
         case TokenType::MINUS:
             check_binary_number_operand(error_handler, x.op_offset, left, right, x.left->offset, x.right->offset);
-            return std::make_shared<Number>( get_number(left) - get_number(right) );
+            return std::make_shared<Number>( get_number_or_ub(left) - get_number_or_ub(right) );
         case TokenType::SLASH:
             check_binary_number_operand(error_handler, x.op_offset, left, right, x.left->offset, x.right->offset);
-            return std::make_shared<Number>( get_number(left) / get_number(right) );
+            return std::make_shared<Number>( get_number_or_ub(left) / get_number_or_ub(right) );
         case TokenType::STAR:
             check_binary_number_operand(error_handler, x.op_offset, left, right, x.left->offset, x.right->offset);
-            return std::make_shared<Number>( get_number(left) * get_number(right) );
+            return std::make_shared<Number>( get_number_or_ub(left) * get_number_or_ub(right) );
         case TokenType::PLUS:
             check_binary_number_or_string_operands(error_handler, x.op_offset, left, right, x.left->offset, x.right->offset);
             if(left->get_type() == ObjectType::number && right->get_type() == ObjectType::number)
             {
-                return std::make_shared<Number>( get_number(left) + get_number(right) );
+                return std::make_shared<Number>( get_number_or_ub(left) + get_number_or_ub(right) );
             }
             else if(left->get_type() == ObjectType::string && right->get_type() == ObjectType::string)
             {
-                return std::make_shared<String>( get_string(left) + get_string(right) );
+                return std::make_shared<String>( get_string_or_ub(left) + get_string_or_ub(right) );
             }
             else
             {
@@ -513,16 +474,16 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
             }
         case TokenType::LESS:
             check_binary_number_operand(error_handler, x.op_offset, left, right, x.left->offset, x.right->offset);
-            return std::make_shared<Bool>( get_number(left) < get_number(right) );
+            return std::make_shared<Bool>( get_number_or_ub(left) < get_number_or_ub(right) );
         case TokenType::LESS_EQUAL:
             check_binary_number_operand(error_handler, x.op_offset, left, right, x.left->offset, x.right->offset);
-            return std::make_shared<Bool>( get_number(left) <= get_number(right) );
+            return std::make_shared<Bool>( get_number_or_ub(left) <= get_number_or_ub(right) );
         case TokenType::GREATER:
             check_binary_number_operand(error_handler, x.op_offset, left, right, x.left->offset, x.right->offset);
-            return std::make_shared<Bool>( get_number(left) > get_number(right) );
+            return std::make_shared<Bool>( get_number_or_ub(left) > get_number_or_ub(right) );
         case TokenType::GREATER_EQUAL:
             check_binary_number_operand(error_handler, x.op_offset, left, right, x.left->offset, x.right->offset);
-            return std::make_shared<Bool>( get_number(left) >= get_number(right) );
+            return std::make_shared<Bool>( get_number_or_ub(left) >= get_number_or_ub(right) );
         case TokenType::BANG_EQUAL:
             return std::make_shared<Bool>( !is_equal(left, right) );
         case TokenType::EQUAL_EQUAL:
@@ -552,10 +513,10 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
         switch(x.op)
         {
         case TokenType::BANG:
-            return std::make_shared<Bool>(!is_truthy(*right));
+            return std::make_shared<Bool>(!is_truthy(right));
         case TokenType::MINUS:
             check_single_number_operand(error_handler, x.op_offset, right, x.right->offset);
-            return std::make_shared<Number>(-get_number(right));
+            return std::make_shared<Number>(-get_number_or_ub(right));
         default:
             assert(false && "unreachable");
             return std::make_shared<Nil>();

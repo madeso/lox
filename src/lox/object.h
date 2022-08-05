@@ -110,6 +110,7 @@ std::shared_ptr<Object>   make_native_function
     std::function<std::shared_ptr<Object>(const Arguments& arguments)> func
 );
 
+
 // ----------------------------------------------------------------------------
 
 
@@ -118,6 +119,18 @@ std::optional<std::string>  as_string   (std::shared_ptr<Object> o);
 std::optional<bool>         as_bool     (std::shared_ptr<Object> o);
 std::optional<float>        as_number   (std::shared_ptr<Object> o);
 std::shared_ptr<Callable>   as_callable (std::shared_ptr<Object> o);
+
+
+// ----------------------------------------------------------------------------
+
+
+std::string  get_string_or_ub  (std::shared_ptr<Object> o);
+bool         get_bool_or_ub    (std::shared_ptr<Object> o);
+float        get_number_or_ub  (std::shared_ptr<Object> o);
+
+
+bool is_truthy(std::shared_ptr<Object> o);
+
 
 // ----------------------------------------------------------------------------
 

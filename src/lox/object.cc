@@ -235,4 +235,48 @@ as_callable(std::shared_ptr<Object> o)
 }
 
 
+// ----------------------------------------------------------------------------
+
+
+float
+get_number_or_ub(std::shared_ptr<Object> o)
+{
+    assert(o->get_type() == ObjectType::number);
+    return static_cast<Number*>(o.get())->value;
+}
+
+
+std::string
+get_string_or_ub(std::shared_ptr<Object> o)
+{
+    assert(o->get_type() == ObjectType::string);
+    return static_cast<String*>(o.get())->value;
+}
+
+
+bool
+get_bool_or_ub(std::shared_ptr<Object> o)
+{
+    assert(o->get_type() == ObjectType::boolean);
+    return static_cast<Bool*>(o.get())->value;
+}
+
+
+bool
+is_truthy(std::shared_ptr<Object> o)
+{
+    switch(o->get_type())
+    {
+    case ObjectType::nil:
+        return false;
+    case ObjectType::boolean:
+        return static_cast<const Bool*>(o.get())->value;
+    default:
+        return true;
+    }
+}
+
+
+// ----------------------------------------------------------------------------
+
 }
