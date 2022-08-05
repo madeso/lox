@@ -1,5 +1,6 @@
 #include "lox/object.h"
 
+#include "interpreter.h"
 
 
 namespace lox { namespace
@@ -183,7 +184,7 @@ std::shared_ptr<Object>
 make_native_function
 (
     const std::string& name,
-    std::function<std::shared_ptr<Object>(const Arguments& arguments)> func
+    std::function<std::shared_ptr<Object>(const Arguments& arguments)>&& func
 )
 {
     return std::make_shared<NativeFunction>(name, func);
@@ -274,6 +275,76 @@ is_truthy(std::shared_ptr<Object> o)
     default:
         return true;
     }
+}
+
+
+// ----------------------------------------------------------------------------
+
+// ----------------------------------------------------------------------------
+
+
+void
+define_native_function
+(
+    const std::string& name,
+    Environment& env,
+    std::function<std::shared_ptr<Object>(const Arguments& arguments)>&& func
+)
+{
+    env.define(name, make_native_function(name, std::move(func)));
+}
+
+
+ArgumentHelper::ArgumentHelper(const lox::Arguments& aargs)
+    : args(aargs)
+    , next_argument(0)
+    , has_read_all_arguments(false)
+{
+}
+
+ArgumentHelper::~ArgumentHelper()
+{
+    assert(has_read_all_arguments && "complete() not called");
+}
+
+void
+ArgumentHelper::complete()
+{
+    assert(has_read_all_arguments==false && "complete() called twice!");
+    has_read_all_arguments = true;
+    verify_number_of_arguments(args, next_argument);
+}
+
+std::string
+ArgumentHelper::require_string()
+{
+    const auto argument_index = next_argument++;
+    if(args.arguments.size() <= argument_index) { return ""; }
+    return get_string_from_arg(args, argument_index);
+}
+
+bool
+ArgumentHelper::require_bool()
+{
+    const auto argument_index = next_argument++;
+    if(args.arguments.size() <= argument_index) { return false; }
+    return get_bool_from_arg(args, argument_index);
+}
+
+float
+ArgumentHelper::require_number()
+{
+    const auto argument_index = next_argument++;
+    if(args.arguments.size() <= argument_index) { return 0.0f; }
+    return get_number_from_arg(args, argument_index);
+}
+
+std::shared_ptr<Callable>
+ArgumentHelper::require_callable()
+{
+    const auto argument_index = next_argument++;
+    if(args.arguments.size() <= argument_index) { return nullptr; }
+    return get_callable_from_arg(args, argument_index);
 }
 
 

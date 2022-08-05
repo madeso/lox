@@ -1,5 +1,7 @@
 #pragma once
 
+#include "lox/ints.h"
+
 
 namespace lox
 {
@@ -12,6 +14,7 @@ enum class ObjectType
 
 
 struct Arguments;
+struct Environment;
 
 
 constexpr std::string_view objecttype_to_string(ObjectType ot)
@@ -107,7 +110,7 @@ std::shared_ptr<Object>   make_number           (float f);
 std::shared_ptr<Object>   make_native_function
 (
     const std::string& name,
-    std::function<std::shared_ptr<Object>(const Arguments& arguments)> func
+    std::function<std::shared_ptr<Object>(const Arguments& arguments)>&& func
 );
 
 
@@ -133,6 +136,49 @@ bool is_truthy(std::shared_ptr<Object> o);
 
 
 // ----------------------------------------------------------------------------
+
+
+
+
+// ----------------------------------------------------------------------------
+
+// not sure where to place this... in a integration header? for now it's here!
+
+
+void
+define_native_function
+(
+    const std::string& name,
+    Environment& env,
+    std::function<std::shared_ptr<Object>(const Arguments& arguments)>&& func
+);
+
+struct ArgumentHelper
+{
+    const lox::Arguments& args;
+    u64 next_argument;
+    bool has_read_all_arguments;
+
+    explicit ArgumentHelper(const lox::Arguments& args);
+    ~ArgumentHelper();
+
+    std::string                 require_string   ();
+    bool                        require_bool     ();
+    float                       require_number   ();
+    std::shared_ptr<Callable>   require_callable ();
+
+    void complete();
+
+    ArgumentHelper(ArgumentHelper&&) = delete;
+    ArgumentHelper(const ArgumentHelper&) = delete;
+    void operator=(ArgumentHelper&&) = delete;
+    void operator=(const ArgumentHelper&) = delete;
+};
+
+
+// ----------------------------------------------------------------------------
+
+
 
 }
 

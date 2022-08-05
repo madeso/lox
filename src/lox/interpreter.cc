@@ -41,6 +41,22 @@ struct ReturnValue
     }
 };
 
+struct InvalidArgumentType
+{
+    u64 argument_index;
+    ObjectType type;
+
+    InvalidArgumentType
+    (
+        u64 aargument_index,
+        ObjectType atype
+    )
+        : argument_index(aargument_index)
+        , type(atype)
+    {
+    }
+};
+
 
 struct RuntimeError
 {
@@ -613,6 +629,56 @@ verify_number_of_arguments(const Arguments& args, u64 arity)
 
 
 
+std::string
+get_string_from_arg(const Arguments& args, u64 argument_index)
+{
+    assert(argument_index < args.arguments.size());
+    auto value = as_string(args.arguments[argument_index]);
+    if(value.has_value() == false)
+    {
+        throw InvalidArgumentType(argument_index, ObjectType::string);
+    }
+    return *value;
+}
+
+
+bool
+get_bool_from_arg(const Arguments& args, u64 argument_index)
+{
+    assert(argument_index < args.arguments.size());
+    auto value = as_bool(args.arguments[argument_index]);
+    if(value.has_value() == false)
+    {
+        throw InvalidArgumentType(argument_index, ObjectType::boolean);
+    }
+    return *value;
+}
+
+
+float
+get_number_from_arg(const Arguments& args, u64 argument_index)
+{
+    assert(argument_index < args.arguments.size());
+    auto value = as_number(args.arguments[argument_index]);
+    if(value.has_value() == false)
+    {
+        throw InvalidArgumentType(argument_index, ObjectType::number);
+    }
+    return *value;
+}
+
+
+std::shared_ptr<Callable>
+get_callable_from_arg(const Arguments& args, u64 argument_index)
+{
+    assert(argument_index < args.arguments.size());
+    auto value = as_callable(args.arguments[argument_index]);
+    if(value == nullptr)
+    {
+        throw InvalidArgumentType(argument_index, ObjectType::callable);
+    }
+    return value;
+}
 
 
 }
