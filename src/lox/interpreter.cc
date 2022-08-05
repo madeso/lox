@@ -243,6 +243,18 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     // util functions
 
     std::shared_ptr<Object>
+    evaluate(std::shared_ptr<Expression> x)
+    {
+        return x->accept(this);
+    }
+
+    void
+    execute(std::shared_ptr<Statement> x)
+    {
+        x->accept(this);
+    }
+
+    std::shared_ptr<Object>
     get_var(Environment& environment, const std::string& name, const Offset& off)
     {
         auto var = environment.get_or_null(name);
@@ -275,7 +287,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
 
         if(x.value != nullptr)
         {
-            value = x.value->accept(this);
+            value = evaluate(x.value);
         }
 
         throw ReturnValue{value};
@@ -284,15 +296,15 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     void
     on_if_statement(const IfStatement& x) override
     {
-        if(is_truthy(x.condition->accept(this)))
+        if(is_truthy(evaluate(x.condition)))
         {
-            x.then_branch->accept(this);
+            execute(x.then_branch);
         }
         else
         {
             if(x.else_branch != nullptr)
             {
-                x.else_branch->accept(this);
+                execute(x.else_branch);
             }
         }
     }
@@ -316,16 +328,16 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
         auto raii = EnvironmentRaii{&current_environment, environment};
         for(const auto& st: statements)
         {
-            st->accept(this);
+            execute(st);
         }
     }
 
     void
     on_while_statement(const WhileStatement& x) override
     {
-        while(is_truthy(x.condition->accept(this)))
+        while(is_truthy(evaluate(x.condition)))
         {
-            x.body->accept(this);
+            execute(x.body);
         }
     }
 
@@ -334,7 +346,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     {
         // todo(Gustav): make usage of unitialized value an error
         std::shared_ptr<Object> value = x.initializer != nullptr
-            ? x.initializer->accept(this)
+            ? evaluate(x.initializer)
             : std::make_shared<Nil>()
             ;
         
@@ -344,7 +356,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     void
     on_print_statement(const PrintStatement& x) override
     {
-        auto value = x.expression->accept(this);
+        auto value = evaluate(x.expression);
         const auto to_print = value->to_string();
         on_line(to_print);
     }
@@ -352,7 +364,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     void
     on_expression_statement(const ExpressionStatement& x) override
     {
-        x.expression->accept(this);
+        evaluate(x.expression);
     }
 
 
@@ -362,7 +374,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     std::shared_ptr<Object>
     on_call_expression(const CallExpression& x) override
     {
-        auto callee = x.callee->accept(this);
+        auto callee = evaluate(x.callee);
         
         auto function = as_callable(callee);
         if(function == nullptr)
@@ -383,7 +395,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
         std::vector<std::shared_ptr<Object>> arguments;
         for(auto& argument : x.arguments)
         { 
-            arguments.emplace_back(argument->accept(this));
+            arguments.emplace_back(evaluate(argument));
         }
 
         try
@@ -416,7 +428,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     std::shared_ptr<Object>
     on_logical_expression(const LogicalExpression& x) override
     {
-        auto left = x.left->accept(this);
+        auto left = evaluate(x.left);
 
         switch(x.op)
         {
@@ -437,13 +449,13 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
             break;
         }
 
-        return x.right->accept(this);
+        return evaluate(x.right);
     }
 
     std::shared_ptr<Object>
     on_assign_expression(const AssignExpression& x) override
     {
-        auto value = x.value->accept(this);
+        auto value = evaluate(x.value);
         set_var(*current_environment, x.name, x.name_offset, value);
         return value;
     }
@@ -459,8 +471,8 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     {
         // todo(Gustav): make binary operators more flexible string*int should duplicate string
         // todo(Gustav): string + (other) should stringify other?
-        auto left = x.left->accept(this);
-        auto right = x.right->accept(this);
+        auto left = evaluate(x.left);
+        auto right = evaluate(x.right);
 
         switch(x.op)
         {
@@ -513,7 +525,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     std::shared_ptr<Object>
     on_grouping_expression(const GroupingExpression& x) override
     {
-        return x.expression->accept(this);
+        return evaluate(x.expression);
     }
 
     std::shared_ptr<Object>
@@ -525,7 +537,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     std::shared_ptr<Object>
     on_unary_expression(const UnaryExpression& x) override
     {
-        auto right = x.right->accept(this);
+        auto right = evaluate(x.right);
         switch(x.op)
         {
         case TokenType::BANG:

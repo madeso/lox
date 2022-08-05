@@ -162,6 +162,8 @@ struct ArgumentHelper
     explicit ArgumentHelper(const lox::Arguments& args);
     ~ArgumentHelper();
 
+    // todo(Gustav): add some match/switch helper to handle overloads
+
     std::string                 require_string   ();
     bool                        require_bool     ();
     float                       require_number   ();
