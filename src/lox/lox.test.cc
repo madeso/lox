@@ -509,15 +509,16 @@ TEST_CASE("interpret", "[interpret]")
         REQUIRE(StringEq(error_list, {}));
         CHECK(StringEq(console_out,{}));
 
-        auto fun = lx->get_global_environment().get_or_null("hello");
-        REQUIRE(fun != nullptr);
-        REQUIRE(fun->get_type() == lox::ObjectType::callable);
-        auto& callable = static_cast<lox::Callable&>(*fun.get());
-        auto res = callable.call({ {lox::make_string("world")} });
+        auto function_object = lx->get_global_environment().get_or_null("hello");
+        REQUIRE(function_object != nullptr);
 
-        REQUIRE(res != nullptr);
-        REQUIRE(res->get_type() == lox::ObjectType::string);
-        auto& str = static_cast<lox::String&>(*res.get());
-        REQUIRE(str.value == "goodbye cruel world");
+        auto callable = lox::as_callable(function_object);
+        REQUIRE(callable != nullptr);
+        
+        auto res = callable->call({ {lox::make_string("world")} });
+        auto str = lox::as_string(res);
+        
+        REQUIRE(str);
+        REQUIRE(*str == "goodbye cruel world");
     }
 }
