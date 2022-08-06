@@ -24,7 +24,6 @@ struct String : public Object
     std::string value;
 
     explicit String(const std::string& s);
-    explicit String(const std::string_view& s);
     virtual ~String() = default;
 
     ObjectType get_type() const override;
@@ -116,11 +115,6 @@ Nil::to_string() const
 
 
 String::String(const std::string& s)
-    : value(s)
-{
-}
-
-String::String(const std::string_view& s)
     : value(s)
 {
 }
