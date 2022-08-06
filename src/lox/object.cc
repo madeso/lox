@@ -7,6 +7,53 @@ namespace lox { namespace
 {
 
 
+// ----------------------------------------------------------------------------
+
+struct Nil : public Object
+{
+    Nil() = default;
+    virtual ~Nil() = default;
+
+    ObjectType get_type() const override;
+    std::string to_string() const override;
+};
+
+
+struct String : public Object
+{
+    std::string value;
+
+    explicit String(const std::string& s);
+    explicit String(const std::string_view& s);
+    virtual ~String() = default;
+
+    ObjectType get_type() const override;
+    std::string to_string() const override;
+};
+
+
+struct Bool : public Object
+{
+    bool value;
+
+    explicit Bool(bool b);
+    virtual ~Bool() = default;
+
+    ObjectType get_type() const override;
+    std::string to_string() const override;
+};
+
+
+struct Number : public Object
+{
+    float value;
+
+    explicit Number(float f);
+    virtual ~Number() = default;
+
+    ObjectType get_type() const override;
+    std::string to_string() const override;
+};
 
 struct NativeFunction : Callable
 {

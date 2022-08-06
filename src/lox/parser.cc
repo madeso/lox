@@ -71,7 +71,7 @@ struct Parser
     std::shared_ptr<Program>
     parse_program()
     {
-        auto program = std::make_unique<Program>();
+        auto program = std::make_shared<Program>();
 
         while(!is_at_end())
         {
@@ -135,7 +135,7 @@ struct Parser
         consume(TokenType::LEFT_BRACE, "Expect '{{' before {} body"_format(kind));
         auto body = parse_block_to_statements();
         const auto end = previous().offset;
-        return std::make_unique<FunctionStatement>(offset_start_end(start, end), std::string(name), std::move(params), std::move(body));
+        return std::make_shared<FunctionStatement>(offset_start_end(start, end), std::string(name), std::move(params), std::move(body));
     }
 
     std::shared_ptr<Statement>
@@ -153,7 +153,7 @@ struct Parser
 
         consume_semicolon("print statement");
         const auto end = previous().offset;
-        return std::make_unique<VarStatement>(offset_start_end(start, end), std::string(name.lexeme), std::move(initializer));
+        return std::make_shared<VarStatement>(offset_start_end(start, end), std::string(name.lexeme), std::move(initializer));
     }
 
     std::shared_ptr<Statement>
@@ -229,17 +229,17 @@ struct Parser
             const auto io = increment->offset;
             std::vector<std::shared_ptr<Statement>> statements;
             statements.emplace_back(std::move(body));
-            statements.emplace_back(std::make_unique<ExpressionStatement>(io, std::move(increment)));
-            body = std::make_unique<BlockStatement>(offset_start_end(io, end), std::move(statements));
+            statements.emplace_back(std::make_shared<ExpressionStatement>(io, std::move(increment)));
+            body = std::make_shared<BlockStatement>(offset_start_end(io, end), std::move(statements));
         }
 
         {
             const auto co_start = condition == nullptr ? body->offset.start : condition->offset.start;
             if(condition == nullptr)
             {
-                condition = std::make_unique<LiteralExpression>(Offset{nullptr, 0}, std::make_unique<Bool>(true));
+                condition = std::make_shared<LiteralExpression>(Offset{nullptr, 0}, make_bool(true));
             }
-            body = std::make_unique<WhileStatement>(Offset{end.source, co_start, end.end}, std::move(condition), std::move(body));
+            body = std::make_shared<WhileStatement>(Offset{end.source, co_start, end.end}, std::move(condition), std::move(body));
         }
 
         if(initializer != nullptr)
@@ -247,7 +247,7 @@ struct Parser
             std::vector<std::shared_ptr<Statement>> statements;
             statements.emplace_back(std::move(initializer));
             statements.emplace_back(std::move(body));
-            body = std::make_unique<BlockStatement>(offset_start_end(start, end), std::move(statements));
+            body = std::make_shared<BlockStatement>(offset_start_end(start, end), std::move(statements));
         }
         
         return body;
@@ -265,7 +265,7 @@ struct Parser
         auto body = parse_statement();
         const auto end = previous().offset;
         
-        return std::make_unique<WhileStatement>(offset_start_end(start, end), std::move(condition), std::move(body));
+        return std::make_shared<WhileStatement>(offset_start_end(start, end), std::move(condition), std::move(body));
     }
 
     std::shared_ptr<Statement>
@@ -286,7 +286,7 @@ struct Parser
 
         const auto end = previous().offset;
         
-        return std::make_unique<IfStatement>(offset_start_end(start, end), std::move(condition), std::move(then_branch), std::move(else_branch));
+        return std::make_shared<IfStatement>(offset_start_end(start, end), std::move(condition), std::move(then_branch), std::move(else_branch));
     }
 
     std::vector<std::shared_ptr<Statement>>
@@ -313,7 +313,7 @@ struct Parser
         auto statements = parse_block_to_statements();
 
         auto& end = previous().offset;
-        return std::make_unique<BlockStatement>(offset_start_end(start, end), std::move(statements));
+        return std::make_shared<BlockStatement>(offset_start_end(start, end), std::move(statements));
     }
 
     std::shared_ptr<Statement>
@@ -323,7 +323,7 @@ struct Parser
         auto value = parse_expression();
         consume_semicolon("print statement");
         const auto end = previous().offset;
-        return std::make_unique<PrintStatement>(offset_start_end(print, end), std::move(value));
+        return std::make_shared<PrintStatement>(offset_start_end(print, end), std::move(value));
     }
 
     std::shared_ptr<Statement>
@@ -333,7 +333,7 @@ struct Parser
         const auto start = value->offset;
         consume_semicolon("expression");
         const auto end = previous().offset;
-        return std::make_unique<ExpressionStatement>(offset_start_end(start, end), std::move(value));
+        return std::make_shared<ExpressionStatement>(offset_start_end(start, end), std::move(value));
     }
 
     std::shared_ptr<Expression>
@@ -355,7 +355,7 @@ struct Parser
             if(expr->get_type() == ExpressionType::variable_expression)
             {
                 const auto name = static_cast<VariableExpression*>(expr.get())->name;
-                return std::make_unique<AssignExpression>(offset_start_end(expr->offset, rhs->offset), name, expr->offset, std::move(rhs));
+                return std::make_shared<AssignExpression>(offset_start_end(expr->offset, rhs->offset), name, expr->offset, std::move(rhs));
             }
 
             error(offset_for_error(equals), "Invalid assignment target.");
@@ -375,7 +375,7 @@ struct Parser
             auto& op = previous();
             auto right = parse_and();
             const auto end = right->offset;
-            left = std::make_unique<LogicalExpression>(offset_start_end(start, end), std::move(left), op.type, std::move(right));
+            left = std::make_shared<LogicalExpression>(offset_start_end(start, end), std::move(left), op.type, std::move(right));
         }
 
         return left;
@@ -392,7 +392,7 @@ struct Parser
             auto& op = previous();
             auto right = parse_equality();
             const auto end = right->offset;
-            left = std::make_unique<LogicalExpression>(offset_start_end(start, end), std::move(left), op.type, std::move(right));
+            left = std::make_shared<LogicalExpression>(offset_start_end(start, end), std::move(left), op.type, std::move(right));
         }
 
         return left;
@@ -409,7 +409,7 @@ struct Parser
             auto& op = previous();
             auto right = parse_comparison();
             const auto end = right->offset;
-            expr = std::make_unique<BinaryExpression>(offset_start_end(start, end), std::move(expr), op.type, op.offset, std::move(right));
+            expr = std::make_shared<BinaryExpression>(offset_start_end(start, end), std::move(expr), op.type, op.offset, std::move(right));
         }
 
         return expr;
@@ -426,7 +426,7 @@ struct Parser
             auto& op = previous();
             auto right = parse_term();
             const auto end = right->offset;
-            expr = std::make_unique<BinaryExpression>(offset_start_end(start, end), std::move(expr), op.type, op.offset, std::move(right));
+            expr = std::make_shared<BinaryExpression>(offset_start_end(start, end), std::move(expr), op.type, op.offset, std::move(right));
         }
 
         return expr;
@@ -443,7 +443,7 @@ struct Parser
             auto& op = previous();
             auto right = parse_factor();
             const auto end = right->offset;
-            expr = std::make_unique<BinaryExpression>(offset_start_end(start, end), std::move(expr), op.type, op.offset, std::move(right));
+            expr = std::make_shared<BinaryExpression>(offset_start_end(start, end), std::move(expr), op.type, op.offset, std::move(right));
         }
 
         return expr;
@@ -460,7 +460,7 @@ struct Parser
             auto& op = previous();
             auto right = parse_unary();
             const auto end = right->offset;
-            expr = std::make_unique<BinaryExpression>(offset_start_end(start, end), std::move(expr), op.type, op.offset, std::move(right));
+            expr = std::make_shared<BinaryExpression>(offset_start_end(start, end), std::move(expr), op.type, op.offset, std::move(right));
         }
 
         return expr;
@@ -473,7 +473,7 @@ struct Parser
         {
             auto& op = previous();
             auto right = parse_unary();
-            return std::make_unique<UnaryExpression>(offset_start_end(op.offset, right->offset), op.type, op.offset, std::move(right));
+            return std::make_shared<UnaryExpression>(offset_start_end(op.offset, right->offset), op.type, op.offset, std::move(right));
         }
 
         return parse_call();
@@ -522,26 +522,26 @@ struct Parser
             error_handler->on_error(off, "More than {} number of arguments, passed {}"_format(max_number_of_arguments, arguments.size()));
         }
 
-        return std::make_unique<CallExpression>(off, std::move(callee), std::move(arguments));
+        return std::make_shared<CallExpression>(off, std::move(callee), std::move(arguments));
     }
 
     std::shared_ptr<Expression>
     parse_primary()
     {
-        if (match({TokenType::FALSE})) { return std::make_unique<LiteralExpression>(previous().offset, std::make_unique<Bool>(false)); }
-        if (match({TokenType::TRUE})) { return std::make_unique<LiteralExpression>(previous().offset, std::make_unique<Bool>(true)); }
-        if (match({TokenType::NIL})) { return std::make_unique<LiteralExpression>(previous().offset, std::make_unique<Nil>()); }
+        if (match({TokenType::FALSE})) { return std::make_shared<LiteralExpression>(previous().offset, make_bool(false)); }
+        if (match({TokenType::TRUE})) { return std::make_shared<LiteralExpression>(previous().offset, make_bool(true)); }
+        if (match({TokenType::NIL})) { return std::make_shared<LiteralExpression>(previous().offset, make_nil()); }
 
         if (match({TokenType::NUMBER, TokenType::STRING}))
         {
             auto& prev = previous();
-            return std::make_unique<LiteralExpression>(prev.offset, std::move(prev.literal));
+            return std::make_shared<LiteralExpression>(prev.offset, std::move(prev.literal));
         }
 
         if (match({TokenType::IDENTIFIER}))
         {
             auto& prev = previous();
-            return std::make_unique<VariableExpression>(prev.offset, std::string(prev.lexeme));
+            return std::make_shared<VariableExpression>(prev.offset, std::string(prev.lexeme));
         }
 
         if (match({TokenType::LEFT_PAREN}))
@@ -550,7 +550,7 @@ struct Parser
             auto expr = parse_expression();
             consume(TokenType::RIGHT_PAREN, "Expect ')' after expression.");
             const Offset right_paren = previous().offset;
-            return std::make_unique<GroupingExpression>(offset_start_end(left_paren, right_paren), std::move(expr));
+            return std::make_shared<GroupingExpression>(offset_start_end(left_paren, right_paren), std::move(expr));
         }
 
         throw error(offset_for_range_error(previous().offset, peek()), "Expected expression.");

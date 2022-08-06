@@ -347,7 +347,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
         // todo(Gustav): make usage of unitialized value an error
         std::shared_ptr<Object> value = x.initializer != nullptr
             ? evaluate(x.initializer)
-            : std::make_shared<Nil>()
+            : make_nil()
             ;
         
         current_environment->define(x.name, value);
@@ -478,22 +478,22 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
         {
         case TokenType::MINUS:
             check_binary_number_operand(error_handler, x.op_offset, left, right, x.left->offset, x.right->offset);
-            return std::make_shared<Number>( get_number_or_ub(left) - get_number_or_ub(right) );
+            return make_number( get_number_or_ub(left) - get_number_or_ub(right) );
         case TokenType::SLASH:
             check_binary_number_operand(error_handler, x.op_offset, left, right, x.left->offset, x.right->offset);
-            return std::make_shared<Number>( get_number_or_ub(left) / get_number_or_ub(right) );
+            return make_number( get_number_or_ub(left) / get_number_or_ub(right) );
         case TokenType::STAR:
             check_binary_number_operand(error_handler, x.op_offset, left, right, x.left->offset, x.right->offset);
-            return std::make_shared<Number>( get_number_or_ub(left) * get_number_or_ub(right) );
+            return make_number( get_number_or_ub(left) * get_number_or_ub(right) );
         case TokenType::PLUS:
             check_binary_number_or_string_operands(error_handler, x.op_offset, left, right, x.left->offset, x.right->offset);
             if(left->get_type() == ObjectType::number && right->get_type() == ObjectType::number)
             {
-                return std::make_shared<Number>( get_number_or_ub(left) + get_number_or_ub(right) );
+                return make_number( get_number_or_ub(left) + get_number_or_ub(right) );
             }
             else if(left->get_type() == ObjectType::string && right->get_type() == ObjectType::string)
             {
-                return std::make_shared<String>( get_string_or_ub(left) + get_string_or_ub(right) );
+                return make_string( get_string_or_ub(left) + get_string_or_ub(right) );
             }
             else
             {
@@ -502,20 +502,20 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
             }
         case TokenType::LESS:
             check_binary_number_operand(error_handler, x.op_offset, left, right, x.left->offset, x.right->offset);
-            return std::make_shared<Bool>( get_number_or_ub(left) < get_number_or_ub(right) );
+            return make_bool( get_number_or_ub(left) < get_number_or_ub(right) );
         case TokenType::LESS_EQUAL:
             check_binary_number_operand(error_handler, x.op_offset, left, right, x.left->offset, x.right->offset);
-            return std::make_shared<Bool>( get_number_or_ub(left) <= get_number_or_ub(right) );
+            return make_bool( get_number_or_ub(left) <= get_number_or_ub(right) );
         case TokenType::GREATER:
             check_binary_number_operand(error_handler, x.op_offset, left, right, x.left->offset, x.right->offset);
-            return std::make_shared<Bool>( get_number_or_ub(left) > get_number_or_ub(right) );
+            return make_bool( get_number_or_ub(left) > get_number_or_ub(right) );
         case TokenType::GREATER_EQUAL:
             check_binary_number_operand(error_handler, x.op_offset, left, right, x.left->offset, x.right->offset);
-            return std::make_shared<Bool>( get_number_or_ub(left) >= get_number_or_ub(right) );
+            return make_bool( get_number_or_ub(left) >= get_number_or_ub(right) );
         case TokenType::BANG_EQUAL:
-            return std::make_shared<Bool>( !is_equal(left, right) );
+            return make_bool( !is_equal(left, right) );
         case TokenType::EQUAL_EQUAL:
-            return std::make_shared<Bool>( is_equal(left, right) );
+            return make_bool( is_equal(left, right) );
         default:
             assert(false && "unhandled token in Interpreter::on_binary_expression(...)");
             return nullptr;
@@ -541,13 +541,13 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
         switch(x.op)
         {
         case TokenType::BANG:
-            return std::make_shared<Bool>(!is_truthy(right));
+            return make_bool(!is_truthy(right));
         case TokenType::MINUS:
             check_single_number_operand(error_handler, x.op_offset, right, x.right->offset);
-            return std::make_shared<Number>(-get_number_or_ub(right));
+            return make_number(-get_number_or_ub(right));
         default:
             assert(false && "unreachable");
-            return std::make_shared<Nil>();
+            return make_nil();
         }
     }
 

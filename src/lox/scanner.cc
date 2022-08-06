@@ -3,6 +3,8 @@
 #include <unordered_map>
 
 #include "lox/errorhandler.h"
+#include "lox/object.h"
+
 
 namespace lox { namespace
 {
@@ -217,7 +219,7 @@ struct Scanner
         }
 
         const auto str = substr(source, start, current);
-        add_token(TokenType::NUMBER, std::make_shared<Number>(parse_double(str)));
+        add_token(TokenType::NUMBER, make_number(parse_double(str)));
     }
 
     void
@@ -247,7 +249,7 @@ struct Scanner
         // Trim the surrounding quotes.
         assert(current > 0);
         auto value = substr(source, start + 1, current - 1);
-        add_token(TokenType::STRING, std::make_shared<String>(value));
+        add_token(TokenType::STRING, make_string(std::string(value)));
     }
 
     void
