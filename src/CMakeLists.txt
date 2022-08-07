@@ -67,8 +67,11 @@ source_group("generated" FILES ${EXPR_SOURCE} ${EXPR_HEADER})
 # -----------------------------------------------------------------------------
 # unit test
 set(src_test
-    lox/lox.test.cc
+    lox/test.cc lox/test.h
     ../external/catch/main.cc
+
+    lox/parser.test.cc
+    lox/interpreter.test.cc
 )
 add_executable(test ${src_test})
 target_link_libraries(test

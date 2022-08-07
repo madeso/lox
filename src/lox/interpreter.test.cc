@@ -7,49 +7,12 @@
 #include "lox/parser.h"
 #include "lox/interpreter.h"
 
+#include "test.h"
+
 using namespace catchy;
 
 namespace
 {
-    struct ParseOutput
-    {
-        std::string out;
-        std::vector<std::string> err;
-    };
-
-    struct AddStringErrors : lox::PrintHandler
-    {
-        std::vector<std::string>* errors;
-
-        explicit AddStringErrors(std::vector<std::string>* o)
-            : errors(o)
-        {
-        }
-
-        void
-        on_line(std::string_view line) override
-        {
-            errors->emplace_back(line);
-        }
-    };
-
-    ParseOutput
-    parse_to_string(const std::string source)
-    {
-        auto output = ParseOutput{"<syntax errors>", {}};
-
-        auto printer = AddStringErrors{&output.err};
-        auto tokens = lox::scan_tokens(source, &printer);
-        auto program = lox::parse_program(tokens.tokens, &printer);
-
-        if(tokens.errors == 0 && program.errors == 0)
-        {
-            output.out = lox::print_ast(*program.program);
-        }
-
-        return output;
-    }
-
     bool
     run_string(std::shared_ptr<lox::Interpreter> interpreter, const std::string& source)
     {
@@ -62,38 +25,6 @@ namespace
         }
 
         return interpreter->interpret(*program.program);
-    }
-}
-
-#define XSTR(x) #x
-#define STR(x) XSTR(x)
-#define XSECTION() SECTION(STR(__LINE__))
-
-TEST_CASE("parser", "[parser]")
-{
-    XSECTION()
-    {
-        const auto out = parse_to_string
-        (R"lox(
-            var foo = 42;
-            print foo;
-        )lox");
-        REQUIRE(StringEq(out.err, {}));
-        CHECK(StringEq(out.out, "(program (decl foo 42) (print (get foo)))"));
-    }
-    XSECTION()
-    {
-        const auto out = parse_to_string
-        (R"lox(
-            var i = 0;
-            while (i < 10)
-            {
-                print i+1;
-                i = i + 1;
-            }
-        )lox");
-        REQUIRE(StringEq(out.err, {}));
-        CHECK(StringEq(out.out, "(program (decl i 0) (while (< (get i) 10) ({} (print (+ (get i) 1)) (expr (= i (+ (get i) 1))))))"));
     }
 }
 
