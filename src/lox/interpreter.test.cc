@@ -403,6 +403,29 @@ TEST_CASE("interpret", "[interpret]")
             "1", "2"
         }));
     }
+    
+    SECTION("local functions and closures")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            var a = "global";
+            {
+                fun showA()
+                {
+                    print a;
+                }
+
+                showA();
+                var a = "block";
+                showA();
+            }
+        )lox");
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
+            "global", "global"
+        }));
+    }
 
     SECTION("lox -> cpp binding")
     {
