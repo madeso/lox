@@ -299,12 +299,12 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
         auto found = current_state->locals.find(x.uid.value);
         if(found != current_state->locals.end())
         {
-            auto r = environment.set_at_or_false(found->second, name, value);
+            [[maybe_unused]] auto r = environment.set_at_or_false(found->second, name, value);
             assert(r == true);
         }
         else
         {
-            auto r = global_environment->set_or_false(name, value);
+            [[maybe_unused]] auto r = global_environment->set_or_false(name, value);
             assert(r == true);
         }
     }
