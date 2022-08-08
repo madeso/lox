@@ -12,7 +12,7 @@
 #include "lox/parser.h"
 #include "lox/interpreter.h"
 #include "lox/printhandler.h"
-
+#include "lox/resolver.h"
 
 struct PrintErrors : lox::PrintHandler
 {
@@ -100,7 +100,14 @@ struct InterpreterRunner : CodeRunner
             return RunError::syntax_error;
         }
 
-        const auto interpret_ok = interpreter->interpret(*program.program);
+        auto resolved = lox::resolve(*program.program, interpreter->get_error_handler());
+
+        if(resolved.has_value() == false)
+        {
+            return RunError::syntax_error;
+        }
+
+        const auto interpret_ok = interpreter->interpret(*program.program, *resolved);
         if(interpret_ok)
         {
             return RunError::no_error;

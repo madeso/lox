@@ -76,14 +76,14 @@ define_type
     source << "\n";
     
 
-    const std::string_view expl = sub.members.size() == 0 ? "explicit " : "";
-
-    header << INDENT << expl << sub.name << base_name << "\n";
+    header << INDENT << sub.name << base_name << "\n";
     header << INDENT << "(\n";
     source << sub.name << base_name << "::" << sub.name << base_name << "\n";
     source << "(\n";
-    header << INDENT << INDENT << "const Offset&" << " " << "offset";
-    source << INDENT << "const Offset&" << " " << "the_offset";
+    header << INDENT << INDENT << "const Offset&" << " " << "offset" << ",\n";
+    source << INDENT << "const Offset&" << " " << "the_offset" << ",\n";
+    header << INDENT << INDENT << "const " << base_name << "Id&" << " " << "id";
+    source << INDENT << "const " << base_name << "Id&" << " " << "the_id";
     for(const auto& m: sub.members)
     {
         
@@ -97,7 +97,7 @@ define_type
     header << "\n";
 
     source << ")\n";
-    source << INDENT << ':' << " " << base_name << "(the_offset)\n";
+    source << INDENT << ':' << " " << base_name << "(the_offset, the_id)\n";
     for(const auto& m: sub.members)
     {
         source << INDENT << ',' << " " << m.name << "(a" << m.name << ")\n";
@@ -195,17 +195,20 @@ define_ast
 
     source << "//////////////////////////////////////////////////////////////\n";
     source << "// " << base_name << " \n\n";
-    source << base_name << "::" << base_name << "(const Offset& o) : offset(o) {}\n";
+    source << base_name << "::" << base_name << "(const Offset& o, const " << base_name << "Id& i) : offset(o), uid(i) {}\n";
     source << "\n\n\n";
 
+    header << "struct " << base_name << "Id { u64 value; };\n";
+    header << "\n\n";
     header << "struct " << base_name << "\n";
     header << "{\n";
-    header << INDENT << "explicit " << base_name << "(const Offset& o);\n";
+    header << INDENT << "" << base_name << "(const Offset& o, const " << base_name << "Id& i);\n";
     header << INDENT << "virtual ~" << base_name << "() = default;\n";
     header << "\n";
     header << INDENT << "virtual " << base_name << "Type get_type() const = 0;\n";
     header << "\n";
     header << INDENT << "Offset offset;\n";
+    header << INDENT << base_name << "Id uid;\n";
     header << "\n";
     for(const auto& vis: visitors)
     {
@@ -318,6 +321,7 @@ write_code
             }
         },
         {
+            {"VoidVisitor", "void"},
             {"StringVisitor", "std::string"},
             {"ObjectVisitor", "std::shared_ptr<Object>"}
         }

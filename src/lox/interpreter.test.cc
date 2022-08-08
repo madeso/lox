@@ -6,6 +6,7 @@
 #include "lox/ast.h"
 #include "lox/parser.h"
 #include "lox/interpreter.h"
+#include "lox/resolver.h"
 
 #include "test.h"
 
@@ -24,7 +25,14 @@ namespace
             return false;
         }
 
-        return interpreter->interpret(*program.program);
+        auto resolved = lox::resolve(*program.program, interpreter->get_error_handler());
+
+        if(resolved.has_value() == false)
+        {
+            return false;
+        }
+
+        return interpreter->interpret(*program.program, *resolved);
     }
 }
 
@@ -178,7 +186,7 @@ TEST_CASE("interpret", "[interpret]")
         }));
     }
 
-    SECTION("while loop")
+    SECTION("shadowing example")
     {
         const auto run_ok = run_string
         (lx, R"lox(
@@ -425,6 +433,31 @@ TEST_CASE("interpret", "[interpret]")
         CHECK(StringEq(console_out,{
             "global", "global"
         }));
+    }
+    
+    SECTION("fail declare 2 var")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            fun bad() {
+                var a = "first";
+                var a = "second";
+            }
+        )lox");
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{}));
+    }
+
+    SECTION("fail return at top level")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            return ":(";
+        )lox");
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{}));
     }
 
     SECTION("lox -> cpp binding")

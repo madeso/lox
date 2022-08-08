@@ -11,7 +11,7 @@ namespace lox
 
 struct ErrorHandler;
 struct Program;
-
+struct Resolved;
 
 struct Arguments
 {
@@ -34,7 +34,7 @@ struct Interpreter
     virtual bool
     interpret
     (
-        Program& expression
+        Program& expression, const Resolved& resolved
     ) = 0;
 };
 

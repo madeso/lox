@@ -7,18 +7,32 @@
 #include "lox/errorhandler.h"
 #include "lox/program.h"
 #include "lox/environment.h"
+#include "lox/resolver.h"
 
 
 namespace lox { namespace
 {
 struct MainInterpreter;
 
+
+struct State
+{
+    std::unordered_map<u64, std::size_t> locals;
+
+    explicit State(const Resolved& resolved)
+        : locals(resolved.locals)
+    {
+    }
+};
+
+
 void
 execute_statements_with_environment
 (
     MainInterpreter* main,
     const std::vector<std::shared_ptr<Statement>>& statements,
-    std::shared_ptr<Environment> environment
+    std::shared_ptr<Environment> environment,
+    std::shared_ptr<State> state
 );
 
 
@@ -68,11 +82,13 @@ struct ScriptFunction : Callable
     MainInterpreter* interpreter;
     FunctionStatement declaration;
     std::shared_ptr<Environment> closure;
+    std::shared_ptr<State> state;
 
-    explicit ScriptFunction(MainInterpreter* i, const FunctionStatement& f, std::shared_ptr<Environment> c)
+    explicit ScriptFunction(MainInterpreter* i, const FunctionStatement& f, std::shared_ptr<Environment> c, std::shared_ptr<State> s)
         : interpreter(i)
         , declaration(f)
         , closure(c)
+        , state(s)
     {
     }
 
@@ -96,7 +112,7 @@ struct ScriptFunction : Callable
 
         try
         {
-            execute_statements_with_environment(interpreter, declaration.body, environment);
+            execute_statements_with_environment(interpreter, declaration.body, environment, state);
         }
         catch(const ReturnValue& r)
         {
@@ -199,44 +215,49 @@ is_equal(std::shared_ptr<Object> lhs, std::shared_ptr<Object> rhs)
 }
 
 
-struct EnvironmentRaii
+template<typename T>
+struct SharedptrRaii
 {
-    std::shared_ptr<Environment>* parent;
-    std::shared_ptr<Environment> last_child;
+    std::shared_ptr<T>* parent;
+    std::shared_ptr<T> last_child;
 
-    EnvironmentRaii(std::shared_ptr<Environment>* p, std::shared_ptr<Environment> child) : parent(p), last_child(*p)
+    SharedptrRaii(std::shared_ptr<T>* p, std::shared_ptr<T> child) : parent(p), last_child(*p)
     {
         *parent = child;
     }
 
-    ~EnvironmentRaii()
+    ~SharedptrRaii()
     {
         *parent = last_child;
     }
 
-    EnvironmentRaii(EnvironmentRaii&&) = delete;
-    void operator=(EnvironmentRaii&&) = delete;
-    EnvironmentRaii(const EnvironmentRaii&) = delete;
-    void operator=(const EnvironmentRaii&) = delete;
+    SharedptrRaii(SharedptrRaii&&) = delete;
+    void operator=(SharedptrRaii&&) = delete;
+    SharedptrRaii(const SharedptrRaii&) = delete;
+    void operator=(const SharedptrRaii&) = delete;
 };
-
 
 struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
 {
     ErrorHandler* error_handler;
     std::shared_ptr<Environment> global_environment;
     std::shared_ptr<Environment> current_environment;
+    std::shared_ptr<State> current_state;
     std::function<void (std::string)> on_line;
 
     //-------------------------------------------------------------------------
     // constructor
 
-    explicit MainInterpreter(std::shared_ptr<Environment> ge, ErrorHandler* eh, const std::function<void (std::string)>& ol)
+    explicit MainInterpreter
+    (
+        std::shared_ptr<Environment> ge,
+        ErrorHandler* eh,
+        const std::function<void (std::string)>& ol
+    )
         : error_handler(eh)
         , global_environment(ge)
         , on_line(ol)
     {
-        current_environment = global_environment;
     }
 
     //---------------------------------------------------------------------------------------------
@@ -252,6 +273,40 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     execute(std::shared_ptr<Statement> x)
     {
         x->accept(this);
+    }
+
+    std::shared_ptr<Object>
+    lookup_var(Environment& environment, const std::string& name, const Expression& x)
+    {
+        auto found = current_state->locals.find(x.uid.value);
+        if(found != current_state->locals.end())
+        {
+            auto r = environment.get_at_or_null(found->second, name);
+            assert(r != nullptr);
+            return r;
+        }
+        else
+        {
+            auto r = global_environment->get_or_null(name);
+            assert(r != nullptr);
+            return r;
+        }
+    }
+
+    void
+    set_var_via_lookup(Environment& environment, const std::string& name, std::shared_ptr<Object> value, const Expression& x)
+    {
+        auto found = current_state->locals.find(x.uid.value);
+        if(found != current_state->locals.end())
+        {
+            auto r = environment.set_at_or_false(found->second, name, value);
+            assert(r == true);
+        }
+        else
+        {
+            auto r = global_environment->set_or_false(name, value);
+            assert(r == true);
+        }
     }
 
     std::shared_ptr<Object>
@@ -313,19 +368,27 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     on_block_statement(const BlockStatement& x) override
     {
         auto block_env = std::make_shared<Environment>(current_environment);
-        execute_statements_with_environment(x.statements, block_env);
+        execute_statements_with_environment(x.statements, block_env, current_state);
     }
 
     void
     on_function_statement(const FunctionStatement& x) override
     {
-        current_environment->define(x.name, std::make_shared<ScriptFunction>(this, x, current_environment));
+        assert(current_environment);
+        assert(current_state);
+        current_environment->define(x.name, std::make_shared<ScriptFunction>(this, x, current_environment, current_state));
     }
 
     void
-    execute_statements_with_environment(const std::vector<std::shared_ptr<Statement>>& statements, std::shared_ptr<Environment> environment)
+    execute_statements_with_environment
+    (
+        const std::vector<std::shared_ptr<Statement>>& statements,
+        std::shared_ptr<Environment> environment,
+        std::shared_ptr<State> state
+    )
     {
-        auto raii = EnvironmentRaii{&current_environment, environment};
+        auto env_raii = SharedptrRaii<Environment>{&current_environment, environment};
+        auto state_raii = SharedptrRaii<State>{&current_state, state};
         for(const auto& st: statements)
         {
             execute(st);
@@ -456,14 +519,16 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     on_assign_expression(const AssignExpression& x) override
     {
         auto value = evaluate(x.value);
-        set_var(*current_environment, x.name, x.name_offset, value);
+
+        set_var_via_lookup(*current_environment, x.name, value, x);
         return value;
     }
 
     std::shared_ptr<Object>
     on_variable_expression(const VariableExpression& x) override
     {
-        return get_var(*current_environment, x.name, x.offset);
+        return lookup_var(*current_environment, x.name, x);
+        // return get_var(*current_environment, x.name, x.offset);
     }
 
     std::shared_ptr<Object>
@@ -556,9 +621,9 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
 
 
 void
-execute_statements_with_environment(MainInterpreter* main, const std::vector<std::shared_ptr<Statement>>& statements, std::shared_ptr<Environment> environment)
+execute_statements_with_environment(MainInterpreter* main, const std::vector<std::shared_ptr<Statement>>& statements, std::shared_ptr<Environment> environment, std::shared_ptr<State> state)
 {
-    main->execute_statements_with_environment(statements, environment);
+    main->execute_statements_with_environment(statements, environment, state);
 }
 
 
@@ -586,14 +651,15 @@ struct PublicInterpreter : Interpreter
     }
 
     bool
-    interpret(Program& program) override
+    interpret(Program& program, const Resolved& resolved) override
     {
         try
         {
-            for(auto& s: program.statements)
-            {
-                s->accept(&interpreter);
-            }
+            auto state = std::make_shared<State>(resolved);
+            interpreter.execute_statements_with_environment
+            (
+                program.statements, global_environment, state
+            );
             return true;
         }
         catch (const RuntimeError&)

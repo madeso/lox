@@ -22,6 +22,8 @@ struct Environment
 
     void define(const std::string& name, std::shared_ptr<Object> value);
     std::shared_ptr<Object> get_or_null(const std::string& name);
+    std::shared_ptr<Object> get_at_or_null(std::size_t distance, const std::string& name);
+    bool set_at_or_false(std::size_t distance, const std::string& name, std::shared_ptr<Object> value);
     bool set_or_false(const std::string& name, std::shared_ptr<Object> value);
 };
 

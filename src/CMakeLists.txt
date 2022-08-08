@@ -40,6 +40,7 @@ set(lox_src
     lox/parser.cc lox/parser.h
     lox/printhandler.cc lox/printhandler.h
     lox/program.cc lox/program.h
+    lox/resolver.h lox/resolver.cc
     lox/scanner.cc lox/scanner.h
     lox/token.cc lox/token.h
     lox/tokentype.h
