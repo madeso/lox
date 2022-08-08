@@ -86,7 +86,7 @@ struct MainResolver : ExpressionVoidVisitor, StatementVoidVisitor
         Scope& scope = scopes.back();
         if(auto found = scope.find(name); found != scope.end())
         {
-            error_handler->on_error(off, "Already a variable with this name in this scope");
+            error_handler->on_error(off, "There is already a variable with this name in this scope");
             error_handler->on_note(found->second.offset, "declared here");
             has_errors = true;
             return;
@@ -226,7 +226,10 @@ struct MainResolver : ExpressionVoidVisitor, StatementVoidVisitor
              if(var_is_in_current_scope && found->second.status != VarStatus::defined)
              {
                 error_handler->on_error(x.offset, "Can't read local variable in its own initializer");
+                // todo(Gustav): reduce or remove note? it should only be the var statement not the whole statement
+                error_handler->on_note(found->second.offset, "declared here");
                 has_errors = true;
+                // todo(Gustav): edit distance search upwards for similar looking variables?
              }
         }
 

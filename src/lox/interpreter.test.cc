@@ -37,7 +37,69 @@ namespace
 }
 
 
-TEST_CASE("interpret", "[interpret]")
+TEST_CASE("interpret fail", "[interpret]")
+{
+    std::vector<std::string> console_out;
+    std::vector<ReportedError> error_list;
+    auto printer = AddErrorErrors{&error_list};
+    auto lx = lox::make_interpreter(&printer, [&](const std::string& s){ console_out.emplace_back(s); });
+
+    constexpr ReportedError::Type error = ReportedError::Type::error;
+    constexpr ReportedError::Type note = ReportedError::Type::note;
+
+    // todo(Gustav): replace offsets with row + byte offset+length and leave offset handling to another test?
+
+    SECTION("declare 2 var")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            fun bad() {
+                var a = "first";
+                var a = "second";
+            }
+        )lox");
+        CHECK_FALSE(run_ok);
+        CHECK(StringEq(console_out,{}));
+        CHECK(ErrorEq(error_list, {
+            {error, 74, 91, "There is already a variable with this name in this scope"},
+            {note, 41, 57, "declared here"}
+        }));
+    }
+
+    SECTION("return at top level")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            return ":(";
+        )lox");
+        CHECK_FALSE(run_ok);
+        CHECK(StringEq(console_out,{}));
+        CHECK(ErrorEq(error_list, {
+            {error, 13, 25, "Can't return from top-level code"}
+        }));
+    }
+
+    SECTION("shadowing in non-global")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            var a = 1;
+            {
+                var a = a + 2;
+                print a;
+            }
+        )lox");
+        CHECK_FALSE(run_ok);
+        CHECK(StringEq(console_out,{}));
+        CHECK(ErrorEq(error_list, {
+            {error, 62, 63, "Can't read local variable in its own initializer"},
+            {note, 54, 68, "declared here"}
+        }));
+    }
+}
+
+
+TEST_CASE("interpret ok", "[interpret]")
 {
     std::vector<std::string> console_out;
     std::vector<std::string> error_list;
@@ -183,26 +245,6 @@ TEST_CASE("interpret", "[interpret]")
             "outer a", "outer b", "global c",
             "------",
             "global a", "global b", "global c"
-        }));
-    }
-
-    SECTION("shadowing example")
-    {
-        const auto run_ok = run_string
-        (lx, R"lox(
-            var a = 1;
-            var b = 2;
-            {
-                var a = a + 2;
-                var b = b + 2;
-                print a;
-                print b;
-            }
-        )lox");
-        CHECK(run_ok);
-        REQUIRE(StringEq(error_list, {}));
-        CHECK(StringEq(console_out,{
-            "3", "4"
         }));
     }
     
@@ -433,31 +475,6 @@ TEST_CASE("interpret", "[interpret]")
         CHECK(StringEq(console_out,{
             "global", "global"
         }));
-    }
-    
-    SECTION("fail declare 2 var")
-    {
-        const auto run_ok = run_string
-        (lx, R"lox(
-            fun bad() {
-                var a = "first";
-                var a = "second";
-            }
-        )lox");
-        CHECK(run_ok);
-        REQUIRE(StringEq(error_list, {}));
-        CHECK(StringEq(console_out,{}));
-    }
-
-    SECTION("fail return at top level")
-    {
-        const auto run_ok = run_string
-        (lx, R"lox(
-            return ":(";
-        )lox");
-        CHECK(run_ok);
-        REQUIRE(StringEq(error_list, {}));
-        CHECK(StringEq(console_out,{}));
     }
 
     SECTION("lox -> cpp binding")
