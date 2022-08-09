@@ -62,7 +62,7 @@ Environment::get_at_or_null(std::size_t distance, const std::string& name)
     Environment* ancestor = get_ancestor_or_null(this, distance);
     assert(ancestor != nullptr);
     auto found = ancestor->values.find(name);
-    if(found != values.end())
+    if(found != ancestor->values.end())
     {
         return found->second;
     }
