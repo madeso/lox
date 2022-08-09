@@ -13,7 +13,6 @@ enum class ObjectType
 };
 
 
-struct Arguments;
 struct Environment;
 
 
@@ -42,6 +41,12 @@ struct Object
     virtual std::string to_string() const = 0;
 };
 
+
+
+struct Arguments
+{
+    std::vector<std::shared_ptr<Object>> arguments;
+};
 
 
 struct Callable : public Object
@@ -86,49 +91,6 @@ float        get_number_or_ub  (std::shared_ptr<Object> o);
 
 
 bool is_truthy(std::shared_ptr<Object> o);
-
-
-// ----------------------------------------------------------------------------
-
-
-
-
-// ----------------------------------------------------------------------------
-
-// not sure where to place this... in a integration header? for now it's here!
-
-
-void
-define_native_function
-(
-    const std::string& name,
-    Environment& env,
-    std::function<std::shared_ptr<Object>(const Arguments& arguments)>&& func
-);
-
-struct ArgumentHelper
-{
-    const lox::Arguments& args;
-    u64 next_argument;
-    bool has_read_all_arguments;
-
-    explicit ArgumentHelper(const lox::Arguments& args);
-    ~ArgumentHelper();
-
-    // todo(Gustav): add some match/switch helper to handle overloads
-
-    std::string                 require_string   ();
-    bool                        require_bool     ();
-    float                       require_number   ();
-    std::shared_ptr<Callable>   require_callable ();
-
-    void complete();
-
-    ArgumentHelper(ArgumentHelper&&) = delete;
-    ArgumentHelper(const ArgumentHelper&) = delete;
-    void operator=(ArgumentHelper&&) = delete;
-    void operator=(const ArgumentHelper&) = delete;
-};
 
 
 // ----------------------------------------------------------------------------

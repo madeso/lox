@@ -44,6 +44,7 @@ set(lox_src
     lox/scanner.cc lox/scanner.h
     lox/token.cc lox/token.h
     lox/tokentype.h
+    lox/lox.cc lox/lox.h
 )
 
 add_library(liblox STATIC ${lox_src} ${EXPR_SOURCE} ${EXPR_HEADER})
@@ -73,6 +74,7 @@ set(src_test
 
     lox/parser.test.cc
     lox/interpreter.test.cc
+    lox/lox.test.cc
 )
 add_executable(test ${src_test})
 target_link_libraries(test

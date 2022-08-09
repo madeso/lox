@@ -13,11 +13,6 @@ struct ErrorHandler;
 struct Program;
 struct Resolved;
 
-struct Arguments
-{
-    std::vector<std::shared_ptr<Object>> arguments;
-};
-
 
 // runtime errors are sent to the error handler
 // return false on runtime error
