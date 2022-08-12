@@ -99,7 +99,7 @@ struct ScriptFunction : Callable
     }
 
     std::shared_ptr<Object>
-    call(const Arguments& arguments) override
+    call(std::shared_ptr<Callable>, const Arguments& arguments) override
     {
         verify_number_of_arguments(arguments, declaration.params.size());
         
@@ -237,6 +237,51 @@ struct SharedptrRaii
     void operator=(const SharedptrRaii&) = delete;
 };
 
+
+struct ScriptInstance : Object
+{
+    std::shared_ptr<Klass> klass;
+
+    explicit ScriptInstance(std::shared_ptr<Klass> o)
+        : klass(o)
+    {
+    }
+
+    ObjectType
+    get_type() const override
+    {
+        return ObjectType::instance;
+    }
+
+    std::string
+    to_string() const override
+    {
+        return "<instance {}>"_format(klass->name);
+    }
+
+    bool
+    is_callable() const override
+    {
+        return false;
+    }
+};
+
+
+struct ScriptKlass : Klass
+{
+    ScriptKlass(const std::string& name) : Klass(name)
+    {
+    }
+
+    std::shared_ptr<Object> constructor(std::shared_ptr<Klass> klass, const Arguments& arguments) override
+    {
+        verify_number_of_arguments(arguments, 0);
+        return std::make_shared<ScriptInstance>(klass);
+    };
+};
+
+
+
 struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
 {
     ErrorHandler* error_handler;
@@ -339,7 +384,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     on_class_statement(const ClassStatement& x) override
     {
         current_environment->define(x.name, make_nil());
-        [[maybe_unused]] const auto set = current_environment->set_or_false(x.name, make_klass(x.name));
+        [[maybe_unused]] const auto set = current_environment->set_or_false(x.name, std::make_shared<ScriptKlass>(x.name));
         assert(set);
     }
     
@@ -471,7 +516,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
 
         try
         {
-            auto return_value = function->call({arguments});
+            auto return_value = call(function, {arguments});
             return return_value;
         }
         catch(const CallError& err)

@@ -490,11 +490,14 @@ TEST_CASE("interpret ok", "[interpret]")
             }
 
             print HelloWorlder;
+            var instance = HelloWorlder();
+            print instance;
         )lox");
         CHECK(run_ok);
         REQUIRE(StringEq(error_list, {}));
         CHECK(StringEq(console_out,{
-            "<class HelloWorlder>"
+            "<class HelloWorlder>",
+            "<instance HelloWorlder>"
         }));
     }
 }

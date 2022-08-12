@@ -16,6 +16,7 @@ struct Nil : public Object
 
     ObjectType get_type() const override;
     std::string to_string() const override;
+    bool is_callable() const override { return false; }
 };
 
 
@@ -28,6 +29,7 @@ struct String : public Object
 
     ObjectType get_type() const override;
     std::string to_string() const override;
+    bool is_callable() const override { return false; }
 };
 
 
@@ -40,6 +42,7 @@ struct Bool : public Object
 
     ObjectType get_type() const override;
     std::string to_string() const override;
+    bool is_callable() const override { return false; }
 };
 
 
@@ -52,6 +55,7 @@ struct Number : public Object
 
     ObjectType get_type() const override;
     std::string to_string() const override;
+    bool is_callable() const override { return false; }
 };
 
 struct NativeFunction : Callable
@@ -76,33 +80,9 @@ struct NativeFunction : Callable
     }
 
     std::shared_ptr<Object>
-    call(const Arguments& arguments) override
+    call(std::shared_ptr<Callable>, const Arguments& arguments) override
     {
         return func(arguments);
-    }
-};
-
-
-struct Klass : public Object
-{
-    std::string name;
-
-    Klass(const std::string& n)
-        : name(n)
-    {
-    }
-
-    ObjectType
-    get_type() const override
-    {
-        return ObjectType::klass;
-    }
-
-    std::string
-    to_string() const override
-    {
-        return "<class {}>"_format(name);
-        // return name;
     }
 };
 
@@ -213,6 +193,45 @@ ObjectType Callable::get_type() const
 }
 
 
+bool Callable::is_callable() const
+{
+    return true;
+}
+
+std::shared_ptr<Object>
+call(std::shared_ptr<Callable> self, const Arguments& arguments)
+{
+    return self->call(self, arguments);
+}
+
+// ----------------------------------------------------------------------------
+
+
+Klass::Klass(const std::string& n)
+    : name(n)
+{
+}
+
+ObjectType
+Klass::get_type() const
+{
+    return ObjectType::klass;
+}
+
+std::string
+Klass::to_string() const
+{
+    return "<class {}>"_format(name);
+}
+
+std::shared_ptr<Object>
+Klass::call(std::shared_ptr<Callable> self, const Arguments& arguments)
+{
+    assert(self->get_type() == ObjectType::klass);
+    auto klass = std::static_pointer_cast<Klass>(self);
+    return constructor(klass, arguments);
+}
+
 
 // ----------------------------------------------------------------------------
 
@@ -255,11 +274,6 @@ make_native_function
     return std::make_shared<NativeFunction>(name, func);
 }
 
-std::shared_ptr<Object>
-make_klass(const std::string& name)
-{
-    return std::make_shared<Klass>(name);
-}
 
 // ----------------------------------------------------------------------------
 
@@ -301,7 +315,7 @@ std::shared_ptr<Callable>
 as_callable(std::shared_ptr<Object> o)
 {
     assert(o != nullptr);
-    if(o->get_type() != ObjectType::callable) { return nullptr; }
+    if(o->is_callable() == false) { return nullptr; }
     return std::static_pointer_cast<Callable>(o);
 }
 

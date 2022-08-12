@@ -9,7 +9,7 @@ namespace lox
 
 enum class ObjectType
 {
-    nil, string, boolean, number, callable, klass
+    nil, string, boolean, number, callable, klass, instance
 };
 
 
@@ -20,12 +20,13 @@ constexpr std::string_view objecttype_to_string(ObjectType ot)
 {
     switch (ot)
     {
-    case ObjectType::nil:     return "nil";
-    case ObjectType::string:  return "string";
-    case ObjectType::boolean: return "boolean";
-    case ObjectType::number:  return "number";
-    case ObjectType::klass:  return "class";
-    default:                  assert(false && "not a callable"); return "???";
+    case ObjectType::nil:      return "nil";
+    case ObjectType::string:   return "string";
+    case ObjectType::boolean:  return "boolean";
+    case ObjectType::number:   return "number";
+    case ObjectType::klass:    return "class";
+    case ObjectType::instance: return "instance";
+    default:                   assert(false && "invalid type"); return "???";
     }
 }
 
@@ -40,6 +41,7 @@ struct Object
 
     virtual ObjectType get_type() const = 0;
     virtual std::string to_string() const = 0;
+    virtual bool is_callable() const = 0;
 };
 
 
@@ -52,10 +54,33 @@ struct Arguments
 
 struct Callable : public Object
 {
-    virtual std::shared_ptr<Object> call(const Arguments& arguments) = 0;
+    virtual std::shared_ptr<Object> call(std::shared_ptr<Callable> self, const Arguments& arguments) = 0;
     ObjectType get_type() const override;
+    bool is_callable() const override;
 };
 
+std::shared_ptr<Object> call(std::shared_ptr<Callable> self, const Arguments& arguments);
+
+// ----------------------------------------------------------------------------
+
+
+struct Klass : Callable
+{
+    std::string name;
+
+    explicit Klass(const std::string& n);
+
+    ObjectType
+    get_type() const override;
+
+    std::string
+    to_string() const override;
+
+    virtual std::shared_ptr<Object> constructor(std::shared_ptr<Klass> klass, const Arguments& arguments) = 0;
+
+    std::shared_ptr<Object>
+    call(std::shared_ptr<Callable> self, const Arguments& arguments) override;
+};
 
 // ----------------------------------------------------------------------------
 
@@ -69,7 +94,6 @@ std::shared_ptr<Object>   make_native_function
     const std::string& name,
     std::function<std::shared_ptr<Object>(const Arguments& arguments)>&& func
 );
-std::shared_ptr<Object>   make_klass(const std::string& name);
 
 // ----------------------------------------------------------------------------
 
