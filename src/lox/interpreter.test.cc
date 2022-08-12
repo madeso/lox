@@ -485,20 +485,21 @@ TEST_CASE("interpret ok", "[interpret]")
             {
                 get_string()
                 {
-                    return "hello world";
+                    return "Hello, world!";
                 }
             }
 
             print HelloWorlder;
             var instance = HelloWorlder();
             print instance;
-            // print instance.get_string();
+            print instance.get_string();
         )lox");
         CHECK(run_ok);
         REQUIRE(StringEq(error_list, {}));
         CHECK(StringEq(console_out,{
             "<class HelloWorlder>",
-            "<instance HelloWorlder>"
+            "<instance HelloWorlder>",
+            "Hello, world!"
         }));
     }
 
@@ -517,4 +518,81 @@ TEST_CASE("interpret ok", "[interpret]")
             "I love cats!"
         }));
     }
+
+    
+    SECTION("called function on class")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            class Box {}
+
+            fun notMethod(argument)
+            {
+                print "called function with " + argument;
+            }
+
+            var box = Box();
+            box.function = notMethod;
+            box.function("argument");
+        )lox");
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
+            "called function with argument"
+        }));
+    }
+    /*
+    SECTION("bound method: called method on class with out dot notation")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            class Person
+            {
+                sayName()
+                {
+                    print this.name;
+                }
+            }
+
+            var jane = Person();
+            jane.name = "Jane";
+
+            var method = jane.sayName;
+            method();
+        )lox");
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
+            "Jane"
+        }));
+    }
+    
+    SECTION("bound method: call method on class with dot instance on other class instance")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            class Person
+            {
+                sayName()
+                {
+                    print this.name;
+                }
+            }
+
+            var jane = Person();
+            jane.name = "Jane";
+
+            var bill = Person();
+            bill.name = "Bill";
+
+            bill.sayName = jane.sayName;
+            bill.sayName();
+        )lox");
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
+            "Jane"
+        }));
+    }
+    */
 }

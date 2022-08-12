@@ -249,13 +249,51 @@ struct SharedptrRaii
     void operator=(const SharedptrRaii&) = delete;
 };
 
+struct ScriptKlass;
+
+std::shared_ptr<Object> call_constructor(std::shared_ptr<ScriptKlass> klass, const Arguments& arguments);
+
+struct ScriptKlass : Klass
+{
+    std::unordered_map<std::string, std::shared_ptr<ScriptFunction>> methods;
+
+    ScriptKlass
+    (
+        const std::string& name,
+        std::unordered_map<std::string, std::shared_ptr<ScriptFunction>>&& m
+    )
+        : Klass(name)
+        , methods(m)
+    {
+    }
+
+    std::shared_ptr<Object>
+    constructor(std::shared_ptr<Klass> klass, const Arguments& arguments) override
+    {
+        assert(static_cast<Klass*>(this) == klass.get());
+        auto self = std::static_pointer_cast<ScriptKlass>(klass);
+        return call_constructor(self, arguments);
+    };
+
+    std::shared_ptr<ScriptFunction>
+    find_method_or_null(const std::string& name)
+    {
+        if(auto found = methods.find(name); found != methods.end())
+        {
+            return found->second;
+        }
+
+        return nullptr;
+    }
+};
+
 
 struct ScriptInstance : Object, WithProperties
 {
-    std::shared_ptr<Klass> klass;
+    std::shared_ptr<ScriptKlass> klass;
     std::unordered_map<std::string, std::shared_ptr<Object>> fields;
 
-    explicit ScriptInstance(std::shared_ptr<Klass> o)
+    explicit ScriptInstance(std::shared_ptr<ScriptKlass> o)
         : klass(o)
     {
     }
@@ -289,6 +327,12 @@ struct ScriptInstance : Object, WithProperties
         {
             return found->second;
         }
+
+        if(auto method = klass->find_method_or_null(name); method != nullptr)
+        {
+            return method;
+        }
+
         return nullptr;
     }
 
@@ -308,19 +352,11 @@ struct ScriptInstance : Object, WithProperties
 };
 
 
-struct ScriptKlass : Klass
+std::shared_ptr<Object> call_constructor(std::shared_ptr<ScriptKlass> klass, const Arguments& arguments)
 {
-    ScriptKlass(const std::string& name) : Klass(name)
-    {
-    }
-
-    std::shared_ptr<Object> constructor(std::shared_ptr<Klass> klass, const Arguments& arguments) override
-    {
-        verify_number_of_arguments(arguments, 0);
-        return std::make_shared<ScriptInstance>(klass);
-    };
-};
-
+    verify_number_of_arguments(arguments, 0);
+    return std::make_shared<ScriptInstance>(klass);
+}
 
 
 struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
@@ -425,7 +461,20 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     on_class_statement(const ClassStatement& x) override
     {
         current_environment->define(x.name, make_nil());
-        [[maybe_unused]] const auto set = current_environment->set_or_false(x.name, std::make_shared<ScriptKlass>(x.name));
+        std::unordered_map<std::string, std::shared_ptr<ScriptFunction>> method_list;
+        for(const auto& method: x.methods)
+        {
+            auto function = std::make_shared<ScriptFunction>
+            (
+                this,
+                current_environment,
+                current_state,
+                "mtd {}"_format(method->name), method->params, method->body
+            );
+
+            method_list.insert({method->name, function});
+        }
+        [[maybe_unused]] const auto set = current_environment->set_or_false(x.name, std::make_shared<ScriptKlass>(x.name, std::move(method_list)));
         assert(set);
     }
     

@@ -22,7 +22,7 @@ struct Var
 
 enum class FunctionType
 {
-    none, function
+    none, function, method
 };
 
 
@@ -157,6 +157,11 @@ struct MainResolver : ExpressionVoidVisitor, StatementVoidVisitor
     {
         declare_var(x.name, x.offset);
         define_var(x.name);
+
+        for(auto& method: x.methods)
+        {
+            resolve_function(*method, FunctionType::method);
+        }
     }
 
     void on_var_statement(const VarStatement& s) override
