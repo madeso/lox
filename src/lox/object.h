@@ -24,7 +24,8 @@ constexpr std::string_view objecttype_to_string(ObjectType ot)
     case ObjectType::string:  return "string";
     case ObjectType::boolean: return "boolean";
     case ObjectType::number:  return "number";
-    default:                  return "???";
+    case ObjectType::klass:  return "class";
+    default:                  assert(false && "not a callable"); return "???";
     }
 }
 
