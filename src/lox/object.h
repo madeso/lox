@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #include "lox/ints.h"
 
 
@@ -44,7 +46,7 @@ struct WithProperties
 };
 
 
-struct Object
+struct Object : std::enable_shared_from_this<Object>
 {
     Object() = default;
     virtual ~Object() = default;
@@ -65,12 +67,10 @@ struct Arguments
 
 struct Callable : public Object
 {
-    virtual std::shared_ptr<Object> call(std::shared_ptr<Callable> self, const Arguments& arguments) = 0;
+    virtual std::shared_ptr<Object> call(const Arguments& arguments) = 0;
     ObjectType get_type() const override;
     bool is_callable() const override;
 };
-
-std::shared_ptr<Object> call(std::shared_ptr<Callable> self, const Arguments& arguments);
 
 // ----------------------------------------------------------------------------
 
@@ -90,7 +90,7 @@ struct Klass : Callable
     virtual std::shared_ptr<Object> constructor(std::shared_ptr<Klass> klass, const Arguments& arguments) = 0;
 
     std::shared_ptr<Object>
-    call(std::shared_ptr<Callable> self, const Arguments& arguments) override;
+    call(const Arguments& arguments) override;
 };
 
 // ----------------------------------------------------------------------------

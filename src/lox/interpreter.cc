@@ -111,7 +111,7 @@ struct ScriptFunction : Callable
     }
 
     std::shared_ptr<Object>
-    call(std::shared_ptr<Callable>, const Arguments& arguments) override
+    call(const Arguments& arguments) override
     {
         verify_number_of_arguments(arguments, params.size());
         
@@ -615,7 +615,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
 
         try
         {
-            auto return_value = call(function, {arguments});
+            auto return_value = function->call({arguments});
             return return_value;
         }
         catch(const CallError& err)

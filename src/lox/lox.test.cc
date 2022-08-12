@@ -61,7 +61,7 @@ TEST_CASE("lox binding" "[lox]")
         auto callable = lox::as_callable(function_object);
         REQUIRE(callable != nullptr);
         
-        auto res = call(callable, { {lox::make_string("world")} });
+        auto res = callable->call({ {lox::make_string("world")} });
         auto str = lox::as_string(res);
         
         REQUIRE(str);
@@ -184,8 +184,8 @@ TEST_CASE("lox binding" "[lox]")
         // script should have called `set_fun` and callable should now be set
         REQUIRE(callable != nullptr);
 
-        auto fir_val = call(callable, {{}});
-        auto sec_val = call(callable, {{}});
+        auto fir_val = callable->call({{}});
+        auto sec_val = callable->call({{}});
         
         auto fir = lox::as_number(fir_val);
         auto sec = lox::as_number(sec_val);

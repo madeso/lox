@@ -80,7 +80,7 @@ struct NativeFunction : Callable
     }
 
     std::shared_ptr<Object>
-    call(std::shared_ptr<Callable>, const Arguments& arguments) override
+    call(const Arguments& arguments) override
     {
         return func(arguments);
     }
@@ -209,12 +209,6 @@ bool Callable::is_callable() const
     return true;
 }
 
-std::shared_ptr<Object>
-call(std::shared_ptr<Callable> self, const Arguments& arguments)
-{
-    return self->call(self, arguments);
-}
-
 
 // ----------------------------------------------------------------------------
 
@@ -238,8 +232,10 @@ Klass::to_string() const
 }
 
 std::shared_ptr<Object>
-Klass::call(std::shared_ptr<Callable> self, const Arguments& arguments)
+Klass::call(const Arguments& arguments)
 {
+    auto self = shared_from_this();
+    assert(self != nullptr);
     assert(self->get_type() == ObjectType::klass);
     auto klass = std::static_pointer_cast<Klass>(self);
     return constructor(klass, arguments);
