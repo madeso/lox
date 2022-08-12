@@ -541,7 +541,7 @@ TEST_CASE("interpret ok", "[interpret]")
             "called function with argument"
         }));
     }
-    /*
+    
     SECTION("bound method: called method on class with out dot notation")
     {
         const auto run_ok = run_string
@@ -564,6 +564,33 @@ TEST_CASE("interpret ok", "[interpret]")
         REQUIRE(StringEq(error_list, {}));
         CHECK(StringEq(console_out,{
             "Jane"
+        }));
+    }
+    
+    SECTION("bound method: return this in callback")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            class Thing
+            {
+                getCallback()
+                {
+                    fun localFunction()
+                    {
+                        print this;
+                    }
+
+                    return localFunction;
+                }
+            }
+
+            var callback = Thing().getCallback();
+            callback();
+        )lox");
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
+            "<instance Thing>"
         }));
     }
     
@@ -594,5 +621,4 @@ TEST_CASE("interpret ok", "[interpret]")
             "Jane"
         }));
     }
-    */
 }

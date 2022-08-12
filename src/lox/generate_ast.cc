@@ -301,6 +301,11 @@ write_code
                 }
             },
             {
+                "This",
+                {
+                }
+            },
+            {
                 "Grouping",
                 {
                     {"Expression", "expression"}

@@ -158,10 +158,16 @@ struct MainResolver : ExpressionVoidVisitor, StatementVoidVisitor
         declare_var(x.name, x.offset);
         define_var(x.name);
 
+        begin_scope();
+        declare_var("this", x.offset);
+        define_var("this");
+
         for(auto& method: x.methods)
         {
             resolve_function(*method, FunctionType::method);
         }
+
+        end_scope();
     }
 
     void on_var_statement(const VarStatement& s) override
@@ -277,6 +283,11 @@ struct MainResolver : ExpressionVoidVisitor, StatementVoidVisitor
     {
         resolve(x.value);
         resolve(x.object);
+    }
+
+    void on_this_expression(const ThisExpression& x) override
+    {
+        resolve_local(x, "this");
     }
 
     void on_grouping_expression(const GroupingExpression& x) override

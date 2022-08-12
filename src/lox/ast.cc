@@ -163,6 +163,12 @@ struct AstPrinter : ExpressionStringVisitor, StatementStringVisitor
     {
         return parenthesize("set", {x.value->accept(this), x.name, x.object->accept(this)});
     }
+    
+    std::string
+    on_this_expression(const ThisExpression&) override
+    {
+        return parenthesize("this", {});
+    }
 
     std::string
     on_binary_expression(const BinaryExpression& expr) override
@@ -422,6 +428,13 @@ struct GraphvizPrinter : ExpressionStringVisitor, StatementStringVisitor
         link(n, v);
         link(n, x.value->accept(this));
         link(v, x.object->accept(this));
+        return n;
+    }
+
+    std::string
+    on_this_expression(const ThisExpression&) override
+    {
+        const auto n = new_node("this");
         return n;
     }
 

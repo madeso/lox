@@ -37,4 +37,5 @@ arguments      -> expression ( "," expression )* ;
 primary        -> "true" | "false" | "nil"
                | NUMBER | STRING
                | "(" expression ")"
+               | THIS
                | IDENTIFIER ;

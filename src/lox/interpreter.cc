@@ -104,6 +104,14 @@ struct ScriptFunction : Callable
     {
     }
 
+    std::shared_ptr<Object>
+    bind(std::shared_ptr<Object> instance)
+    {
+        auto env = std::make_shared<Environment>(closure);
+        env->define("this", instance);
+        return std::make_shared<ScriptFunction>(interpreter, env, state, to_str, params, body);
+    }
+
     std::string
     to_string() const override
     {
@@ -330,7 +338,11 @@ struct ScriptInstance : Object, WithProperties
 
         if(auto method = klass->find_method_or_null(name); method != nullptr)
         {
-            return method;
+            auto self = shared_from_this();
+            assert(self != nullptr);
+            assert(self->get_type() == ObjectType::instance);
+            auto inst = std::static_pointer_cast<ScriptInstance>(self);
+            return method->bind(inst);
         }
 
         return nullptr;
@@ -350,6 +362,7 @@ struct ScriptInstance : Object, WithProperties
         return true;
     }
 };
+
 
 
 std::shared_ptr<Object> call_constructor(std::shared_ptr<ScriptKlass> klass, const Arguments& arguments)
@@ -713,6 +726,12 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
         }
 
         return value;
+    }
+
+    std::shared_ptr<Object>
+    on_this_expression(const ThisExpression& x) override
+    {
+        return lookup_var(*current_environment, "this", x);
     }
 
     std::shared_ptr<Object>

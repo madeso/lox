@@ -601,6 +601,12 @@ struct Parser
             return std::make_shared<LiteralExpression>(prev.offset, new_expr(), std::move(prev.literal));
         }
 
+        if( match({TokenType::THIS}))
+        {
+            auto& prev = previous();
+            return std::make_shared<ThisExpression>(prev.offset, new_expr());
+        }
+
         if (match({TokenType::IDENTIFIER}))
         {
             auto& prev = previous();
