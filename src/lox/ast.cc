@@ -87,29 +87,6 @@ struct AstPrinter : ExpressionStringVisitor, StatementStringVisitor
     }
 
     std::string
-    on_call_expression(const CallExpression& x) override
-    {
-        std::vector<std::string> args { x.callee->accept(this)};
-        for(const auto& a: x.arguments)
-        {
-            args.emplace_back(a->accept(this));
-        }
-        return parenthesize("call", args);
-    }
-
-    std::string
-    on_get_expression(const GetExpression& x) override
-    {
-        return parenthesize("get", {x.name, x.object->accept(this)});
-    }
-
-    std::string
-    on_set_expression(const SetExpression& x) override
-    {
-        return parenthesize("set", {x.value->accept(this), x.name, x.object->accept(this)});
-    }
-
-    std::string
     on_while_statement(const WhileStatement& x) override
     {
         return parenthesize("while", {x.condition->accept(this), x.body->accept(this)});
@@ -163,6 +140,29 @@ struct AstPrinter : ExpressionStringVisitor, StatementStringVisitor
 
     // --------------------------------------------------------------------------------------------
     // expressions
+
+    std::string
+    on_call_expression(const CallExpression& x) override
+    {
+        std::vector<std::string> args { x.callee->accept(this)};
+        for(const auto& a: x.arguments)
+        {
+            args.emplace_back(a->accept(this));
+        }
+        return parenthesize("call", args);
+    }
+
+    std::string
+    on_get_expression(const GetExpression& x) override
+    {
+        return parenthesize("get", {x.name, x.object->accept(this)});
+    }
+
+    std::string
+    on_set_expression(const SetExpression& x) override
+    {
+        return parenthesize("set", {x.value->accept(this), x.name, x.object->accept(this)});
+    }
 
     std::string
     on_binary_expression(const BinaryExpression& expr) override
