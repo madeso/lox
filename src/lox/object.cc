@@ -83,6 +83,30 @@ struct NativeFunction : Callable
 };
 
 
+struct Klass : public Object
+{
+    std::string name;
+
+    Klass(const std::string& n)
+        : name(n)
+    {
+    }
+
+    ObjectType
+    get_type() const override
+    {
+        return ObjectType::klass;
+    }
+
+    std::string
+    to_string() const override
+    {
+        return "<class {}>"_format(name);
+        // return name;
+    }
+};
+
+
 }}
 
 
@@ -231,6 +255,11 @@ make_native_function
     return std::make_shared<NativeFunction>(name, func);
 }
 
+std::shared_ptr<Object>
+make_klass(const std::string& name)
+{
+    return std::make_shared<Klass>(name);
+}
 
 // ----------------------------------------------------------------------------
 

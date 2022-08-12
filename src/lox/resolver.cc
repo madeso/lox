@@ -152,6 +152,12 @@ struct MainResolver : ExpressionVoidVisitor, StatementVoidVisitor
         resolve(s.statements);
         end_scope();
     }
+    
+    void on_class_statement(const ClassStatement& x) override
+    {
+        declare_var(x.name, x.offset);
+        define_var(x.name);
+    }
 
     void on_var_statement(const VarStatement& s) override
     {

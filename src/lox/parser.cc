@@ -107,6 +107,10 @@ struct Parser
     {
         try
         {
+            if(match({TokenType::CLASS}))
+            {
+                return parse_class_declaration();
+            }
             if(match({TokenType::FUN}))
             {
                 return parse_function_or_method("function");
@@ -126,6 +130,28 @@ struct Parser
     }
 
     std::shared_ptr<Statement>
+    parse_class_declaration()
+    {
+        const auto name = consume(TokenType::IDENTIFIER, "Expected class name").lexeme;
+        const auto start = previous().offset;
+
+        consume(TokenType::LEFT_BRACE, "Expected { before class body");
+
+
+        std::vector<std::shared_ptr<FunctionStatement>> methods;
+        while(check(TokenType::RIGHT_BRACE) == false && is_at_end() == false)
+        {
+            auto method = parse_function_or_method("method");
+            methods.emplace_back(std::move(method));
+        }
+
+        consume(TokenType::RIGHT_BRACE, "Expected } after class body");
+
+        const auto end = previous().offset;
+        return std::make_shared<ClassStatement>(offset_start_end(start, end), new_stmt(), std::string(name), std::move(methods));
+    }
+
+    std::shared_ptr<FunctionStatement>
     parse_function_or_method(std::string_view kind)
     {
         const auto name = consume(TokenType::IDENTIFIER, "Expected {} name"_format(kind)).lexeme;

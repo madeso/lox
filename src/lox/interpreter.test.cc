@@ -476,4 +476,25 @@ TEST_CASE("interpret ok", "[interpret]")
             "global", "global"
         }));
     }
+    
+    SECTION("simple class")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            class HelloWorlder
+            {
+                get_string()
+                {
+                    return "hello world";
+                }
+            }
+
+            print HelloWorlder;
+        )lox");
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
+            "<class HelloWorlder>"
+        }));
+    }
 }

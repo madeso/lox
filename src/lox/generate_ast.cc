@@ -338,6 +338,13 @@ write_code
                 }
             },
             {
+                "Class",
+                {
+                    {"std::string", "name"},
+                    {"std::vector<std::shared_ptr<FunctionStatement>>", "methods"}
+                }
+            },
+            {
                 "Function",
                 {
                     {"std::string", "name"},

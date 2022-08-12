@@ -69,6 +69,24 @@ struct AstPrinter : ExpressionStringVisitor, StatementStringVisitor
     }
 
     std::string
+    on_class_statement(const ClassStatement& x) override
+    {
+        std::vector<std::string> blocks;
+        blocks.emplace_back(x.name);
+
+        std::vector<std::string> methods;
+        for(const auto& stmt: x.methods)
+        {
+            methods.emplace_back(stmt->accept(this));
+        }
+        if(methods.empty() == false)
+        {
+            blocks.emplace_back(parenthesize("methods", methods));
+        }
+        return parenthesize("class", blocks);
+    }
+
+    std::string
     on_call_expression(const CallExpression& x) override
     {
         std::vector<std::string> args { x.callee->accept(this)};
@@ -273,6 +291,23 @@ struct GraphvizPrinter : ExpressionStringVisitor, StatementStringVisitor
     on_return_statement(const ReturnStatement& x) override
     {
         return link_from(new_node("return"), x.value->accept(this));
+    }
+
+    std::string
+    on_class_statement(const ClassStatement& x) override
+    {
+        const auto n = new_node("class");
+        const auto name = link_to(n, new_node(x.name));
+        std::optional<std::string> methods;
+        for(const auto& stmt: x.methods)
+        {
+            if(methods.has_value() == false)
+            {
+                methods = link_to(name, new_node("methods"));
+            }
+            link(*methods, stmt->accept(this));
+        }
+        return n;
     }
 
     std::string

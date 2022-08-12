@@ -9,7 +9,7 @@ namespace lox
 
 enum class ObjectType
 {
-    nil, string, boolean, number, callable
+    nil, string, boolean, number, callable, klass
 };
 
 
@@ -56,8 +56,6 @@ struct Callable : public Object
 };
 
 
-
-
 // ----------------------------------------------------------------------------
 
 
@@ -70,7 +68,7 @@ std::shared_ptr<Object>   make_native_function
     const std::string& name,
     std::function<std::shared_ptr<Object>(const Arguments& arguments)>&& func
 );
-
+std::shared_ptr<Object>   make_klass(const std::string& name);
 
 // ----------------------------------------------------------------------------
 

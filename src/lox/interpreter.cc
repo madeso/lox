@@ -336,6 +336,14 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     // statements
 
     void
+    on_class_statement(const ClassStatement& x) override
+    {
+        current_environment->define(x.name, make_nil());
+        [[maybe_unused]] const auto set = current_environment->set_or_false(x.name, make_klass(x.name));
+        assert(set);
+    }
+    
+    void
     on_return_statement(const ReturnStatement& x) override
     {
         std::shared_ptr<Object> value;
