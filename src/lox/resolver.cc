@@ -268,6 +268,12 @@ struct MainResolver : ExpressionVoidVisitor, StatementVoidVisitor
         resolve(x.object);
     }
 
+    void on_set_expression(const SetExpression& x) override
+    {
+        resolve(x.value);
+        resolve(x.object);
+    }
+
     void on_grouping_expression(const GroupingExpression& x) override
     {
         resolve(x.expression);

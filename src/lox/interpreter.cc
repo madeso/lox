@@ -279,6 +279,20 @@ struct ScriptInstance : Object, WithProperties
         }
         return nullptr;
     }
+
+    bool set_property_or_false(const std::string& name, std::shared_ptr<Object> value) override
+    {
+        if(auto found = fields.find(name); found != fields.end())
+        {
+            found->second = value;
+        }
+        else
+        {
+            fields.insert({name, value});
+        }
+
+        return true;
+    }
 };
 
 
@@ -590,6 +604,45 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
             )
         );
         throw RuntimeError{};
+    }
+
+    std::shared_ptr<Object>
+    on_set_expression(const SetExpression& x) override
+    {
+        auto object = evaluate(x.object);
+
+        WithProperties* props = object->get_properties_or_null();
+        if(props == nullptr)
+        {
+            error_handler->on_error
+            (
+                x.offset, "{} is not capable of having any properties. Has value {}"_format
+                (
+                    objecttype_to_string(object->get_type()),
+                    object->to_string()
+                )
+            );
+            throw RuntimeError{};
+        }
+
+        auto value = evaluate(x.value);
+        const auto was_set = props->set_property_or_false(x.name, value);
+
+        if(was_set == false)
+        {
+            // todo(Gustav): edit distance + custom error message?
+            error_handler->on_error
+            (
+                x.offset, "{} doesn't have a property named {}"_format
+                (
+                    object->to_string(),
+                    x.name
+                )
+            );
+            throw RuntimeError{};
+        }
+
+        return value;
     }
 
     std::shared_ptr<Object>

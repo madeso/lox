@@ -395,10 +395,25 @@ struct Parser
             auto& equals = previous();
             auto rhs = parse_assignment();
 
+            // todo(Gustav): is new_expr needed here or can we reuse the existing expression id?
+
             if(expr->get_type() == ExpressionType::variable_expression)
             {
                 const auto name = static_cast<VariableExpression*>(expr.get())->name;
-                return std::make_shared<AssignExpression>(offset_start_end(expr->offset, rhs->offset), new_expr(), name, expr->offset, std::move(rhs));
+                return std::make_shared<AssignExpression>
+                (
+                    offset_start_end(expr->offset, rhs->offset), new_expr(),
+                    name, expr->offset, std::move(rhs)
+                );
+            }
+            else if(expr->get_type() == ExpressionType::get_expression)
+            {
+                auto* set = static_cast<GetExpression*>(expr.get());
+                return std::make_shared<SetExpression>
+                (
+                    offset_start_end(expr->offset, rhs->offset), new_expr(), 
+                    std::move(set->object), set->name, std::move(rhs)
+                );
             }
 
             error(offset_for_error(equals), "Invalid assignment target.");

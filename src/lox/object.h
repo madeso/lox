@@ -40,6 +40,7 @@ struct WithProperties
 {
     virtual ~WithProperties() = default;
     virtual std::shared_ptr<Object> get_property_or_null(const std::string& name) = 0;
+    virtual bool set_property_or_false(const std::string& name, std::shared_ptr<Object> value) = 0;
 };
 
 

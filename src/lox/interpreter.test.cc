@@ -501,4 +501,20 @@ TEST_CASE("interpret ok", "[interpret]")
             "<instance HelloWorlder>"
         }));
     }
+
+    SECTION("simple properies on class")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            class Classy{}
+            var instance = Classy();
+            instance.animals = "I love cats!";
+            print instance.animals;
+        )lox");
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
+            "I love cats!"
+        }));
+    }
 }

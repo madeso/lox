@@ -104,6 +104,12 @@ struct AstPrinter : ExpressionStringVisitor, StatementStringVisitor
     }
 
     std::string
+    on_set_expression(const SetExpression& x) override
+    {
+        return parenthesize("set", {x.value->accept(this), x.name, x.object->accept(this)});
+    }
+
+    std::string
     on_while_statement(const WhileStatement& x) override
     {
         return parenthesize("while", {x.condition->accept(this), x.body->accept(this)});
@@ -404,6 +410,17 @@ struct GraphvizPrinter : ExpressionStringVisitor, StatementStringVisitor
         const auto n = new_node("get");
         const auto v = new_node(x.name);
         link(n, v);
+        link(v, x.object->accept(this));
+        return n;
+    }
+
+    std::string
+    on_set_expression(const SetExpression& x) override
+    {
+        const auto n = new_node("get");
+        const auto v = new_node(x.name);
+        link(n, v);
+        link(n, x.value->accept(this));
         link(v, x.object->accept(this));
         return n;
     }

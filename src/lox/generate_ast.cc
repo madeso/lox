@@ -293,6 +293,14 @@ write_code
                 }
             },
             {
+                "Set",
+                {
+                    {"Expression", "object"},
+                    {"std::string", "name"},
+                    {"Expression", "value"}
+                }
+            },
+            {
                 "Grouping",
                 {
                     {"Expression", "expression"}
