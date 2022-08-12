@@ -33,6 +33,15 @@ constexpr std::string_view objecttype_to_string(ObjectType ot)
 
 // ----------------------------------------------------------------------------
 
+struct Object;
+
+
+struct WithProperties
+{
+    virtual ~WithProperties() = default;
+    virtual std::shared_ptr<Object> get_property_or_null(const std::string& name) = 0;
+};
+
 
 struct Object
 {
@@ -42,6 +51,8 @@ struct Object
     virtual ObjectType get_type() const = 0;
     virtual std::string to_string() const = 0;
     virtual bool is_callable() const = 0;
+    
+    virtual WithProperties* get_properties_or_null();
 };
 
 
@@ -50,7 +61,6 @@ struct Arguments
 {
     std::vector<std::shared_ptr<Object>> arguments;
 };
-
 
 struct Callable : public Object
 {

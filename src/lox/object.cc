@@ -186,6 +186,17 @@ Number::to_string() const
 // ----------------------------------------------------------------------------
 
 
+WithProperties*
+Object::get_properties_or_null()
+{
+    return nullptr;
+}
+
+
+
+// ----------------------------------------------------------------------------
+
+
 
 ObjectType Callable::get_type() const
 {
@@ -204,7 +215,9 @@ call(std::shared_ptr<Callable> self, const Arguments& arguments)
     return self->call(self, arguments);
 }
 
+
 // ----------------------------------------------------------------------------
+
 
 
 Klass::Klass(const std::string& n)

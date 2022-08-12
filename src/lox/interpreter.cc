@@ -238,9 +238,10 @@ struct SharedptrRaii
 };
 
 
-struct ScriptInstance : Object
+struct ScriptInstance : Object, WithProperties
 {
     std::shared_ptr<Klass> klass;
+    std::unordered_map<std::string, std::shared_ptr<Object>> fields;
 
     explicit ScriptInstance(std::shared_ptr<Klass> o)
         : klass(o)
@@ -263,6 +264,20 @@ struct ScriptInstance : Object
     is_callable() const override
     {
         return false;
+    }
+
+    WithProperties* get_properties_or_null() override
+    {
+        return this;
+    }
+    
+    std::shared_ptr<Object> get_property_or_null(const std::string& name) override
+    {
+        if(auto found = fields.find(name); found != fields.end())
+        {
+            return found->second;
+        }
+        return nullptr;
     }
 };
 
@@ -539,6 +554,42 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
             }
             throw RuntimeError{};
         }
+    }
+
+    std::shared_ptr<Object>
+    on_get_expression(const GetExpression& x) override
+    {
+        auto object = evaluate(x.object);
+        if(WithProperties* props = object->get_properties_or_null(); props != nullptr)
+        {
+            auto r = props->get_property_or_null(x.name);
+
+            if(r == nullptr)
+            {
+                // todo(Gustav): edit distance search for best named property
+                error_handler->on_error
+                (
+                    x.offset, "{} doesn't have a property named {}"_format
+                    (
+                        object->to_string(),
+                        x.name
+                    )
+                );
+                throw RuntimeError{};
+            }
+
+            return r;
+        }
+
+        error_handler->on_error
+        (
+            x.offset, "{} is not capable of having any properties. Has value {}"_format
+            (
+                objecttype_to_string(object->get_type()),
+                object->to_string()
+            )
+        );
+        throw RuntimeError{};
     }
 
     std::shared_ptr<Object>

@@ -492,6 +492,7 @@ TEST_CASE("interpret ok", "[interpret]")
             print HelloWorlder;
             var instance = HelloWorlder();
             print instance;
+            // print instance.get_string();
         )lox");
         CHECK(run_ok);
         REQUIRE(StringEq(error_list, {}));

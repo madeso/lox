@@ -286,6 +286,13 @@ write_code
                 }
             },
             {
+                "Get",
+                {
+                    {"Expression", "object"},
+                    {"std::string", "name"}
+                }
+            },
+            {
                 "Grouping",
                 {
                     {"Expression", "expression"}
