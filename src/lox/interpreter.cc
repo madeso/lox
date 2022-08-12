@@ -80,39 +80,51 @@ struct RuntimeError
 struct ScriptFunction : Callable
 {
     MainInterpreter* interpreter;
-    FunctionStatement declaration;
     std::shared_ptr<Environment> closure;
     std::shared_ptr<State> state;
+    std::string to_str;
+    std::vector<std::string> params;
+    std::vector<std::shared_ptr<Statement>> body;
 
-    explicit ScriptFunction(MainInterpreter* i, const FunctionStatement& f, std::shared_ptr<Environment> c, std::shared_ptr<State> s)
+    explicit ScriptFunction
+    (
+        MainInterpreter* i,
+        std::shared_ptr<Environment> c,
+        std::shared_ptr<State> s,
+        const std::string& n,
+        const std::vector<std::string>& p,
+        const std::vector<std::shared_ptr<Statement>>& b
+    )
         : interpreter(i)
-        , declaration(f)
         , closure(c)
         , state(s)
+        , to_str(n)
+        , params(p)
+        , body(b)
     {
     }
 
     std::string
     to_string() const override
     {
-        return "<fn {}>"_format(declaration.name);
+        return "<{}>"_format(to_str);
     }
 
     std::shared_ptr<Object>
     call(std::shared_ptr<Callable>, const Arguments& arguments) override
     {
-        verify_number_of_arguments(arguments, declaration.params.size());
+        verify_number_of_arguments(arguments, params.size());
         
         auto environment = std::make_shared<Environment>(closure);
 
-        for(std::size_t param_index = 0; param_index < declaration.params.size(); param_index += 1)
+        for(std::size_t param_index = 0; param_index < params.size(); param_index += 1)
         {
-            environment->define(declaration.params[param_index], arguments.arguments[param_index]);
+            environment->define(params[param_index], arguments.arguments[param_index]);
         }
 
         try
         {
-            execute_statements_with_environment(interpreter, declaration.body, environment, state);
+            execute_statements_with_environment(interpreter, body, environment, state);
         }
         catch(const ReturnValue& r)
         {
@@ -458,7 +470,16 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     {
         assert(current_environment);
         assert(current_state);
-        current_environment->define(x.name, std::make_shared<ScriptFunction>(this, x, current_environment, current_state));
+        current_environment->define
+        (
+            x.name, std::make_shared<ScriptFunction>
+            (
+                this,
+                current_environment,
+                current_state,
+                "fn {}"_format(x.name), x.params, x.body
+            )
+        );
     }
 
     void
