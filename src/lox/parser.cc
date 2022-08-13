@@ -133,7 +133,7 @@ struct Parser
     parse_class_declaration()
     {
         const auto name = consume(TokenType::IDENTIFIER, "Expected class name").lexeme;
-        const auto start = previous().offset;
+        const auto start = previous_offset();
 
         consume(TokenType::LEFT_BRACE, "Expected { before class body");
 
@@ -147,7 +147,7 @@ struct Parser
 
         consume(TokenType::RIGHT_BRACE, "Expected } after class body");
 
-        const auto end = previous().offset;
+        const auto end = previous_offset();
         return std::make_shared<ClassStatement>(offset_start_end(start, end), new_stmt(), std::string(name), std::move(methods));
     }
 
@@ -155,10 +155,10 @@ struct Parser
     parse_function_or_method(std::string_view kind)
     {
         const auto name = consume(TokenType::IDENTIFIER, "Expected {} name"_format(kind)).lexeme;
-        const auto start = previous().offset;
+        const auto start = previous_offset();
 
         consume(TokenType::LEFT_PAREN, "Expect '(' after {} name"_format(kind));
-        const auto params_start = previous().offset;
+        const auto params_start = previous_offset();
         std::vector<std::string> params;
         if(check(TokenType::RIGHT_PAREN) == false)
         {
@@ -168,7 +168,7 @@ struct Parser
             } while (match({TokenType::COMMA}));
         }
         consume(TokenType::RIGHT_PAREN, "Expect ')' after parameters");
-        const auto params_end = previous().offset;
+        const auto params_end = previous_offset();
 
         if (params.size() >= 255)
         {
@@ -177,14 +177,14 @@ struct Parser
 
         consume(TokenType::LEFT_BRACE, "Expect '{{' before {} body"_format(kind));
         auto body = parse_block_to_statements();
-        const auto end = previous().offset;
+        const auto end = previous_offset();
         return std::make_shared<FunctionStatement>(offset_start_end(start, end), new_stmt(), std::string(name), std::move(params), std::move(body));
     }
 
     std::shared_ptr<Statement>
     parse_var_declaration()
     {
-        const auto start = previous().offset;
+        const auto start = previous_offset();
         auto& name = consume(TokenType::IDENTIFIER, "Expected variable name");
 
         std::shared_ptr<Expression> initializer = nullptr;
@@ -195,7 +195,7 @@ struct Parser
         }
 
         consume_semicolon("print statement");
-        const auto end = previous().offset;
+        const auto end = previous_offset();
         return std::make_shared<VarStatement>(offset_start_end(start, end), new_stmt(), std::string(name.lexeme), std::move(initializer));
     }
 
@@ -215,7 +215,7 @@ struct Parser
     std::shared_ptr<Statement>
     parse_return_statement()
     {
-        const auto start = previous().offset;
+        const auto start = previous_offset();
 
         std::shared_ptr<Expression> value;
         if(check(TokenType::SEMICOLON) == false)
@@ -224,14 +224,14 @@ struct Parser
         }
 
         consume(TokenType::SEMICOLON, "Expected ';' after return value");
-        const auto end = previous().offset;
+        const auto end = previous_offset();
         return std::make_shared<ReturnStatement>(offset_start_end(start, end), new_stmt(), std::move(value));
     }
 
     std::shared_ptr<Statement>
     parse_for_statement()
     {
-        const auto start = previous().offset;
+        const auto start = previous_offset();
         consume(TokenType::LEFT_PAREN, "Expected '(' after for");
         
         std::shared_ptr<Statement> initializer;
@@ -265,7 +265,7 @@ struct Parser
         consume(TokenType::RIGHT_PAREN, "Expected ')' after for condition");
 
         auto body = parse_statement();
-        const auto end = previous().offset;
+        const auto end = previous_offset();
 
         if(increment != nullptr)
         {
@@ -299,14 +299,14 @@ struct Parser
     std::shared_ptr<Statement>
     parse_while_statement()
     {
-        const auto start = previous().offset;
+        const auto start = previous_offset();
         consume(TokenType::LEFT_PAREN, "Expected '(' after for");
         
         auto condition = parse_expression();
         consume(TokenType::RIGHT_PAREN, "Expected ')' after for condition");
 
         auto body = parse_statement();
-        const auto end = previous().offset;
+        const auto end = previous_offset();
         
         return std::make_shared<WhileStatement>(offset_start_end(start, end), new_stmt(), std::move(condition), std::move(body));
     }
@@ -314,7 +314,7 @@ struct Parser
     std::shared_ptr<Statement>
     parse_if_statement()
     {
-        const auto start = previous().offset;
+        const auto start = previous_offset();
         consume(TokenType::LEFT_PAREN, "Expected '(' after if");
         auto condition = parse_expression();
         consume(TokenType::RIGHT_PAREN, "Expected ')' after if condition");
@@ -327,7 +327,7 @@ struct Parser
             else_branch = parse_statement();
         }
 
-        const auto end = previous().offset;
+        const auto end = previous_offset();
         
         return std::make_shared<IfStatement>(offset_start_end(start, end), new_stmt(), std::move(condition), std::move(then_branch), std::move(else_branch));
     }
@@ -351,21 +351,21 @@ struct Parser
     std::shared_ptr<Statement>
     parse_block_statement()
     {
-        auto start = previous().offset;
+        auto start = previous_offset();
 
         auto statements = parse_block_to_statements();
 
-        auto& end = previous().offset;
+        auto end = previous_offset();
         return std::make_shared<BlockStatement>(offset_start_end(start, end), new_stmt(), std::move(statements));
     }
 
     std::shared_ptr<Statement>
     parse_print_statement()
     {
-        const auto print = previous().offset;
+        const auto print = previous_offset();
         auto value = parse_expression();
         consume_semicolon("print statement");
-        const auto end = previous().offset;
+        const auto end = previous_offset();
         return std::make_shared<PrintStatement>(offset_start_end(print, end), new_stmt(), std::move(value));
     }
 
@@ -375,7 +375,7 @@ struct Parser
         auto value = parse_expression();
         const auto start = value->offset;
         consume_semicolon("expression");
-        const auto end = previous().offset;
+        const auto end = previous_offset();
         return std::make_shared<ExpressionStatement>(offset_start_end(start, end), new_stmt(), std::move(value));
     }
 
@@ -565,7 +565,7 @@ struct Parser
     std::shared_ptr<Expression>
     finish_parsing_of_call(std::shared_ptr<Expression>&& callee)
     {
-        const auto start = previous().offset;
+        const auto start = previous_offset();
         std::vector<std::shared_ptr<Expression>> arguments;
         if (check(TokenType::RIGHT_PAREN) == false)
         {
@@ -591,9 +591,9 @@ struct Parser
     std::shared_ptr<Expression>
     parse_primary()
     {
-        if (match({TokenType::FALSE})) { return std::make_shared<LiteralExpression>(previous().offset, new_expr(), make_bool(false)); }
-        if (match({TokenType::TRUE})) { return std::make_shared<LiteralExpression>(previous().offset, new_expr(), make_bool(true)); }
-        if (match({TokenType::NIL})) { return std::make_shared<LiteralExpression>(previous().offset, new_expr(), make_nil()); }
+        if (match({TokenType::FALSE})) { return std::make_shared<LiteralExpression>(previous_offset(), new_expr(), make_bool(false)); }
+        if (match({TokenType::TRUE})) { return std::make_shared<LiteralExpression>(previous_offset(), new_expr(), make_bool(true)); }
+        if (match({TokenType::NIL})) { return std::make_shared<LiteralExpression>(previous_offset(), new_expr(), make_nil()); }
 
         if (match({TokenType::NUMBER, TokenType::STRING}))
         {
@@ -615,14 +615,14 @@ struct Parser
 
         if (match({TokenType::LEFT_PAREN}))
         {
-            const Offset left_paren = previous().offset;
+            const Offset left_paren = previous_offset();
             auto expr = parse_expression();
             consume(TokenType::RIGHT_PAREN, "Expect ')' after expression.");
-            const Offset right_paren = previous().offset;
+            const Offset right_paren = previous_offset();
             return std::make_shared<GroupingExpression>(offset_start_end(left_paren, right_paren), new_expr(), std::move(expr));
         }
 
-        throw error(offset_for_range_error(previous().offset, peek()), "Expected expression.");
+        throw error(offset_for_range_error(previous_offset(), peek()), "Expected expression.");
     }
 
 
@@ -684,7 +684,21 @@ struct Parser
     Token&
     previous() 
     {
+        assert(current != 0);
         return tokens[current - 1];
+    }
+
+    Offset
+    previous_offset()
+    {
+        if(current == 0)
+        {
+            return {tokens[current].offset.source, 0};
+        }
+        else
+        {
+            return previous().offset;
+        }
     }
 
     void
@@ -694,7 +708,7 @@ struct Parser
         (
             TokenType::SEMICOLON,
             "Missing ';' after {}"_format(after),
-            {previous().offset}
+            {previous_offset()}
         );
     }
 
