@@ -104,7 +104,7 @@ struct ScriptFunction : Callable
     {
     }
 
-    std::shared_ptr<Object>
+    std::shared_ptr<Callable>
     bind(std::shared_ptr<Object> instance)
     {
         auto env = std::make_shared<Environment>(closure);
@@ -367,8 +367,18 @@ struct ScriptInstance : Object, WithProperties
 
 std::shared_ptr<Object> call_constructor(std::shared_ptr<ScriptKlass> klass, const Arguments& arguments)
 {
-    verify_number_of_arguments(arguments, 0);
-    return std::make_shared<ScriptInstance>(klass);
+    auto instance = std::make_shared<ScriptInstance>(klass);
+
+    if (auto initializer = klass->find_method_or_null("init"); initializer != nullptr)
+    {
+        initializer->bind(instance)->call(arguments);
+    }
+    else
+    {
+        verify_number_of_arguments(arguments, 0);
+    }
+
+    return instance;
 }
 
 

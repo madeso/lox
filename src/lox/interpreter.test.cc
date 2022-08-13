@@ -96,6 +96,35 @@ TEST_CASE("interpret fail", "[interpret]")
             {note, 54, 68, "declared here"}
         }));
     }
+
+    SECTION("this in global")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            print this;
+        )lox");
+        CHECK_FALSE(run_ok);
+        CHECK(StringEq(console_out,{}));
+        CHECK(ErrorEq(error_list, {
+            {error, 19, 23, "Can't use 'this' outside of a class"},
+        }));
+    }
+
+    SECTION("this in function")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            fun notAMethod()
+            {
+                print this;
+            }
+        )lox");
+        CHECK_FALSE(run_ok);
+        CHECK(StringEq(console_out,{}));
+        CHECK(ErrorEq(error_list, {
+            {error, 66, 70, "Can't use 'this' outside of a class"},
+        }));
+    }
 }
 
 
@@ -539,6 +568,40 @@ TEST_CASE("interpret ok", "[interpret]")
         REQUIRE(StringEq(error_list, {}));
         CHECK(StringEq(console_out,{
             "called function with argument"
+        }));
+    }
+
+    SECTION("simple class with members and constructor")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            class Adder
+            {
+                init(start)
+                {
+                    this.string = start;
+                }
+
+                add(more)
+                {
+                    this.string = this.string + more;
+                }
+
+                get()
+                {
+                    return this.string;
+                }
+            }
+
+            var str = Adder("Hello");
+            str.add(", ");
+            str.add("world!");
+            print str.get();
+        )lox");
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
+            "Hello, world!"
         }));
     }
     

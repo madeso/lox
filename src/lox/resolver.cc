@@ -25,6 +25,11 @@ enum class FunctionType
     none, function, method
 };
 
+enum class ClassType
+{
+    none, klass
+};
+
 
 struct MainResolver : ExpressionVoidVisitor, StatementVoidVisitor
 {
@@ -33,6 +38,7 @@ struct MainResolver : ExpressionVoidVisitor, StatementVoidVisitor
     bool has_errors = false;
     std::vector<Scope> scopes;
     FunctionType current_function = FunctionType::none;
+    ClassType current_class = ClassType::none;
 
     //-------------------------------------------------------------------------
     // constructor
@@ -155,6 +161,9 @@ struct MainResolver : ExpressionVoidVisitor, StatementVoidVisitor
     
     void on_class_statement(const ClassStatement& x) override
     {
+        auto enclosing_class = current_class;
+        current_class = ClassType::klass;
+
         declare_var(x.name, x.offset);
         define_var(x.name);
 
@@ -168,6 +177,8 @@ struct MainResolver : ExpressionVoidVisitor, StatementVoidVisitor
         }
 
         end_scope();
+
+        current_class = enclosing_class;
     }
 
     void on_var_statement(const VarStatement& s) override
@@ -287,6 +298,12 @@ struct MainResolver : ExpressionVoidVisitor, StatementVoidVisitor
 
     void on_this_expression(const ThisExpression& x) override
     {
+        if(current_class != ClassType::klass)
+        {
+            error_handler->on_error(x.offset, "Can't use 'this' outside of a class");
+            has_errors = true;
+        }
+
         resolve_local(x, "this");
     }
 
