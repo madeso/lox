@@ -647,13 +647,39 @@ TEST_CASE("interpret ok", "[interpret]")
             "<instance Foo>"
         }));
     }
+
+    SECTION("void function return nil")
+    {
+        // todo(Gustav): should this be supported?
+        const auto run_ok = run_string
+        (lx, R"lox(
+            class Foo
+            {
+                nop1() {}
+            }
+
+            fun nop2() {}
+
+            var foo = Foo();
+            var r1 = foo.nop1();
+            var r2 = nop2();
+            print r1;
+            print r2;
+        )lox");
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
+            "nil",
+            "nil"
+        }));
+    }
     
     SECTION("early return")
     {
         // todo(Gustav): should this be supported?
         const auto run_ok = run_string
         (lx, R"lox(
-            class Foo
+            class Animal
             {
                 init(val)
                 {
@@ -662,13 +688,19 @@ TEST_CASE("interpret ok", "[interpret]")
                 }
             }
 
-            var foo = Foo("cats!");
+            var r;
+            var foo = Animal("dogs?");
             print foo.val;
+            r = foo.init("cats!");
+            print foo.val;
+            print r;
         )lox");
         CHECK(run_ok);
         REQUIRE(StringEq(error_list, {}));
         CHECK(StringEq(console_out,{
-            "cats!"
+            "dogs?",
+            "cats!",
+            "<instance Animal>"
         }));
     }
     

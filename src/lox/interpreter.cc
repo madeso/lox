@@ -139,6 +139,12 @@ struct ScriptFunction : Callable
         }
         catch(const ReturnValue& r)
         {
+            if(is_initializer)
+            {
+                auto ini = closure->get_at_or_null(0, "this");
+                assert(ini != nullptr);
+                return ini;
+            }
             return r.value;
         }
 
