@@ -604,6 +604,31 @@ TEST_CASE("interpret ok", "[interpret]")
             "Hello, world!"
         }));
     }
+
+    SECTION("invoking constructor directly")
+    {
+        // todo(Gustav): should this be supported?
+        const auto run_ok = run_string
+        (lx, R"lox(
+            class Foo
+            {
+                init()
+                {
+                    print this;
+                }
+            }
+
+            var foo = Foo();
+            print foo.init();
+        )lox");
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
+            "<instance Foo>",
+            "<instance Foo>",
+            "<instance Foo>"
+        }));
+    }
     
     SECTION("bound method: called method on class with out dot notation")
     {

@@ -85,6 +85,7 @@ struct ScriptFunction : Callable
     std::string to_str;
     std::vector<std::string> params;
     std::vector<std::shared_ptr<Statement>> body;
+    bool is_initializer;
 
     explicit ScriptFunction
     (
@@ -93,7 +94,8 @@ struct ScriptFunction : Callable
         std::shared_ptr<State> s,
         const std::string& n,
         const std::vector<std::string>& p,
-        const std::vector<std::shared_ptr<Statement>>& b
+        const std::vector<std::shared_ptr<Statement>>& b,
+        bool ii
     )
         : interpreter(i)
         , closure(c)
@@ -101,6 +103,7 @@ struct ScriptFunction : Callable
         , to_str(n)
         , params(p)
         , body(b)
+        , is_initializer(ii)
     {
     }
 
@@ -109,7 +112,7 @@ struct ScriptFunction : Callable
     {
         auto env = std::make_shared<Environment>(closure);
         env->define("this", instance);
-        return std::make_shared<ScriptFunction>(interpreter, env, state, to_str, params, body);
+        return std::make_shared<ScriptFunction>(interpreter, env, state, to_str, params, body, is_initializer);
     }
 
     std::string
@@ -138,6 +141,14 @@ struct ScriptFunction : Callable
         {
             return r.value;
         }
+
+        if(is_initializer)
+        {
+            auto ini = closure->get_at_or_null(0, "this");
+            assert(ini != nullptr);
+            return ini;
+        }
+
         return make_nil();
     }
 };
@@ -492,7 +503,8 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
                 this,
                 current_environment,
                 current_state,
-                "mtd {}"_format(method->name), method->params, method->body
+                "mtd {}"_format(method->name), method->params, method->body,
+                method->name == "init"
             );
 
             method_list.insert({method->name, function});
@@ -549,7 +561,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
                 this,
                 current_environment,
                 current_state,
-                "fn {}"_format(x.name), x.params, x.body
+                "fn {}"_format(x.name), x.params, x.body, false
             )
         );
     }
