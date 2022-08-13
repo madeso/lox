@@ -125,6 +125,24 @@ TEST_CASE("interpret fail", "[interpret]")
             {error, 66, 70, "Can't use 'this' outside of a class"},
         }));
     }
+    
+    SECTION("returning from initializer")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            class Foo {
+                init()
+                {
+                    return "something else";
+                }
+            }
+        )lox");
+        CHECK_FALSE(run_ok);
+        CHECK(StringEq(console_out,{}));
+        CHECK(ErrorEq(error_list, {
+            {error, 86, 110, "Can't return value from initializer"},
+        }));
+    }
 }
 
 
@@ -627,6 +645,30 @@ TEST_CASE("interpret ok", "[interpret]")
             "<instance Foo>",
             "<instance Foo>",
             "<instance Foo>"
+        }));
+    }
+    
+    SECTION("early return")
+    {
+        // todo(Gustav): should this be supported?
+        const auto run_ok = run_string
+        (lx, R"lox(
+            class Foo
+            {
+                init(val)
+                {
+                    this.val = val;
+                    return; // "early" return, weird here but legal
+                }
+            }
+
+            var foo = Foo("cats!");
+            print foo.val;
+        )lox");
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
+            "cats!"
         }));
     }
     

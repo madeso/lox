@@ -22,7 +22,7 @@ struct Var
 
 enum class FunctionType
 {
-    none, function, method
+    none, function, method, initializer
 };
 
 enum class ClassType
@@ -173,7 +173,11 @@ struct MainResolver : ExpressionVoidVisitor, StatementVoidVisitor
 
         for(auto& method: x.methods)
         {
-            resolve_function(*method, FunctionType::method);
+            const auto function_type = method->name == "init"
+                ? FunctionType::initializer
+                : FunctionType::method
+                ;
+            resolve_function(*method, function_type);
         }
 
         end_scope();
@@ -229,6 +233,11 @@ struct MainResolver : ExpressionVoidVisitor, StatementVoidVisitor
 
         if(s.value != nullptr)
         {
+            if(current_function == FunctionType::initializer)
+            {
+                error_handler->on_error(s.offset, "Can't return value from initializer");
+                has_errors = true;
+            }
             resolve(s.value);
         }
     }
