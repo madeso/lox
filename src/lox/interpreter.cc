@@ -285,11 +285,11 @@ struct ScriptKlass : Klass
 
     ScriptKlass
     (
-        const std::string& name,
+        const std::string& nm,
         std::shared_ptr<Klass>&& sk,
         std::unordered_map<std::string, std::shared_ptr<ScriptFunction>>&& m
     )
-        : Klass(name)
+        : Klass(nm)
         , superklass(sk)
         , methods(m)
     {
@@ -304,16 +304,16 @@ struct ScriptKlass : Klass
     };
 
     std::shared_ptr<Callable>
-    find_method_or_null(const std::string& name) override
+    find_method_or_null(const std::string& method_name) override
     {
-        if(auto found = methods.find(name); found != methods.end())
+        if(auto found = methods.find(method_name); found != methods.end())
         {
             return found->second;
         }
 
         if(superklass != nullptr)
         {
-            return superklass->find_method_or_null(name);
+            return superklass->find_method_or_null(method_name);
         }
 
         return nullptr;
