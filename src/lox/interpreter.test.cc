@@ -143,6 +143,91 @@ TEST_CASE("interpret fail", "[interpret]")
             {error, 86, 110, "Can't return value from initializer"},
         }));
     }
+
+    SECTION("print missing var")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            print foo;
+        )lox");
+        CHECK_FALSE(run_ok);
+        CHECK(StringEq(console_out,{}));
+        CHECK(ErrorEq(error_list, {
+            {error, 19, 22, "Undefined variable foo"},
+        }));
+    }
+
+    SECTION("assign non declared var globally")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            foo = 42;
+        )lox");
+        CHECK_FALSE(run_ok);
+        CHECK(StringEq(console_out,{}));
+        CHECK(ErrorEq(error_list, {
+            {error, 13, 21, "Global variable foo was never declared"},
+        }));
+    }
+
+    SECTION("assign non declared var in function")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            fun test() { foo = 42; }
+            test();
+        )lox");
+        CHECK_FALSE(run_ok);
+        CHECK(StringEq(console_out,{}));
+        CHECK(ErrorEq(error_list, {
+            {error, 26, 34, "Variable foo was neither declared in global nor local scope"},
+        }));
+    }
+
+    SECTION("call missing method on var")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            class Foo {}
+            var foo = Foo();
+            foo.bar();
+        )lox");
+        CHECK_FALSE(run_ok);
+        CHECK(StringEq(console_out,{}));
+        CHECK(ErrorEq(error_list, {
+            {error, 71, 74, "<instance Foo> doesn't have a property named bar"},
+        }));
+    }
+
+    SECTION("call missing method on function returning nil")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            fun get() { return nil; }
+            var foo = get();
+            foo.bar();
+        )lox");
+        CHECK_FALSE(run_ok);
+        CHECK(StringEq(console_out,{}));
+        CHECK(ErrorEq(error_list, {
+            {error, 84, 87, "nil is not capable of having any properties"},
+        }));
+    }
+
+    SECTION("call missing method on function returning string")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            fun get() { return "cats"; }
+            var foo = get();
+            foo.bar();
+        )lox");
+        CHECK_FALSE(run_ok);
+        CHECK(StringEq(console_out,{}));
+        CHECK(ErrorEq(error_list, {
+            {error, 87, 90, "string is not capable of having any properties, has value cats"},
+        }));
+    }
     
     SECTION("inheritance: infinite chain")
     {
