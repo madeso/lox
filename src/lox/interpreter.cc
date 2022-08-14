@@ -407,6 +407,37 @@ std::shared_ptr<Object> call_constructor(std::shared_ptr<ScriptKlass> klass, con
 }
 
 
+void report_error_no_properties(const Offset& offset, ErrorHandler* error_handler, std::shared_ptr<Object> object)
+{
+    assert(error_handler);
+    assert(object);
+    const auto type = object->get_type();
+
+    // special case for nil, no need to write the value of nil
+    if(type == ObjectType::nil)
+    {
+        error_handler->on_error
+        (
+            offset, "{} is not capable of having any properties"_format
+            (
+                objecttype_to_string(type)
+            )
+        );
+    }
+    else
+    {
+        error_handler->on_error
+        (
+            offset, "{} is not capable of having any properties, has value {}"_format
+            (
+                objecttype_to_string(type),
+                object->to_string()
+            )
+        );
+    }
+}
+
+
 struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
 {
     ErrorHandler* error_handler;
@@ -458,7 +489,11 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
         else
         {
             auto r = global_environment->get_or_null(name);
-            assert(r != nullptr);
+            if(r == nullptr)
+            {
+                error_handler->on_error(x.offset, "Undefined variable {}"_format(name));
+                throw RuntimeError{};
+            }
             return r;
         }
     }
@@ -488,8 +523,20 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
         }
         else
         {
-            [[maybe_unused]] auto r = global_environment->set_or_false(name, value);
-            assert(r == true);
+            const auto was_set = global_environment->set_or_false(name, value);
+            if(was_set == false)
+            {
+                const bool is_in_global = global_environment.get() == current_environment.get();
+                if(is_in_global)
+                {
+                    error_handler->on_error(x.offset, "Global variable {} was never declared"_format(name));
+                }
+                else
+                {
+                    error_handler->on_error(x.offset, "Variable {} was neither declared in global nor local scope"_format(name));
+                }
+                throw RuntimeError{};
+            }
         }
     }
 
@@ -777,14 +824,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
             return r;
         }
 
-        error_handler->on_error
-        (
-            x.offset, "{} is not capable of having any properties. Has value {}"_format
-            (
-                objecttype_to_string(object->get_type()),
-                object->to_string()
-            )
-        );
+        report_error_no_properties(x.offset, error_handler, object);
         throw RuntimeError{};
     }
 
@@ -796,14 +836,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
         WithProperties* props = object->get_properties_or_null();
         if(props == nullptr)
         {
-            error_handler->on_error
-            (
-                x.offset, "{} is not capable of having any properties. Has value {}"_format
-                (
-                    objecttype_to_string(object->get_type()),
-                    object->to_string()
-                )
-            );
+            report_error_no_properties(x.offset, error_handler, object);
             throw RuntimeError{};
         }
 
