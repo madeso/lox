@@ -181,6 +181,7 @@ TEST_CASE("interpret fail", "[interpret]")
         CHECK(StringEq(console_out,{}));
         CHECK(ErrorEq(error_list, {
             {error, 26, 34, "Variable foo was neither declared in global nor local scope"},
+            {note, 54, 56, "called from here"}
         }));
     }
 

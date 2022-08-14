@@ -797,6 +797,15 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
             }
             throw RuntimeError{};
         }
+        catch(RuntimeError&)
+        {
+            error_handler->on_note
+            (
+                x.offset,
+                "called from here"
+            );
+            throw;
+        }
     }
 
     std::shared_ptr<Object>
