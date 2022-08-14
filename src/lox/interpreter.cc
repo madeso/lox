@@ -301,7 +301,7 @@ struct ScriptKlass : Klass
     };
 
     std::shared_ptr<Callable>
-    find_method_or_null(const std::string& name)
+    find_method_or_null(const std::string& name) override
     {
         if(auto found = methods.find(name); found != methods.end())
         {

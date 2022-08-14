@@ -90,6 +90,7 @@ struct Klass : Callable
     to_string() const override;
 
     virtual std::shared_ptr<Object> constructor(std::shared_ptr<Klass> klass, const Arguments& arguments) = 0;
+    virtual std::shared_ptr<Callable> find_method_or_null(const std::string& name) = 0;
 
     std::shared_ptr<Object>
     call(const Arguments& arguments) override;
