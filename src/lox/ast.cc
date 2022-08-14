@@ -304,7 +304,8 @@ struct GraphvizPrinter : ExpressionStringVisitor, StatementStringVisitor
     std::string
     on_function_statement(const FunctionStatement& x) override
     {
-        const auto n = link_from(new_node("fun"), x.name);
+        const auto root = new_node("fun");
+        const auto n = link_to(root, new_node(x.name));
         const auto body = link_to(n, new_node("body"));
         if(x.params.empty() == false)
         {
@@ -314,7 +315,11 @@ struct GraphvizPrinter : ExpressionStringVisitor, StatementStringVisitor
                 link(params, p);
             }
         }
-        return n;
+        for(auto& b: x.body)
+        {
+            link(body, b->accept(this));
+        }
+        return root;
     }
 
     std::string
@@ -439,7 +444,7 @@ struct GraphvizPrinter : ExpressionStringVisitor, StatementStringVisitor
     std::string
     on_set_expression(const SetExpression& x) override
     {
-        const auto n = new_node("get");
+        const auto n = new_node("set");
         const auto v = new_node(x.name);
         link(n, v);
         link(n, x.value->accept(this));
