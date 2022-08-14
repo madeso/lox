@@ -27,7 +27,7 @@ enum class FunctionType
 
 enum class ClassType
 {
-    none, klass
+    none, klass, derived
 };
 
 
@@ -167,6 +167,22 @@ struct MainResolver : ExpressionVoidVisitor, StatementVoidVisitor
         declare_var(x.name, x.offset);
         define_var(x.name);
 
+        if(x.parent != nullptr && x.parent->name == x.name)
+        {
+            error_handler->on_error(x.parent->offset, "A class can't inherit from itself");
+            has_errors = true;
+        }
+
+        if(x.parent != nullptr)
+        {
+            current_class = ClassType::derived;
+            resolve(x.parent);
+
+            begin_scope();
+            declare_var("super", x.offset);
+            define_var("super");
+        }
+
         begin_scope();
         declare_var("this", x.offset);
         define_var("this");
@@ -181,6 +197,11 @@ struct MainResolver : ExpressionVoidVisitor, StatementVoidVisitor
         }
 
         end_scope();
+
+        if(x.parent != nullptr)
+        {
+            end_scope();
+        }
 
         current_class = enclosing_class;
     }
@@ -303,6 +324,29 @@ struct MainResolver : ExpressionVoidVisitor, StatementVoidVisitor
     {
         resolve(x.value);
         resolve(x.object);
+    }
+
+    void on_super_expression(const SuperExpression& x) override
+    {
+        switch(current_class)
+        {
+        case ClassType::none:
+            error_handler->on_error(x.offset, "Can't use 'super' outside of class");
+            has_errors = true;
+            break;
+
+        case ClassType::klass:
+            error_handler->on_error(x.offset, "Can't use 'super' in class with no superclass");
+            has_errors = true;
+            break;
+
+        case ClassType::derived:
+            break;
+
+        default: assert(false && "unhandled case"); break;
+        }
+
+        resolve_local(x, "super");
     }
 
     void on_this_expression(const ThisExpression& x) override

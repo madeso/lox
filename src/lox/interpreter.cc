@@ -280,14 +280,17 @@ std::shared_ptr<Object> call_constructor(std::shared_ptr<ScriptKlass> klass, con
 
 struct ScriptKlass : Klass
 {
+    std::shared_ptr<Klass> superklass;
     std::unordered_map<std::string, std::shared_ptr<ScriptFunction>> methods;
 
     ScriptKlass
     (
         const std::string& name,
+        std::shared_ptr<Klass>&& sk,
         std::unordered_map<std::string, std::shared_ptr<ScriptFunction>>&& m
     )
         : Klass(name)
+        , superklass(sk)
         , methods(m)
     {
     }
@@ -306,6 +309,11 @@ struct ScriptKlass : Klass
         if(auto found = methods.find(name); found != methods.end())
         {
             return found->second;
+        }
+
+        if(superklass != nullptr)
+        {
+            return superklass->find_method_or_null(name);
         }
 
         return nullptr;
@@ -455,6 +463,20 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
         }
     }
 
+    std::optional<std::size_t>
+    lookup_distance_for_var(const Expression& x)
+    {
+        auto found = current_state->locals.find(x.uid.value);
+        if(found != current_state->locals.end())
+        {
+            return found->second;
+        }
+        else
+        {
+            return std::nullopt;
+        }
+    }
+
     void
     set_var_via_lookup(Environment& environment, const std::string& name, std::shared_ptr<Object> value, const Expression& x)
     {
@@ -500,7 +522,41 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     void
     on_class_statement(const ClassStatement& x) override
     {
+        std::shared_ptr<Klass> superklass;
+        if(x.parent != nullptr)
+        {
+            auto parent = evaluate(x.parent);
+            if(parent != nullptr)
+            {
+                if(parent->get_type() != ObjectType::klass)
+                {
+                    error_handler->on_error
+                    (
+                        x.parent->offset,
+                        "Superclass must be a class, was {}"_format
+                        (
+                            objecttype_to_string(parent->get_type())
+                        )
+                    );
+                    throw RuntimeError{};
+                }
+                else
+                {
+                    superklass = std::static_pointer_cast<Klass>(parent);
+                }
+            }
+        }
+
         current_environment->define(x.name, make_nil());
+
+        std::shared_ptr<Environment> backup_environment;
+        if(superklass != nullptr)
+        {
+            backup_environment = current_environment;
+            current_environment = std::make_shared<Environment>(current_environment);
+            current_environment->define("super", superklass);
+        }
+        
         std::unordered_map<std::string, std::shared_ptr<ScriptFunction>> method_list;
         for(const auto& method: x.methods)
         {
@@ -515,7 +571,22 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
 
             method_list.insert({method->name, function});
         }
-        [[maybe_unused]] const auto set = current_environment->set_or_false(x.name, std::make_shared<ScriptKlass>(x.name, std::move(method_list)));
+
+        if(superklass != nullptr)
+        {
+            current_environment = backup_environment;
+        }
+
+        [[maybe_unused]] const auto set = current_environment->set_or_false
+        (
+            x.name,
+            std::make_shared<ScriptKlass>
+            (
+                x.name,
+                std::move(superklass),
+                std::move(method_list)
+            )
+        );
         assert(set);
     }
     
@@ -756,6 +827,41 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
         return value;
     }
 
+    std::shared_ptr<Object>
+    on_super_expression(const SuperExpression& x) override
+    {
+        auto op_distance = lookup_distance_for_var(x);
+        assert(op_distance);
+        auto distance = *op_distance;
+        assert(distance > 0);
+        
+        auto base_super = current_environment->get_at_or_null(distance, "super");
+        assert(base_super != nullptr);
+        assert(base_super->get_type() == ObjectType::klass);
+        auto superklass = std::static_pointer_cast<Klass>(base_super);
+
+        auto object = current_environment->get_at_or_null(distance-1, "this");
+        assert(object != nullptr);
+        assert(object->get_type() == ObjectType::instance);
+
+        auto method = superklass->find_method_or_null(x.property);
+
+        if(method == nullptr)
+        {
+            error_handler->on_error
+            (
+                x.offset, "{} doesn't have a property named {}"_format
+                (
+                    superklass->to_string(),
+                    x.property
+                )
+            );
+            throw RuntimeError{};
+        }
+
+        return method->bind(object);
+    }
+    
     std::shared_ptr<Object>
     on_this_expression(const ThisExpression& x) override
     {

@@ -135,6 +135,13 @@ struct Parser
         const auto name = consume(TokenType::IDENTIFIER, "Expected class name").lexeme;
         const auto start = previous_offset();
 
+        std::shared_ptr<VariableExpression> superclass;
+        if(match({TokenType::COLON}))
+        {
+            auto& id = consume(TokenType::IDENTIFIER, "Expected superclass name");
+            superclass = std::make_shared<VariableExpression>(id.offset, new_expr(), std::string(id.lexeme));
+        }
+
         consume(TokenType::LEFT_BRACE, "Expected { before class body");
 
 
@@ -148,7 +155,7 @@ struct Parser
         consume(TokenType::RIGHT_BRACE, "Expected } after class body");
 
         const auto end = previous_offset();
-        return std::make_shared<ClassStatement>(offset_start_end(start, end), new_stmt(), std::string(name), std::move(methods));
+        return std::make_shared<ClassStatement>(offset_start_end(start, end), new_stmt(), std::string(name), std::move(superclass), std::move(methods));
     }
 
     std::shared_ptr<FunctionStatement>
@@ -599,6 +606,15 @@ struct Parser
         {
             auto& prev = previous();
             return std::make_shared<LiteralExpression>(prev.offset, new_expr(), std::move(prev.literal));
+        }
+
+        if(match({TokenType::SUPER}))
+        {
+            const auto start = previous_offset();
+            consume(TokenType::DOT, "Expected '.' after 'super' keyword");
+            auto name = consume(TokenType::IDENTIFIER, "Expected superclass property").lexeme;
+            const auto end = previous_offset();
+            return std::make_shared<SuperExpression>(offset_start_end(start, end), new_expr(), std::string(name));
         }
 
         if( match({TokenType::THIS}))

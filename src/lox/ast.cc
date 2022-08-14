@@ -74,6 +74,11 @@ struct AstPrinter : ExpressionStringVisitor, StatementStringVisitor
         std::vector<std::string> blocks;
         blocks.emplace_back(x.name);
 
+        if(x.parent)
+        {
+            blocks.emplace_back(parenthesize("parent", {x.parent->accept(this)}));
+        }
+
         std::vector<std::string> methods;
         for(const auto& stmt: x.methods)
         {
@@ -83,6 +88,7 @@ struct AstPrinter : ExpressionStringVisitor, StatementStringVisitor
         {
             blocks.emplace_back(parenthesize("methods", methods));
         }
+
         return parenthesize("class", blocks);
     }
 
@@ -162,6 +168,12 @@ struct AstPrinter : ExpressionStringVisitor, StatementStringVisitor
     on_set_expression(const SetExpression& x) override
     {
         return parenthesize("set", {x.value->accept(this), x.name, x.object->accept(this)});
+    }
+    
+    std::string
+    on_super_expression(const SuperExpression& x) override
+    {
+        return parenthesize("super", {x.property});
     }
     
     std::string
@@ -325,6 +337,10 @@ struct GraphvizPrinter : ExpressionStringVisitor, StatementStringVisitor
             }
             link(*methods, stmt->accept(this));
         }
+        if(x.parent)
+        {
+            link(n, link_from(new_node("parent"), x.parent->accept(this)));
+        }
         return n;
     }
 
@@ -428,6 +444,14 @@ struct GraphvizPrinter : ExpressionStringVisitor, StatementStringVisitor
         link(n, v);
         link(n, x.value->accept(this));
         link(v, x.object->accept(this));
+        return n;
+    }
+    
+    std::string
+    on_super_expression(const SuperExpression& x) override
+    {
+        const auto n = new_node("super");
+        link(n, new_node(x.property));
         return n;
     }
 

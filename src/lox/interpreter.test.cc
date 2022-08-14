@@ -143,6 +143,79 @@ TEST_CASE("interpret fail", "[interpret]")
             {error, 86, 110, "Can't return value from initializer"},
         }));
     }
+    
+    SECTION("inheritance: infinite chain")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            class Oops : Oops {}
+        )lox");
+        CHECK_FALSE(run_ok);
+        CHECK(StringEq(console_out,{}));
+        CHECK(ErrorEq(error_list, {
+            {error, 26, 30, "A class can't inherit from itself"},
+        }));
+    }
+    
+    SECTION("inheritance: need to inherit from class")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            var NotAClass = "I am totally not a class";
+            class Subclass : NotAClass {}
+        )lox");
+        CHECK_FALSE(run_ok);
+        CHECK(StringEq(console_out,{}));
+        CHECK(ErrorEq(error_list, {
+            {error, 86, 95, "Superclass must be a class, was string"},
+        }));
+    }
+    
+    SECTION("inheritance: bare super")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            print super;
+        )lox");
+        CHECK_FALSE(run_ok);
+        CHECK(StringEq(console_out,{}));
+        CHECK(ErrorEq(error_list, {
+            {error, 24, 25, "Expected '.' after 'super' keyword"},
+        }));
+    }
+    
+    SECTION("inheritance: super call outside of class")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            super.notEvenInAClass();
+        )lox");
+        CHECK_FALSE(run_ok);
+        CHECK(StringEq(console_out,{}));
+        CHECK(ErrorEq(error_list, {
+            {error, 13, 34, "Can't use 'super' outside of class"},
+        }));
+    }
+    
+    SECTION("inheritance: super in base class")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            class Base
+            {
+                say()
+                {
+                    super.say();
+                    print "Oh no";
+                }
+            }
+        )lox");
+        CHECK_FALSE(run_ok);
+        CHECK(StringEq(console_out,{}));
+        CHECK(ErrorEq(error_list, {
+            {error, 98, 107, "Can't use 'super' in class with no superclass"},
+        }));
+    }
 }
 
 
@@ -781,6 +854,122 @@ TEST_CASE("interpret ok", "[interpret]")
         REQUIRE(StringEq(error_list, {}));
         CHECK(StringEq(console_out,{
             "Jane"
+        }));
+    }
+    
+    SECTION("inheritance: call function in derived from base")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            class Base
+            {
+                say()
+                {
+                    print "Hello, world!";
+                }
+            }
+
+            class Derived : Base {}
+            Derived().say();
+        )lox");
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
+            "Hello, world!"
+        }));
+    }
+    
+    SECTION("inheritance: call overloaded function in derived")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            class Base
+            {
+                say()
+                {
+                    print "base";
+                }
+            }
+
+            class Derived : Base
+            {
+                say()
+                {
+                    print "derived";
+                }
+            }
+            Derived().say();
+        )lox");
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
+            "derived"
+        }));
+    }
+    
+    SECTION("inheritance: basic super call in overloaded function")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            class Base
+            {
+                say()
+                {
+                    print "base";
+                }
+            }
+
+            class Derived : Base
+            {
+                say()
+                {
+                    super.say();
+                    print "derived";
+                }
+            }
+
+            Derived().say();
+        )lox");
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
+            "base", "derived"
+        }));
+    }
+    
+    SECTION("inheritance: call super in derived")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            class A
+            {
+                method()
+                {
+                    print "A method";
+                }
+            }
+
+            class B : A
+            {
+                method()
+                {
+                    print "B method";
+                }
+
+                test()
+                {
+                    super.method();
+                }
+            }
+
+            class C : B {}
+
+            C().test();
+        )lox");
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
+            "A method"
         }));
     }
 }

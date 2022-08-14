@@ -301,6 +301,12 @@ write_code
                 }
             },
             {
+                "Super",
+                {
+                    {"std::string", "property"}
+                }
+            },
+            {
                 "This",
                 {
                 }
@@ -361,6 +367,7 @@ write_code
                 "Class",
                 {
                     {"std::string", "name"},
+                    {"VariableExpression", "parent"},
                     {"std::vector<std::shared_ptr<FunctionStatement>>", "methods"}
                 }
             },

@@ -13,6 +13,7 @@ namespace lox
         // Single-character tokens.
         LEFT_PAREN, RIGHT_PAREN, LEFT_BRACE, RIGHT_BRACE,
         COMMA, DOT, MINUS, PLUS, SEMICOLON, SLASH, STAR,
+        COLON,
 
         // One or two character tokens.
         BANG, BANG_EQUAL,
@@ -45,6 +46,7 @@ namespace lox
         case TokenType::SEMICOLON:      return "semicolon";
         case TokenType::SLASH:          return "slash";
         case TokenType::STAR:           return "star";
+        case TokenType::COLON:          return "colon";
         case TokenType::BANG:           return "bang";
         case TokenType::BANG_EQUAL:     return "bang_equal";
         case TokenType::EQUAL:          return "equal";
@@ -92,6 +94,7 @@ namespace lox
         case TokenType::SEMICOLON:      return ";";
         case TokenType::SLASH:          return "/";
         case TokenType::STAR:           return "*";
+        case TokenType::COLON:          return ":";
         case TokenType::BANG:           return "!";
         case TokenType::BANG_EQUAL:     return "!=";
         case TokenType::EQUAL:          return "=";
