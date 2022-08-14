@@ -351,7 +351,7 @@ struct MainResolver : ExpressionVoidVisitor, StatementVoidVisitor
 
     void on_this_expression(const ThisExpression& x) override
     {
-        if(current_class != ClassType::klass)
+        if(current_class == ClassType::none)
         {
             error_handler->on_error(x.offset, "Can't use 'this' outside of a class");
             has_errors = true;
