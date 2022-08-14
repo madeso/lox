@@ -70,6 +70,8 @@ struct Callable : public Object
     virtual std::shared_ptr<Object> call(const Arguments& arguments) = 0;
     ObjectType get_type() const override;
     bool is_callable() const override;
+
+    virtual std::shared_ptr<Callable> bind(std::shared_ptr<Object> instance) = 0;
 };
 
 // ----------------------------------------------------------------------------
@@ -91,6 +93,9 @@ struct Klass : Callable
 
     std::shared_ptr<Object>
     call(const Arguments& arguments) override;
+
+    std::shared_ptr<Callable>
+    bind(std::shared_ptr<Object> instance) override;
 };
 
 // ----------------------------------------------------------------------------

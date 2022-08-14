@@ -84,6 +84,13 @@ struct NativeFunction : Callable
     {
         return func(arguments);
     }
+
+    std::shared_ptr<Callable>
+    bind(std::shared_ptr<Object>) override
+    {
+        assert(false && "figure out how to make bind native function!");
+        return std::static_pointer_cast<Callable>(shared_from_this());
+    }
 };
 
 
@@ -241,6 +248,12 @@ Klass::call(const Arguments& arguments)
     return constructor(klass, arguments);
 }
 
+std::shared_ptr<Callable>
+Klass::bind(std::shared_ptr<Object>)
+{
+    assert(false && "figure out how to make bind a klass!");
+    return std::static_pointer_cast<Callable>(shared_from_this());
+}
 
 // ----------------------------------------------------------------------------
 

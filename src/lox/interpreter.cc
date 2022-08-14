@@ -108,7 +108,7 @@ struct ScriptFunction : Callable
     }
 
     std::shared_ptr<Callable>
-    bind(std::shared_ptr<Object> instance)
+    bind(std::shared_ptr<Object> instance) override
     {
         auto env = std::make_shared<Environment>(closure);
         env->define("this", instance);
@@ -300,7 +300,7 @@ struct ScriptKlass : Klass
         return call_constructor(self, arguments);
     };
 
-    std::shared_ptr<ScriptFunction>
+    std::shared_ptr<Callable>
     find_method_or_null(const std::string& name)
     {
         if(auto found = methods.find(name); found != methods.end())
