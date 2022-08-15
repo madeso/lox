@@ -161,6 +161,22 @@ struct Lox
         return ClassAdder<T>{native_klass};
     }
 
+    template<typename T>
+    ClassAdder<T>
+    define_global_native_class(const std::string& name, std::function<T (ArgumentHelper&)> constructor)
+    {
+        auto native_klass = register_native_klass
+        (
+            name,
+            detail::get_unique_id<T>(),
+            [constructor](std::shared_ptr<NativeKlass> klass, ArgumentHelper& args)
+            {
+                return detail::make_native_instance<T>(klass, constructor(args));
+            }
+        );
+        return ClassAdder<T>{native_klass};
+    }
+
     Environment& get_global_environment();
 
     std::unique_ptr<ErrorHandler> error_handler;

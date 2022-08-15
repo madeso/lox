@@ -198,7 +198,7 @@ TEST_CASE("lox binding" "[lox]")
         CHECK(*sec == Approx(2.0f));
     }
 
-    SECTION("native class")
+    SECTION("native class default constructor")
     {
         struct Adder
         {
@@ -255,6 +255,77 @@ TEST_CASE("lox binding" "[lox]")
             CHECK(run_ok);
             REQUIRE(StringEq(error_list, {}));
             CHECK(StringEq(console_out, {"cats"}));
+        }
+    }
+
+    SECTION("native class custom constructor")
+    {
+        struct Adder
+        {
+            std::string value;
+        };
+        lox.define_global_native_class<Adder>
+        (
+            "Adder",
+            [](lox::ArgumentHelper& args)
+            {
+                const auto initial = args.require_string();
+                args.complete();
+                Adder a;
+                a.value = initial;
+                return a;
+            }
+        )
+            .add_function
+            (
+                "get", [](Adder& c, lox::ArgumentHelper& arguments)
+                {
+                    arguments.complete();
+                    return lox::make_string(c.value);
+                }
+            )
+            .add_function
+            (
+                "add", [](Adder& c, lox::ArgumentHelper& arguments)
+                {
+                    const auto new_value = arguments.require_string();
+                    arguments.complete();
+                    c.value += new_value;
+                    return lox::make_nil();
+                }
+            )
+            ;
+
+        SECTION("call function")
+        {
+            const auto run_ok = lox.run_string
+            (R"lox(
+                var adder = Adder("good ");
+                adder.add("dog");
+                print adder.get();
+            )lox");
+            CHECK(run_ok);
+            REQUIRE(StringEq(error_list, {}));
+            CHECK(StringEq(console_out, {"good dog"}));
+        }
+
+        SECTION("pass function as callback")
+        {
+            const auto run_ok = lox.run_string
+            (R"lox(
+
+                fun callback(func)
+                {
+                    func("cats");
+                }
+
+                var adder = Adder("cute ");
+                callback(adder.add);
+                print adder.get();
+            )lox");
+            CHECK(run_ok);
+            REQUIRE(StringEq(error_list, {}));
+            CHECK(StringEq(console_out, {"cute cats"}));
         }
     }
 }
