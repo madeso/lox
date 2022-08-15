@@ -76,12 +76,15 @@ struct Callable : public Object
 
 // ----------------------------------------------------------------------------
 
-
+// todo(Gustav): remove callable and transform to new constructor
 struct Klass : Callable
 {
-    std::string name;
+    std::string klass_name;
+    std::shared_ptr<Klass> superklass;
+    std::unordered_map<std::string, std::shared_ptr<Callable>> methods;
 
-    explicit Klass(const std::string& n);
+    explicit Klass(const std::string& n, std::shared_ptr<Klass> sk);
+    
 
     ObjectType
     get_type() const override;
@@ -89,14 +92,33 @@ struct Klass : Callable
     std::string
     to_string() const override;
 
-    virtual std::shared_ptr<Object> constructor(std::shared_ptr<Klass> klass, const Arguments& arguments) = 0;
-    virtual std::shared_ptr<Callable> find_method_or_null(const std::string& name) = 0;
-
     std::shared_ptr<Object>
     call(const Arguments& arguments) override;
 
     std::shared_ptr<Callable>
     bind(std::shared_ptr<Object> instance) override;
+
+    virtual std::shared_ptr<Object> constructor(const Arguments& arguments) = 0;
+
+    bool add_method_or_false(const std::string& name, std::shared_ptr<Callable> method);
+    std::shared_ptr<Callable> find_method_or_null(const std::string& name);
+};
+
+// ----------------------------------------------------------------------------
+
+
+struct Instance : Object, WithProperties
+{
+    std::shared_ptr<Klass> klass;
+
+    explicit Instance(std::shared_ptr<Klass> o);
+    bool is_callable() const override;
+    WithProperties* get_properties_or_null() override;
+    std::shared_ptr<Object> get_property_or_null(const std::string& name) override;
+    bool set_property_or_false(const std::string& name, std::shared_ptr<Object> value) override;
+
+    virtual std::shared_ptr<Object> get_field_or_null(const std::string& name) = 0;
+    virtual bool set_field_or_false(const std::string& name, std::shared_ptr<Object> value) = 0;
 };
 
 // ----------------------------------------------------------------------------

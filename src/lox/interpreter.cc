@@ -274,60 +274,13 @@ struct SharedptrRaii
     void operator=(const SharedptrRaii&) = delete;
 };
 
-struct ScriptKlass;
 
-std::shared_ptr<Object> call_constructor(std::shared_ptr<ScriptKlass> klass, const Arguments& arguments);
-
-struct ScriptKlass : Klass
+struct ScriptInstance : Instance
 {
-    std::shared_ptr<Klass> superklass;
-    std::unordered_map<std::string, std::shared_ptr<ScriptFunction>> methods;
-
-    ScriptKlass
-    (
-        const std::string& nm,
-        std::shared_ptr<Klass>&& sk,
-        std::unordered_map<std::string, std::shared_ptr<ScriptFunction>>&& m
-    )
-        : Klass(nm)
-        , superklass(sk)
-        , methods(m)
-    {
-    }
-
-    std::shared_ptr<Object>
-    constructor(std::shared_ptr<Klass> klass, const Arguments& arguments) override
-    {
-        assert(static_cast<Klass*>(this) == klass.get());
-        auto self = std::static_pointer_cast<ScriptKlass>(klass);
-        return call_constructor(self, arguments);
-    };
-
-    std::shared_ptr<Callable>
-    find_method_or_null(const std::string& method_name) override
-    {
-        if(auto found = methods.find(method_name); found != methods.end())
-        {
-            return found->second;
-        }
-
-        if(superklass != nullptr)
-        {
-            return superklass->find_method_or_null(method_name);
-        }
-
-        return nullptr;
-    }
-};
-
-
-struct ScriptInstance : Object, WithProperties
-{
-    std::shared_ptr<ScriptKlass> klass;
     std::unordered_map<std::string, std::shared_ptr<Object>> fields;
 
-    explicit ScriptInstance(std::shared_ptr<ScriptKlass> o)
-        : klass(o)
+    explicit ScriptInstance(std::shared_ptr<Klass> o)
+        : Instance(o)
     {
     }
 
@@ -340,40 +293,20 @@ struct ScriptInstance : Object, WithProperties
     std::string
     to_string() const override
     {
-        return "<instance {}>"_format(klass->name);
+        return "<instance {}>"_format(klass->klass_name);
     }
 
-    bool
-    is_callable() const override
-    {
-        return false;
-    }
-
-    WithProperties* get_properties_or_null() override
-    {
-        return this;
-    }
-    
-    std::shared_ptr<Object> get_property_or_null(const std::string& name) override
+    std::shared_ptr<Object> get_field_or_null(const std::string& name) override
     {
         if(auto found = fields.find(name); found != fields.end())
         {
             return found->second;
         }
 
-        if(auto method = klass->find_method_or_null(name); method != nullptr)
-        {
-            auto self = shared_from_this();
-            assert(self != nullptr);
-            assert(self->get_type() == ObjectType::instance);
-            auto inst = std::static_pointer_cast<ScriptInstance>(self);
-            return method->bind(inst);
-        }
-
         return nullptr;
     }
 
-    bool set_property_or_false(const std::string& name, std::shared_ptr<Object> value) override
+    bool set_field_or_false(const std::string& name, std::shared_ptr<Object> value) override
     {
         if(auto found = fields.find(name); found != fields.end())
         {
@@ -389,22 +322,40 @@ struct ScriptInstance : Object, WithProperties
 };
 
 
-
-std::shared_ptr<Object> call_constructor(std::shared_ptr<ScriptKlass> klass, const Arguments& arguments)
+struct ScriptKlass : Klass
 {
-    auto instance = std::make_shared<ScriptInstance>(klass);
-
-    if (auto initializer = klass->find_method_or_null("init"); initializer != nullptr)
+    ScriptKlass
+    (
+        const std::string& nm,
+        std::shared_ptr<Klass> sk
+    )
+        : Klass(nm, sk)
     {
-        initializer->bind(instance)->call(arguments);
-    }
-    else
-    {
-        verify_number_of_arguments(arguments, 0);
     }
 
-    return instance;
-}
+    std::shared_ptr<Object>
+    constructor(const Arguments& arguments) override
+    {
+        auto self = shared_from_this();
+        assert(self != nullptr);
+        assert(self->get_type() == ObjectType::klass);
+        auto klass = std::static_pointer_cast<Klass>(self);
+
+        auto instance = std::make_shared<ScriptInstance>(klass);
+
+        if (auto initializer = klass->find_method_or_null("init"); initializer != nullptr)
+        {
+            initializer->bind(instance)->call(arguments);
+        }
+        else
+        {
+            verify_number_of_arguments(arguments, 0);
+        }
+
+        return instance;
+    }
+};
+
 
 
 void report_error_no_properties(const Offset& offset, ErrorHandler* error_handler, std::shared_ptr<Object> object)
@@ -594,7 +545,8 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
             }
         }
 
-        current_environment->define(x.name, make_nil());
+        auto new_klass = std::make_shared<ScriptKlass>(x.name, superklass);
+        current_environment->define(x.name, new_klass);
 
         std::shared_ptr<Environment> backup_environment;
         if(superklass != nullptr)
@@ -604,7 +556,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
             current_environment->define("super", superklass);
         }
         
-        std::unordered_map<std::string, std::shared_ptr<ScriptFunction>> method_list;
+        // std::unordered_map<std::string, std::shared_ptr<ScriptFunction>> method_list;
         for(const auto& method: x.methods)
         {
             auto function = std::make_shared<ScriptFunction>
@@ -616,7 +568,13 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
                 method->name == "init"
             );
 
-            method_list.insert({method->name, function});
+            auto added = new_klass->add_method_or_false(method->name, std::move(function));
+            if(added == false)
+            {
+                error_handler->on_error(method->offset, "method already defined in this class");
+                assert(false && "refactor resolver so that it handles this with note to first definition");
+                throw RuntimeError{};
+            }
         }
 
         if(superklass != nullptr)
@@ -627,12 +585,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
         [[maybe_unused]] const auto set = current_environment->set_or_false
         (
             x.name,
-            std::make_shared<ScriptKlass>
-            (
-                x.name,
-                std::move(superklass),
-                std::move(method_list)
-            )
+            new_klass
         );
         assert(set);
     }

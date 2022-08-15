@@ -221,8 +221,13 @@ bool Callable::is_callable() const
 
 
 
-Klass::Klass(const std::string& n)
-    : name(n)
+Klass::Klass
+(
+    const std::string& n,
+    std::shared_ptr<Klass> s
+)
+    : klass_name(n)
+    , superklass(s)
 {
 }
 
@@ -235,17 +240,13 @@ Klass::get_type() const
 std::string
 Klass::to_string() const
 {
-    return "<class {}>"_format(name);
+    return "<class {}>"_format(klass_name);
 }
 
 std::shared_ptr<Object>
 Klass::call(const Arguments& arguments)
 {
-    auto self = shared_from_this();
-    assert(self != nullptr);
-    assert(self->get_type() == ObjectType::klass);
-    auto klass = std::static_pointer_cast<Klass>(self);
-    return constructor(klass, arguments);
+    return constructor(arguments);
 }
 
 std::shared_ptr<Callable>
@@ -254,6 +255,80 @@ Klass::bind(std::shared_ptr<Object>)
     assert(false && "figure out how to make bind a klass!");
     return std::static_pointer_cast<Callable>(shared_from_this());
 }
+
+
+bool
+Klass::add_method_or_false(const std::string& name, std::shared_ptr<Callable> method)
+{
+    if(methods.find(name) == methods.end())
+    {
+        methods.insert({name, method});
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+std::shared_ptr<Callable>
+Klass::find_method_or_null(const std::string& method_name)
+{
+    if(auto found = methods.find(method_name); found != methods.end())
+    {
+        return found->second;
+    }
+
+    if(superklass != nullptr)
+    {
+        return superklass->find_method_or_null(method_name);
+    }
+
+    return nullptr;
+}
+
+
+// ----------------------------------------------------------------------------
+
+
+Instance::Instance(std::shared_ptr<Klass> o)
+    : klass(o)
+{
+}
+
+bool
+Instance::is_callable() const
+{
+    return false;
+}
+
+WithProperties* Instance::get_properties_or_null()
+{
+    return this;
+}
+
+std::shared_ptr<Object> Instance::get_property_or_null(const std::string& name)
+{
+    if(auto found = get_field_or_null(name); found != nullptr)
+    {
+        return found;
+    }
+
+    if(auto method = klass->find_method_or_null(name); method != nullptr)
+    {
+        auto self = shared_from_this();
+        assert(self != nullptr);
+        return method->bind(self);
+    }
+
+    return nullptr;
+}
+
+bool Instance::set_property_or_false(const std::string& name, std::shared_ptr<Object> value)
+{
+    return set_field_or_false(name, value);
+}
+
 
 // ----------------------------------------------------------------------------
 
