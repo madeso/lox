@@ -22,7 +22,7 @@ TEST_CASE("lox binding" "[lox]")
         lox.define_global_native_function
         (
             "nat",
-            [](const lox::Arguments& args)
+            [](lox::Callable*, const lox::Arguments& args)
             {
                 lox::ArgumentHelper{args}.complete();
                 return lox::make_string("hello world");
@@ -61,7 +61,7 @@ TEST_CASE("lox binding" "[lox]")
         auto callable = lox::as_callable(function_object);
         REQUIRE(callable != nullptr);
         
-        auto res = callable->call({ {lox::make_string("world")} });
+        auto res = callable->call({{lox::make_string("world")} });
         auto str = lox::as_string(res);
         
         REQUIRE(str);
@@ -73,7 +73,7 @@ TEST_CASE("lox binding" "[lox]")
         lox.define_global_native_function
         (
             "add",
-            [](const lox::Arguments& args)
+            [](lox::Callable*, const lox::Arguments& args)
             {
                 auto ah = lox::ArgumentHelper{args};
                 auto lhs = ah.require_number();
@@ -99,7 +99,7 @@ TEST_CASE("lox binding" "[lox]")
         lox.define_global_native_function
         (
             "add",
-            [](const lox::Arguments& args)
+            [](lox::Callable*, const lox::Arguments& args)
             {
                 auto ah = lox::ArgumentHelper{args};
                 auto lhs = ah.require_string();
@@ -126,7 +126,7 @@ TEST_CASE("lox binding" "[lox]")
         lox.define_global_native_function
         (
             "add",
-            [](const lox::Arguments& args)
+            [](lox::Callable*, const lox::Arguments& args)
             {
                 auto ah = lox::ArgumentHelper{args};
                 auto lhs = ah.require_bool();
@@ -154,7 +154,7 @@ TEST_CASE("lox binding" "[lox]")
         lox.define_global_native_function
         (
             "set_fun",
-            [&callable](const lox::Arguments& args)
+            [&callable](lox::Callable*, const lox::Arguments& args)
             {
                 auto ah = lox::ArgumentHelper{args};
                 callable = ah.require_callable();
@@ -196,5 +196,46 @@ TEST_CASE("lox binding" "[lox]")
 
         CHECK(*fir == Approx(1.0f));
         CHECK(*sec == Approx(2.0f));
+    }
+
+    SECTION("native class")
+    {
+        struct Adder
+        {
+            std::string value;
+        };
+        lox.define_global_native_class<Adder>("Adder")
+            .add_function
+            (
+                "get", [](Adder& c, lox::ArgumentHelper& arguments)
+                {
+                    arguments.complete();
+                    return lox::make_string(c.value);
+                }
+            )
+            .add_function
+            (
+                "add", [](Adder& c, lox::ArgumentHelper& arguments)
+                {
+                    const auto new_value = arguments.require_string();
+                    arguments.complete();
+                    c.value += new_value;
+                    return lox::make_nil();
+                }
+            )
+            ;
+
+        SECTION("call function")
+        {
+            const auto run_ok = lox.run_string
+            (R"lox(
+                var add = Adder();
+                add.add("dog");
+                print add.get();
+            )lox");
+            CHECK(run_ok);
+            REQUIRE(StringEq(error_list, {}));
+            CHECK(StringEq(console_out, {"dog"}));
+        }
     }
 }

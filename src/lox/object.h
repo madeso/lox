@@ -11,7 +11,7 @@ namespace lox
 
 enum class ObjectType
 {
-    nil, string, boolean, number, callable, klass, instance
+    nil, string, boolean, number, callable, klass, instance, native_instance
 };
 
 
@@ -22,13 +22,14 @@ constexpr std::string_view objecttype_to_string(ObjectType ot)
 {
     switch (ot)
     {
-    case ObjectType::nil:      return "nil";
-    case ObjectType::string:   return "string";
-    case ObjectType::boolean:  return "boolean";
-    case ObjectType::number:   return "number";
-    case ObjectType::klass:    return "class";
-    case ObjectType::instance: return "instance";
-    default:                   assert(false && "invalid type"); return "???";
+    case ObjectType::nil:             return "nil";
+    case ObjectType::string:          return "string";
+    case ObjectType::boolean:         return "boolean";
+    case ObjectType::number:          return "number";
+    case ObjectType::klass:           return "class";
+    case ObjectType::instance:        return "instance";
+    case ObjectType::native_instance: return "native instance";
+    default:                          assert(false && "invalid type"); return "???";
     }
 }
 
@@ -36,7 +37,7 @@ constexpr std::string_view objecttype_to_string(ObjectType ot)
 // ----------------------------------------------------------------------------
 
 struct Object;
-
+struct NativeFunction;
 
 struct WithProperties
 {
@@ -71,7 +72,22 @@ struct Callable : public Object
     ObjectType get_type() const override;
     bool is_callable() const override;
 
+    virtual bool is_bound() const;
+
     virtual std::shared_ptr<Callable> bind(std::shared_ptr<Object> instance) = 0;
+};
+
+struct BoundCallable : Callable
+{
+    std::shared_ptr<Object> bound;
+    std::shared_ptr<NativeFunction> callable;
+
+    BoundCallable(std::shared_ptr<Object> bound, std::shared_ptr<NativeFunction> callable);
+    ~BoundCallable();
+    std::string to_string() const override;
+    std::shared_ptr<Object> call(const Arguments& arguments) override;
+    std::shared_ptr<Callable> bind(std::shared_ptr<Object> instance) override;
+    bool is_bound() const override;
 };
 
 // ----------------------------------------------------------------------------
@@ -83,14 +99,11 @@ struct Klass : Callable
     std::shared_ptr<Klass> superklass;
     std::unordered_map<std::string, std::shared_ptr<Callable>> methods;
 
-    explicit Klass(const std::string& n, std::shared_ptr<Klass> sk);
+    Klass(const std::string& n, std::shared_ptr<Klass> sk);
     
 
     ObjectType
     get_type() const override;
-
-    std::string
-    to_string() const override;
 
     std::shared_ptr<Object>
     call(const Arguments& arguments) override;
@@ -123,15 +136,34 @@ struct Instance : Object, WithProperties
 
 // ----------------------------------------------------------------------------
 
+struct NativeKlass : Klass
+{
+    std::size_t native_id;
 
-std::shared_ptr<Object>   make_nil              ();
-std::shared_ptr<Object>   make_string           (const std::string& str);
-std::shared_ptr<Object>   make_bool             (bool b);
-std::shared_ptr<Object>   make_number           (float f);
-std::shared_ptr<Object>   make_native_function
+    NativeKlass(const std::string& n, std::size_t id, std::shared_ptr<Klass> sk);
+
+    std::string to_string() const override;
+};
+
+struct NativeInstance : Instance
+{
+    NativeInstance(std::shared_ptr<NativeKlass> o);
+
+    ObjectType get_type() const override;
+    std::string to_string() const override;
+};
+
+// ----------------------------------------------------------------------------
+
+
+std::shared_ptr<Object>     make_nil              ();
+std::shared_ptr<Object>     make_string           (const std::string& str);
+std::shared_ptr<Object>     make_bool             (bool b);
+std::shared_ptr<Object>     make_number           (float f);
+std::shared_ptr<Callable>   make_native_function
 (
     const std::string& name,
-    std::function<std::shared_ptr<Object>(const Arguments& arguments)>&& func
+    std::function<std::shared_ptr<Object>(Callable*, const Arguments& arguments)>&& func
 );
 
 // ----------------------------------------------------------------------------

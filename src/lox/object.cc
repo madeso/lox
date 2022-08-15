@@ -58,15 +58,29 @@ struct Number : public Object
     bool is_callable() const override { return false; }
 };
 
+
+}}
+
+
+
+
+// ----------------------------------------------------------------------------
+
+
+
+namespace lox
+{
+
+
 struct NativeFunction : Callable
 {
     std::string name;
-    std::function<std::shared_ptr<Object>(const Arguments& arguments)> func;
+    std::function<std::shared_ptr<Object>(Callable*, const Arguments& arguments)> func;
 
     NativeFunction
     (
         const std::string& n,
-        std::function<std::shared_ptr<Object>(const Arguments& arguments)> f
+        std::function<std::shared_ptr<Object>(Callable*, const Arguments& arguments)> f
     )
         : name(n)
         , func(f)
@@ -82,29 +96,18 @@ struct NativeFunction : Callable
     std::shared_ptr<Object>
     call(const Arguments& arguments) override
     {
-        return func(arguments);
+        return func(this, arguments);
     }
 
     std::shared_ptr<Callable>
-    bind(std::shared_ptr<Object>) override
+    bind(std::shared_ptr<Object> bound) override
     {
-        assert(false && "figure out how to make bind native function!");
-        return std::static_pointer_cast<Callable>(shared_from_this());
+        auto self = std::static_pointer_cast<NativeFunction>(shared_from_this());
+        return std::make_shared<BoundCallable>(bound, self);
     }
 };
 
-
-}}
-
-
-
-
 // ----------------------------------------------------------------------------
-
-
-
-namespace lox
-{
 
 
 
@@ -217,6 +220,50 @@ bool Callable::is_callable() const
 }
 
 
+bool Callable::is_bound() const
+{
+    return false;
+}
+
+// ----------------------------------------------------------------------------
+
+
+BoundCallable::BoundCallable(std::shared_ptr<Object> b, std::shared_ptr<NativeFunction> c)
+    : bound(b)
+    , callable(c)
+{
+    assert(bound);
+    assert(callable);
+}
+
+BoundCallable::~BoundCallable() = default;
+
+std::string
+BoundCallable::to_string() const
+{
+    return "<{} bound to {}>"_format(bound->to_string(), callable->to_string());
+}
+
+std::shared_ptr<Object>
+BoundCallable::call(const Arguments& arguments)
+{
+    return callable->func(this, arguments);
+}
+
+std::shared_ptr<Callable> BoundCallable::bind(std::shared_ptr<Object>)
+{
+    assert(false && "unable to find a already bound object");
+    auto self = std::static_pointer_cast<Callable>(shared_from_this());
+    return self;
+}
+
+bool BoundCallable::is_bound() const
+{
+    return true;
+}
+
+
+
 // ----------------------------------------------------------------------------
 
 
@@ -235,12 +282,6 @@ ObjectType
 Klass::get_type() const
 {
     return ObjectType::klass;
-}
-
-std::string
-Klass::to_string() const
-{
-    return "<class {}>"_format(klass_name);
 }
 
 std::shared_ptr<Object>
@@ -333,6 +374,38 @@ bool Instance::set_property_or_false(const std::string& name, std::shared_ptr<Ob
 // ----------------------------------------------------------------------------
 
 
+NativeKlass::NativeKlass(const std::string& n, std::size_t id, std::shared_ptr<Klass> sk)
+        : Klass(n, sk)
+        , native_id(id)
+{
+}
+
+std::string
+NativeKlass::to_string() const
+{
+    return "<native class {}>"_format(klass_name);
+}
+
+
+NativeInstance::NativeInstance(std::shared_ptr<NativeKlass> o)
+    : Instance(o)
+{
+}
+
+ObjectType NativeInstance::get_type() const
+{
+    return ObjectType::native_instance;
+}
+
+std::string NativeInstance::to_string() const
+{
+    return "<native instance {}>"_format(klass->klass_name);
+}
+
+
+// ----------------------------------------------------------------------------
+
+
 std::shared_ptr<Object>
 make_nil()
 {
@@ -361,11 +434,11 @@ make_number(float f)
 }
 
 
-std::shared_ptr<Object>
+std::shared_ptr<Callable>
 make_native_function
 (
     const std::string& name,
-    std::function<std::shared_ptr<Object>(const Arguments& arguments)>&& func
+    std::function<std::shared_ptr<Object>(Callable*, const Arguments& arguments)>&& func
 )
 {
     return std::make_shared<NativeFunction>(name, func);

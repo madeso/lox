@@ -333,6 +333,12 @@ struct ScriptKlass : Klass
     {
     }
 
+    std::string
+    to_string() const override
+    {
+        return "<class {}>"_format(klass_name);
+    }
+
     std::shared_ptr<Object>
     constructor(const Arguments& arguments) override
     {

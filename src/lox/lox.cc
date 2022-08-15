@@ -14,12 +14,23 @@ namespace lox
 
 // ----------------------------------------------------------------------------
 
+namespace detail
+{
+    std::size_t create_type_id()
+    {
+        static std::size_t next_id = 1;
+        return next_id++;
+    }
+}
+
+// ----------------------------------------------------------------------------
+
 void
 define_native_function
 (
     const std::string& name,
     Environment& env,
-    std::function<std::shared_ptr<Object>(const Arguments& arguments)>&& func
+    std::function<std::shared_ptr<Object>(Callable*, const Arguments& arguments)>&& func
 )
 {
     env.define(name, make_native_function(name, std::move(func)));
@@ -117,10 +128,52 @@ void
 Lox::define_global_native_function
 (
     const std::string& name,
-    std::function<std::shared_ptr<Object>(const Arguments& arguments)>&& func
+    std::function<std::shared_ptr<Object>(Callable*, const Arguments& arguments)>&& func
 )
 {
     define_native_function(name, get_global_environment(), std::move(func));
+}
+
+
+
+struct NativeKlassImpl : NativeKlass
+{
+    std::function<std::shared_ptr<Object> (std::shared_ptr<NativeKlass>, ArgumentHelper& ah)> constr;
+
+    NativeKlassImpl
+    (
+        const std::string& name,
+        std::size_t id,
+        std::function<std::shared_ptr<Object> (std::shared_ptr<NativeKlass>, ArgumentHelper& ah)>&& c    
+    )
+    : NativeKlass(name, id, nullptr)
+    , constr(std::move(c))
+    {
+    }
+
+    std::shared_ptr<Object> constructor(const Arguments& arguments) override
+    {
+        auto obj = shared_from_this();
+        assert(obj.get() == this);
+        auto self = std::static_pointer_cast<NativeKlassImpl>(obj);
+        ArgumentHelper ah{arguments};
+        return constr(self, ah);
+    }
+};
+
+
+std::shared_ptr<NativeKlass>
+Lox::register_native_klass
+(
+    const std::string& name,
+    std::size_t id,
+    std::function<std::shared_ptr<Object> (std::shared_ptr<NativeKlass>, ArgumentHelper& ah)>&& c
+)
+{
+    auto& env = get_global_environment();
+    auto new_klass = std::make_shared<NativeKlassImpl>(name, id, std::move(c));
+    env.define(name, new_klass);
+    return new_klass;
 }
 
 
