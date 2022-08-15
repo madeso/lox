@@ -229,13 +229,32 @@ TEST_CASE("lox binding" "[lox]")
         {
             const auto run_ok = lox.run_string
             (R"lox(
-                var add = Adder();
-                add.add("dog");
-                print add.get();
+                var adder = Adder();
+                adder.add("dog");
+                print adder.get();
             )lox");
             CHECK(run_ok);
             REQUIRE(StringEq(error_list, {}));
             CHECK(StringEq(console_out, {"dog"}));
+        }
+
+        SECTION("pass function as callback")
+        {
+            const auto run_ok = lox.run_string
+            (R"lox(
+
+                fun callback(func)
+                {
+                    func("cats");
+                }
+
+                var adder = Adder();
+                callback(adder.add);
+                print adder.get();
+            )lox");
+            CHECK(run_ok);
+            REQUIRE(StringEq(error_list, {}));
+            CHECK(StringEq(console_out, {"cats"}));
         }
     }
 }
