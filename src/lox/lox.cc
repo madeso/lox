@@ -21,6 +21,14 @@ namespace detail
         static std::size_t next_id = 1;
         return next_id++;
     }
+
+    template<> std::string get_from_obj_or_error<std::string>(std::shared_ptr<Object> obj) { return lox::get_string_from_obj_or_error(obj); }
+    template<> bool get_from_obj_or_error<bool>(std::shared_ptr<Object> obj) { return lox::get_bool_from_obj_or_error(obj); }
+    template<> float get_from_obj_or_error<float>(std::shared_ptr<Object> obj) { return lox::get_number_from_obj_or_error(obj); }
+
+    template<> std::shared_ptr<Object> make_object<std::string>(std::string str) { return lox::make_string(str); }
+    template<> std::shared_ptr<Object> make_object<bool>(bool b) { return lox::make_bool(b); }
+    template<> std::shared_ptr<Object> make_object<float>(float n) { return lox::make_number(n); }
 }
 
 // ----------------------------------------------------------------------------

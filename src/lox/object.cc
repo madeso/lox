@@ -387,6 +387,14 @@ NativeKlass::to_string() const
 }
 
 
+void
+NativeKlass::add_property(const std::string& name, std::unique_ptr<Property> prop)
+{
+    assert(properties.find(name) == properties.end());
+    properties.insert({name, std::move(prop)});
+}
+
+
 NativeInstance::NativeInstance(std::shared_ptr<NativeKlass> o)
     : Instance(o)
 {
@@ -400,6 +408,35 @@ ObjectType NativeInstance::get_type() const
 std::string NativeInstance::to_string() const
 {
     return "<native instance {}>"_format(klass->klass_name);
+}
+
+
+std::shared_ptr<Object> NativeInstance::get_field_or_null(const std::string& name)
+{
+    NativeKlass* nk = static_cast<NativeKlass*>(klass.get());
+    if(auto found = nk->properties.find(name); found != nk->properties.end())
+    {
+        return found->second->get_value(this);
+    }
+    else
+    {
+        return nullptr;
+    }
+}
+
+bool NativeInstance::set_field_or_false(const std::string& name, std::shared_ptr<Object> value)
+{
+    NativeKlass* nk = static_cast<NativeKlass*>(klass.get());
+    if(auto found = nk->properties.find(name); found != nk->properties.end())
+    {
+        // todo(Gustav): what happens if the value is a not-supported type... error how?
+        found->second->set_value(this, value);
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 

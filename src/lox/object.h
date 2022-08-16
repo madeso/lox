@@ -136,13 +136,26 @@ struct Instance : Object, WithProperties
 
 // ----------------------------------------------------------------------------
 
+struct NativeInstance;
+
+struct Property
+{
+    virtual ~Property() = default;
+
+    virtual std::shared_ptr<Object> get_value(NativeInstance* instance) = 0;
+    virtual void set_value(NativeInstance* instance, std::shared_ptr<Object> value) = 0;
+};
+
 struct NativeKlass : Klass
 {
     std::size_t native_id;
+    std::unordered_map<std::string, std::unique_ptr<Property>> properties;
 
     NativeKlass(const std::string& n, std::size_t id, std::shared_ptr<Klass> sk);
 
     std::string to_string() const override;
+
+    void add_property(const std::string& name, std::unique_ptr<Property> prop);
 };
 
 struct NativeInstance : Instance
@@ -151,6 +164,9 @@ struct NativeInstance : Instance
 
     ObjectType get_type() const override;
     std::string to_string() const override;
+
+    std::shared_ptr<Object> get_field_or_null(const std::string& name) override;
+    bool set_field_or_false(const std::string& name, std::shared_ptr<Object> value) override;
 };
 
 // ----------------------------------------------------------------------------

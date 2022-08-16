@@ -809,19 +809,54 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
         }
 
         auto value = evaluate(x.value);
-        const auto was_set = props->set_property_or_false(x.name, value);
-
-        if(was_set == false)
+        try
         {
-            // todo(Gustav): edit distance + custom error message?
-            error_handler->on_error
-            (
-                x.offset, "{} doesn't have a property named {}"_format
+            const auto was_set = props->set_property_or_false(x.name, value);
+
+            if(was_set == false)
+            {
+                // todo(Gustav): edit distance + custom error message?
+                error_handler->on_error
                 (
-                    object->to_string(),
-                    x.name
-                )
-            );
+                    x.offset, "{} doesn't have a property named {}"_format
+                    (
+                        object->to_string(),
+                        x.name
+                    )
+                );
+                throw RuntimeError{};
+            }
+        }
+        catch(const InvalidArgumentType& ae)
+        {
+            // special case for nil, no need to write the value of nil
+            const auto type = value->get_type();
+            if(type == ObjectType::nil)
+            {
+                error_handler->on_error
+                (
+                    x.offset, "nil is not accepted for {} on {}, expected {}"_format
+                    (
+                        x.name,
+                        object->to_string(),
+                        objecttype_to_string(ae.type)
+                    )
+                );
+            }
+            else
+            {
+                error_handler->on_error
+                (
+                    x.offset, "{} ({}) is not accepted for {} on {}, expected {}"_format
+                    (
+                        objecttype_to_string(type),
+                        value->to_string(),
+                        x.name,
+                        object->to_string(),
+                        objecttype_to_string(ae.type)
+                    )
+                );
+            }
             throw RuntimeError{};
         }
 
@@ -1138,6 +1173,48 @@ get_callable_from_arg(const Arguments& args, u64 argument_index)
     }
     return value;
 }
+
+
+std::string get_string_from_obj_or_error(std::shared_ptr<Object> obj)
+{
+    auto value = as_string(obj);
+    if(value.has_value() == false)
+    {
+        throw InvalidArgumentType(0, ObjectType::string);
+    }
+    return *value;
+}
+
+bool get_bool_from_obj_or_error(std::shared_ptr<Object> obj)
+{
+    auto value = as_bool(obj);
+    if(value.has_value() == false)
+    {
+        throw InvalidArgumentType(0, ObjectType::boolean);
+    }
+    return *value;
+}
+
+float get_number_from_obj_or_error(std::shared_ptr<Object> obj)
+{
+    auto value = as_number(obj);
+    if(value.has_value() == false)
+    {
+        throw InvalidArgumentType(0, ObjectType::number);
+    }
+    return *value;
+}
+
+std::shared_ptr<Callable>get_callable_from_obj_or_error(std::shared_ptr<Object> obj)
+{
+    auto value = as_callable(obj);
+    if(value != nullptr)
+    {
+        throw InvalidArgumentType(0, ObjectType::callable);
+    }
+    return value;
+}
+
 
 
 }

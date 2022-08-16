@@ -265,17 +265,17 @@ TEST_CASE("lox binding" "[lox]")
             std::string value;
         };
         lox.define_global_native_class<Adder>
-        (
-            "Adder",
-            [](lox::ArgumentHelper& args)
-            {
-                const auto initial = args.require_string();
-                args.complete();
-                Adder a;
-                a.value = initial;
-                return a;
-            }
-        )
+            (
+                "Adder",
+                [](lox::ArgumentHelper& args)
+                {
+                    const auto initial = args.require_string();
+                    args.complete();
+                    Adder a;
+                    a.value = initial;
+                    return a;
+                }
+            )
             .add_function
             (
                 "get", [](Adder& c, lox::ArgumentHelper& arguments)
@@ -294,6 +294,12 @@ TEST_CASE("lox binding" "[lox]")
                     return lox::make_nil();
                 }
             )
+            .add_property<std::string>
+            (
+                "value",
+                [](Adder& c) { return c.value; },
+                [](Adder& c, const std::string& new_value) { c.value = new_value; }
+            )
             ;
 
         SECTION("call function")
@@ -301,12 +307,15 @@ TEST_CASE("lox binding" "[lox]")
             const auto run_ok = lox.run_string
             (R"lox(
                 var adder = Adder("good ");
-                adder.add("dog");
+                adder.add("dog?");
                 print adder.get();
+                adder.value = "yes";
+                adder.add("!");
+                print adder.value;
             )lox");
             CHECK(run_ok);
             REQUIRE(StringEq(error_list, {}));
-            CHECK(StringEq(console_out, {"good dog"}));
+            CHECK(StringEq(console_out, {"good dog?", "yes!"}));
         }
 
         SECTION("pass function as callback")

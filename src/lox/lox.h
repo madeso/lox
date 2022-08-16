@@ -2,12 +2,12 @@
 
 #include "lox/object.h"
 
-
 namespace lox
 {
 
 
 struct Lox;
+
 
 namespace detail
 {
@@ -16,7 +16,7 @@ namespace detail
     template<typename T>
     std::size_t get_unique_id()
     {
-        const std::size_t id = create_type_id();
+        static const std::size_t id = create_type_id();
         return id;
     }
 
@@ -30,16 +30,6 @@ namespace detail
             , data(t)
         {
         }
-
-        std::shared_ptr<Object> get_field_or_null(const std::string&) override
-        {
-            return nullptr;
-        }
-
-        bool set_field_or_false(const std::string&, std::shared_ptr<Object>) override
-        {
-            return false;
-        }
     };
 
     template<typename T>
@@ -48,6 +38,49 @@ namespace detail
     {
         return std::make_shared<NativeInstanceT<T>>(std::move(t), k);
     }
+
+    template<typename T> T get_from_obj_or_error(std::shared_ptr<Object>);
+    template<> std::string get_from_obj_or_error<std::string>(std::shared_ptr<Object> obj);
+    template<> bool get_from_obj_or_error<bool>(std::shared_ptr<Object> obj);
+    template<> float get_from_obj_or_error<float>(std::shared_ptr<Object> obj);
+
+
+    template<typename T> std::shared_ptr<Object> make_object(T);
+    template<> std::shared_ptr<Object> make_object<std::string>(std::string str);
+    template<> std::shared_ptr<Object> make_object<bool>(bool b);
+    template<> std::shared_ptr<Object> make_object<float>(float n);
+
+    template<typename T, typename P>
+    struct PropertyT : Property
+    {
+        std::function<P(T&)> getter;
+        std::function<void (T&, P)> setter;
+
+        PropertyT
+        (
+            std::function<P(T&)>&& g,
+            std::function<void (T&, P)>&& s
+        )
+            : getter(g)
+            , setter(s)
+        {
+        }
+
+        std::shared_ptr<Object> get_value(NativeInstance* instance) override
+        {
+            assert(static_cast<NativeKlass*>(instance->klass.get())->native_id == get_unique_id<T>());
+            auto& in = static_cast<NativeInstanceT<T>&>(*instance);
+            return make_object<P>(getter(in.data));
+        }
+
+        void set_value(NativeInstance* instance, std::shared_ptr<Object> value) override
+        {
+            assert(static_cast<NativeKlass*>(instance->klass.get())->native_id == get_unique_id<T>());
+            auto& in = static_cast<NativeInstanceT<T>&>(*instance);
+            setter(in.data, get_from_obj_or_error<P>(value));
+        }
+
+    };
 }
 
 
@@ -118,6 +151,15 @@ struct ClassAdder
         );
         [[maybe_unused]] const auto was_added = native_klass->add_method_or_false(name, native_func);
         assert(was_added);
+        return *this;
+    }
+
+    template<typename P>
+    ClassAdder<T>&
+    add_property(const std::string& name, std::function<P(T&)> getter, std::function<void (T&, P)> setter)
+    {
+        auto prop = std::make_unique<detail::PropertyT<T, P>>(std::move(getter), std::move(setter));
+        native_klass->add_property(name, std::move(prop));
         return *this;
     }
 };

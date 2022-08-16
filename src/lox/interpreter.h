@@ -51,4 +51,9 @@ bool                      get_bool_from_arg      (const Arguments& args, u64 arg
 float                     get_number_from_arg    (const Arguments& args, u64 argument_index);
 std::shared_ptr<Callable> get_callable_from_arg  (const Arguments& args, u64 argument_index);
 
+std::string               get_string_from_obj_or_error    (std::shared_ptr<Object> obj);
+bool                      get_bool_from_obj_or_error      (std::shared_ptr<Object> obj);
+float                     get_number_from_obj_or_error    (std::shared_ptr<Object> obj);
+std::shared_ptr<Callable> get_callable_from_obj_or_error  (std::shared_ptr<Object> obj);
+
 }
