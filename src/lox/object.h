@@ -16,6 +16,7 @@ enum class ObjectType
 
 
 struct Environment;
+struct ArgumentHelper;
 
 
 constexpr std::string_view objecttype_to_string(ObjectType ot)
@@ -179,7 +180,7 @@ std::shared_ptr<Object>     make_number           (float f);
 std::shared_ptr<Callable>   make_native_function
 (
     const std::string& name,
-    std::function<std::shared_ptr<Object>(Callable*, const Arguments& arguments)>&& func
+    std::function<std::shared_ptr<Object>(Callable*, ArgumentHelper& arguments)>&& func
 );
 
 // ----------------------------------------------------------------------------
@@ -202,6 +203,32 @@ float        get_number_or_ub  (std::shared_ptr<Object> o);
 
 bool is_truthy(std::shared_ptr<Object> o);
 
+
+// ----------------------------------------------------------------------------
+
+struct ArgumentHelper
+{
+    const lox::Arguments& args;
+    u64 next_argument;
+    bool has_read_all_arguments;
+
+    explicit ArgumentHelper(const lox::Arguments& args);
+    void verify_completion();
+
+    // todo(Gustav): add some match/switch helper to handle overloads
+
+    std::string                 require_string   ();
+    bool                        require_bool     ();
+    float                       require_number   ();
+    std::shared_ptr<Callable>   require_callable ();
+
+    void complete();
+
+    ArgumentHelper(ArgumentHelper&&) = delete;
+    ArgumentHelper(const ArgumentHelper&) = delete;
+    void operator=(ArgumentHelper&&) = delete;
+    void operator=(const ArgumentHelper&) = delete;
+};
 
 // ----------------------------------------------------------------------------
 

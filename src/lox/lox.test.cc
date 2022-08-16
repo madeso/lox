@@ -24,9 +24,8 @@ TEST_CASE("lox binding fail" "[lox]")
         lox.define_global_native_function
         (
             "nat",
-            [](lox::Callable*, const lox::Arguments& args)
+            [](lox::Callable*, lox::ArgumentHelper& helper)
             {
-                lox::ArgumentHelper helper{args};
                 auto arg = helper.require_string();
                 helper.complete();
                 return lox::make_string(arg);
@@ -55,7 +54,7 @@ TEST_CASE("lox binding fail" "[lox]")
             )lox");
             CHECK_FALSE(run_ok);
             CHECK(ErrorEq(error_list, {
-                {error, 74, 91, ""},
+                {error, 20, 24, "number (42) is not accepted for argument 1, expected string"},
             }));
             CHECK(StringEq(console_out,{}));
         }
@@ -68,7 +67,10 @@ TEST_CASE("lox binding fail" "[lox]")
             )lox");
             CHECK_FALSE(run_ok);
             CHECK(ErrorEq(error_list, {
-                {error, 74, 91, ""},
+                {error, 20, 38, "Expected 1 arguments but got 2"},
+                {note, 17, 20, "called with 2 arguments"},
+                {note, 21, 28, "argument 1 evaluated to string: hello"},
+                {note, 30, 37, "argument 2 evaluated to string: world"},
             }));
             CHECK(StringEq(console_out,{}));
         }
@@ -94,11 +96,11 @@ TEST_CASE("lox binding fail" "[lox]")
             const auto run_ok = lox.run_string
             (R"lox(
                 var adder = Adder();
-                adder.value = 42;
+                adder.value = 24;
             )lox");
             CHECK_FALSE(run_ok);
             CHECK(ErrorEq(error_list, {
-                {error, 74, 91, ""},
+                {error, 60, 70, "number (24) is not accepted for property 'value' on <native instance Adder>, expected string"},
             }));
             CHECK(StringEq(console_out, {}));
         }
@@ -119,9 +121,9 @@ TEST_CASE("lox binding" "[lox]")
         lox.define_global_native_function
         (
             "nat",
-            [](lox::Callable*, const lox::Arguments& args)
+            [](lox::Callable*, lox::ArgumentHelper& helper)
             {
-                lox::ArgumentHelper{args}.complete();
+                helper.complete();
                 return lox::make_string("hello world");
             }
         );
@@ -170,9 +172,8 @@ TEST_CASE("lox binding" "[lox]")
         lox.define_global_native_function
         (
             "add",
-            [](lox::Callable*, const lox::Arguments& args)
+            [](lox::Callable*, lox::ArgumentHelper& ah)
             {
-                auto ah = lox::ArgumentHelper{args};
                 auto lhs = ah.require_number();
                 auto rhs = ah.require_number();
                 ah.complete();
@@ -196,9 +197,8 @@ TEST_CASE("lox binding" "[lox]")
         lox.define_global_native_function
         (
             "add",
-            [](lox::Callable*, const lox::Arguments& args)
+            [](lox::Callable*, lox::ArgumentHelper& ah)
             {
-                auto ah = lox::ArgumentHelper{args};
                 auto lhs = ah.require_string();
                 auto rhs = ah.require_string();
                 ah.complete();
@@ -223,9 +223,8 @@ TEST_CASE("lox binding" "[lox]")
         lox.define_global_native_function
         (
             "add",
-            [](lox::Callable*, const lox::Arguments& args)
+            [](lox::Callable*, lox::ArgumentHelper& ah)
             {
-                auto ah = lox::ArgumentHelper{args};
                 auto lhs = ah.require_bool();
                 ah.complete();
                 if(lhs) return lox::make_string("yes!");
@@ -251,9 +250,8 @@ TEST_CASE("lox binding" "[lox]")
         lox.define_global_native_function
         (
             "set_fun",
-            [&callable](lox::Callable*, const lox::Arguments& args)
+            [&callable](lox::Callable*, lox::ArgumentHelper& ah)
             {
-                auto ah = lox::ArgumentHelper{args};
                 callable = ah.require_callable();
                 ah.complete();
                 return lox::make_nil();

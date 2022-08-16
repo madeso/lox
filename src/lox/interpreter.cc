@@ -58,7 +58,7 @@ struct ReturnValue
 struct InvalidArgumentType
 {
     u64 argument_index;
-    ObjectType type;
+    ObjectType expected_type;
 
     InvalidArgumentType
     (
@@ -66,7 +66,7 @@ struct InvalidArgumentType
         ObjectType atype
     )
         : argument_index(aargument_index)
-        , type(atype)
+        , expected_type(atype)
     {
     }
 };
@@ -736,6 +736,37 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
             auto return_value = function->call({arguments});
             return return_value;
         }
+        catch(const InvalidArgumentType& invalid_arg_error)
+        {
+            auto invalid_arg_value = arguments[invalid_arg_error.argument_index];
+            // special case for nil, no need to write the value of nil
+            const auto actual_type = invalid_arg_value->get_type();
+            if(actual_type == ObjectType::nil)
+            {
+                error_handler->on_error
+                (
+                    x.offset, "nil is not accepted for argument {}, expected {}"_format
+                    (
+                        invalid_arg_error.argument_index+1,
+                        objecttype_to_string(invalid_arg_error.expected_type)
+                    )
+                );
+            }
+            else
+            {
+                error_handler->on_error
+                (
+                    x.offset, "{} ({}) is not accepted for argument {}, expected {}"_format
+                    (
+                        objecttype_to_string(actual_type),
+                        invalid_arg_value->to_string(),
+                        invalid_arg_error.argument_index+1,
+                        objecttype_to_string(invalid_arg_error.expected_type)
+                    )
+                );
+            }
+            throw RuntimeError{};
+        }
         catch(const CallError& err)
         {
             error_handler->on_error(x.offset, err.error);
@@ -827,19 +858,19 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
                 throw RuntimeError{};
             }
         }
-        catch(const InvalidArgumentType& ae)
+        catch(const InvalidArgumentType& invalid_arg_error)
         {
             // special case for nil, no need to write the value of nil
-            const auto type = value->get_type();
-            if(type == ObjectType::nil)
+            const auto actual_type = value->get_type();
+            if(actual_type == ObjectType::nil)
             {
                 error_handler->on_error
                 (
-                    x.offset, "nil is not accepted for {} on {}, expected {}"_format
+                    x.offset, "nil is not accepted for property '{}' on {}, expected {}"_format
                     (
                         x.name,
                         object->to_string(),
-                        objecttype_to_string(ae.type)
+                        objecttype_to_string(invalid_arg_error.expected_type)
                     )
                 );
             }
@@ -847,13 +878,13 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
             {
                 error_handler->on_error
                 (
-                    x.offset, "{} ({}) is not accepted for {} on {}, expected {}"_format
+                    x.offset, "{} ({}) is not accepted for property '{}' on {}, expected {}"_format
                     (
-                        objecttype_to_string(type),
+                        objecttype_to_string(actual_type),
                         value->to_string(),
                         x.name,
                         object->to_string(),
-                        objecttype_to_string(ae.type)
+                        objecttype_to_string(invalid_arg_error.expected_type)
                     )
                 );
             }

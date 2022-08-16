@@ -75,12 +75,12 @@ namespace lox
 struct NativeFunction : Callable
 {
     std::string name;
-    std::function<std::shared_ptr<Object>(Callable*, const Arguments& arguments)> func;
+    std::function<std::shared_ptr<Object>(Callable*, ArgumentHelper& arguments)> func;
 
     NativeFunction
     (
         const std::string& n,
-        std::function<std::shared_ptr<Object>(Callable*, const Arguments& arguments)> f
+        std::function<std::shared_ptr<Object>(Callable*, ArgumentHelper& arguments)> f
     )
         : name(n)
         , func(f)
@@ -94,9 +94,20 @@ struct NativeFunction : Callable
     }
 
     std::shared_ptr<Object>
+    perform_call(Callable* callable, const Arguments& arguments)
+    {
+        ArgumentHelper helper{arguments};
+
+        auto ret = func(callable, helper);
+        helper.verify_completion();
+        
+        return ret;
+    }
+
+    std::shared_ptr<Object>
     call(const Arguments& arguments) override
     {
-        return func(this, arguments);
+        return perform_call(this, arguments);
     }
 
     std::shared_ptr<Callable>
@@ -247,7 +258,7 @@ BoundCallable::to_string() const
 std::shared_ptr<Object>
 BoundCallable::call(const Arguments& arguments)
 {
-    return callable->func(this, arguments);
+    return callable->perform_call(this, arguments);
 }
 
 std::shared_ptr<Callable> BoundCallable::bind(std::shared_ptr<Object>)
@@ -475,7 +486,7 @@ std::shared_ptr<Callable>
 make_native_function
 (
     const std::string& name,
-    std::function<std::shared_ptr<Object>(Callable*, const Arguments& arguments)>&& func
+    std::function<std::shared_ptr<Object>(Callable*, ArgumentHelper& arguments)>&& func
 )
 {
     return std::make_shared<NativeFunction>(name, func);
@@ -566,6 +577,61 @@ is_truthy(std::shared_ptr<Object> o)
     default:
         return true;
     }
+}
+
+// ----------------------------------------------------------------------------
+
+
+ArgumentHelper::ArgumentHelper(const lox::Arguments& aargs)
+    : args(aargs)
+    , next_argument(0)
+    , has_read_all_arguments(false)
+{
+}
+
+void ArgumentHelper::verify_completion()
+{
+    assert(has_read_all_arguments && "complete() not called");
+}
+
+void
+ArgumentHelper::complete()
+{
+    assert(has_read_all_arguments==false && "complete() called twice!");
+    has_read_all_arguments = true;
+    verify_number_of_arguments(args, next_argument);
+}
+
+std::string
+ArgumentHelper::require_string()
+{
+    const auto argument_index = next_argument++;
+    if(args.arguments.size() <= argument_index) { return ""; }
+    return get_string_from_arg(args, argument_index);
+}
+
+bool
+ArgumentHelper::require_bool()
+{
+    const auto argument_index = next_argument++;
+    if(args.arguments.size() <= argument_index) { return false; }
+    return get_bool_from_arg(args, argument_index);
+}
+
+float
+ArgumentHelper::require_number()
+{
+    const auto argument_index = next_argument++;
+    if(args.arguments.size() <= argument_index) { return 0.0f; }
+    return get_number_from_arg(args, argument_index);
+}
+
+std::shared_ptr<Callable>
+ArgumentHelper::require_callable()
+{
+    const auto argument_index = next_argument++;
+    if(args.arguments.size() <= argument_index) { return nullptr; }
+    return get_callable_from_arg(args, argument_index);
 }
 
 // ----------------------------------------------------------------------------

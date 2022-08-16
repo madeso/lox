@@ -93,34 +93,9 @@ define_native_function
 (
     const std::string& name,
     Environment& env,
-    std::function<std::shared_ptr<Object>(Callable*, const Arguments& arguments)>&& func
+    std::function<std::shared_ptr<Object>(Callable*, ArgumentHelper& arguments)>&& func
 );
 
-
-
-struct ArgumentHelper
-{
-    const lox::Arguments& args;
-    u64 next_argument;
-    bool has_read_all_arguments;
-
-    explicit ArgumentHelper(const lox::Arguments& args);
-    ~ArgumentHelper();
-
-    // todo(Gustav): add some match/switch helper to handle overloads
-
-    std::string                 require_string   ();
-    bool                        require_bool     ();
-    float                       require_number   ();
-    std::shared_ptr<Callable>   require_callable ();
-
-    void complete();
-
-    ArgumentHelper(ArgumentHelper&&) = delete;
-    ArgumentHelper(const ArgumentHelper&) = delete;
-    void operator=(ArgumentHelper&&) = delete;
-    void operator=(const ArgumentHelper&) = delete;
-};
 
 template<typename T>
 struct ClassAdder
@@ -133,7 +108,7 @@ struct ClassAdder
         std::shared_ptr<Callable> native_func = make_native_function
         (
             name,
-            [func](Callable* callable, const Arguments& args) -> std::shared_ptr<Object>
+            [func](Callable* callable, ArgumentHelper& helper) -> std::shared_ptr<Object>
             {
                 const auto cc = callable->to_string();
                 assert(callable->is_bound());
@@ -145,7 +120,6 @@ struct ClassAdder
                 // todo(Gustav): uncoment this!
                 // assert(native_instance->native_id == detail::get_unique_id<T>());
                 auto specific_type = std::static_pointer_cast<detail::NativeInstanceT<T>>(native_instance);
-                ArgumentHelper helper{args};
                 return func(specific_type->data, helper);
             }
         );
@@ -175,7 +149,7 @@ struct Lox
     define_global_native_function
     (
         const std::string& name,
-        std::function<std::shared_ptr<Object>(Callable*, const Arguments& arguments)>&& func
+        std::function<std::shared_ptr<Object>(Callable*, ArgumentHelper& arguments)>&& func
     );
 
     std::shared_ptr<NativeKlass>
