@@ -9,6 +9,103 @@
 using namespace catchy;
 
 
+TEST_CASE("lox binding fail" "[lox]")
+{
+    std::vector<std::string> console_out;
+    std::vector<ReportedError> error_list;
+
+    auto lox = lox::Lox{std::make_unique<AddErrorErrors>(&error_list), [&](const std::string& s){ console_out.emplace_back(s); }};
+
+    constexpr ReportedError::Type error = ReportedError::Type::error;
+    constexpr ReportedError::Type note = ReportedError::Type::note;
+
+    SECTION("function 1 string arg")
+    {
+        lox.define_global_native_function
+        (
+            "nat",
+            [](lox::Callable*, const lox::Arguments& args)
+            {
+                lox::ArgumentHelper helper{args};
+                auto arg = helper.require_string();
+                helper.complete();
+                return lox::make_string(arg);
+            }
+        );
+
+        SECTION("send 0 arguments")
+        {
+            const auto run_ok = lox.run_string
+            (R"lox(
+                nat();
+            )lox");
+            CHECK_FALSE(run_ok);
+            CHECK(ErrorEq(error_list, {
+                {error, 20, 22, "Expected 1 arguments but got 0"},
+                {note, 17, 20, "called with 0 arguments"}
+            }));
+            CHECK(StringEq(console_out,{}));
+        }
+
+        SECTION("send wrong type")
+        {
+            const auto run_ok = lox.run_string
+            (R"lox(
+                nat(42);
+            )lox");
+            CHECK_FALSE(run_ok);
+            CHECK(ErrorEq(error_list, {
+                {error, 74, 91, ""},
+            }));
+            CHECK(StringEq(console_out,{}));
+        }
+
+        SECTION("send too many arguments")
+        {
+            const auto run_ok = lox.run_string
+            (R"lox(
+                nat("hello", "world");
+            )lox");
+            CHECK_FALSE(run_ok);
+            CHECK(ErrorEq(error_list, {
+                {error, 74, 91, ""},
+            }));
+            CHECK(StringEq(console_out,{}));
+        }
+    }
+
+    SECTION("native class default constructor")
+    {
+        struct Adder
+        {
+            std::string value;
+        };
+        lox.define_global_native_class<Adder>("Adder")
+            .add_property<std::string>
+            (
+                "value",
+                [](Adder& c) { return c.value; },
+                [](Adder& c, const std::string& new_value) { c.value = new_value; }
+            )
+            ;
+
+        SECTION("set property invalid type")
+        {
+            const auto run_ok = lox.run_string
+            (R"lox(
+                var adder = Adder();
+                adder.value = 42;
+            )lox");
+            CHECK_FALSE(run_ok);
+            CHECK(ErrorEq(error_list, {
+                {error, 74, 91, ""},
+            }));
+            CHECK(StringEq(console_out, {}));
+        }
+    }
+}
+
+
 TEST_CASE("lox binding" "[lox]")
 {
     std::vector<std::string> console_out;
