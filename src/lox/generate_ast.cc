@@ -375,6 +375,7 @@ write_code
                 {
                     {"std::string", "name"},
                     {"VariableExpression", "parent"},
+                    {"std::vector<std::shared_ptr<VarStatement>>", "members"},
                     {"std::vector<std::shared_ptr<FunctionStatement>>", "methods"}
                 }
             },

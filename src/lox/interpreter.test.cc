@@ -318,6 +318,68 @@ TEST_CASE("interpret fail", "[interpret]")
             {error, 109, 118, "Can't use 'super' in class with no superclass"},
         }));
     }
+
+    SECTION("now invalid headscratcher: can't assign missing var/override functions in class")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            class Person
+            {
+                public var name;
+
+                public fun sayName()
+                {
+                    print this.name;
+                }
+            }
+
+            var jane = new Person();
+            jane.name = "Jane";
+
+            var bill = new Person();
+            bill.name = "Bill";
+
+            bill.sayName = jane.sayName;
+            bill.sayName();
+        )lox");
+        CHECK_FALSE(run_ok);
+        CHECK(StringEq(console_out,{}));
+        CHECK(ErrorEq(error_list, {
+            {error, 356, 378, "<instance Person> doesn't have a property named sayName"},
+        }));
+    }
+
+    SECTION("now invalid headscratcher: can't call nil")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            class Person
+            {
+                public var name;
+                public var sayName;
+
+                public fun sayName()
+                {
+                    print this.name;
+                }
+            }
+
+            var jane = new Person();
+            jane.name = "Jane";
+
+            var bill = new Person();
+            bill.name = "Bill";
+
+            bill.sayName = jane.sayName;
+            bill.sayName();
+        )lox");
+        CHECK_FALSE(run_ok);
+        CHECK(StringEq(console_out,{}));
+        CHECK(ErrorEq(error_list, {
+            {error, 433, 440, "nil is not a callable, evaluates to nil"},
+            {note, 440, 442, "call occured here"},
+        }));
+    }
 }
 
 
@@ -729,7 +791,7 @@ TEST_CASE("interpret ok", "[interpret]")
     {
         const auto run_ok = run_string
         (lx, R"lox(
-            class Classy{}
+            class Classy{ public var animals; }
             var instance = new Classy();
             instance.animals = "I love cats!";
             print instance.animals;
@@ -746,7 +808,7 @@ TEST_CASE("interpret ok", "[interpret]")
     {
         const auto run_ok = run_string
         (lx, R"lox(
-            class Box {}
+            class Box { public var function; }
 
             fun notMethod(argument)
             {
@@ -770,6 +832,8 @@ TEST_CASE("interpret ok", "[interpret]")
         (lx, R"lox(
             class Adder
             {
+                public var string;
+
                 public fun init(start)
                 {
                     this.string = start;
@@ -856,6 +920,8 @@ TEST_CASE("interpret ok", "[interpret]")
         (lx, R"lox(
             class Animal
             {
+                public var val;
+
                 public fun init(val)
                 {
                     this.val = val;
@@ -885,6 +951,8 @@ TEST_CASE("interpret ok", "[interpret]")
         (lx, R"lox(
             class Person
             {
+                public var name;
+
                 public fun sayName()
                 {
                     print this.name;
@@ -928,34 +996,6 @@ TEST_CASE("interpret ok", "[interpret]")
         REQUIRE(StringEq(error_list, {}));
         CHECK(StringEq(console_out,{
             "<instance Thing>"
-        }));
-    }
-    
-    SECTION("bound method: call method on class with dot instance on other class instance")
-    {
-        const auto run_ok = run_string
-        (lx, R"lox(
-            class Person
-            {
-                public fun sayName()
-                {
-                    print this.name;
-                }
-            }
-
-            var jane = new Person();
-            jane.name = "Jane";
-
-            var bill = new Person();
-            bill.name = "Bill";
-
-            bill.sayName = jane.sayName;
-            bill.sayName();
-        )lox");
-        CHECK(run_ok);
-        REQUIRE(StringEq(error_list, {}));
-        CHECK(StringEq(console_out,{
-            "Jane"
         }));
     }
     
@@ -1100,6 +1140,7 @@ TEST_CASE("interpret currently allowed", "[interpret]")
             
             class Derived : Base
             {
+                public var val;
                 public fun init(v)
                 {
                     this.val = v;

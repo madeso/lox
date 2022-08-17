@@ -146,18 +146,40 @@ struct Parser
 
 
         std::vector<std::shared_ptr<FunctionStatement>> methods;
+        std::vector<std::shared_ptr<VarStatement>> members;
         while(check(TokenType::RIGHT_BRACE) == false && is_at_end() == false)
         {
             consume(TokenType::PUBLIC, "missing visibility specifier");
-            consume(TokenType::FUN, "missing fun statement");
-            auto method = parse_function_or_method("method");
-            methods.emplace_back(std::move(method));
+
+            if(match({TokenType::FUN}))
+            {
+                auto method = parse_function_or_method("method");
+                methods.emplace_back(std::move(method));
+            }
+            else if(match({TokenType::VAR}))
+            {
+                auto mem = parse_var_declaration();
+                members.emplace_back(std::move(mem));
+            }
+            else
+            {
+                auto& next = peek();
+                throw error(next.offset, "Expected fun or var but found {}"_format(next.to_string()));
+            }
         }
 
         consume(TokenType::RIGHT_BRACE, "Expected } after class body");
 
         const auto end = previous_offset();
-        return std::make_shared<ClassStatement>(offset_start_end(start, end), new_stmt(), std::string(name), std::move(superclass), std::move(methods));
+        return std::make_shared<ClassStatement>
+        (
+            offset_start_end(start, end),
+            new_stmt(),
+            std::string(name),
+            std::move(superclass),
+            std::move(members),
+            std::move(methods)
+        );
     }
 
     std::shared_ptr<FunctionStatement>
@@ -190,7 +212,7 @@ struct Parser
         return std::make_shared<FunctionStatement>(offset_start_end(start, end), new_stmt(), std::string(name), std::move(params), std::move(body));
     }
 
-    std::shared_ptr<Statement>
+    std::shared_ptr<VarStatement>
     parse_var_declaration()
     {
         const auto start = previous_offset();

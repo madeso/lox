@@ -183,6 +183,14 @@ struct MainResolver : ExpressionVoidVisitor, StatementVoidVisitor
             define_var("super");
         }
 
+        for(auto& mem: x.members)
+        {
+            if(mem->initializer != nullptr)
+            {
+                resolve(mem->initializer);
+            }
+        }
+
         begin_scope();
         declare_var("this", x.offset);
         define_var("this");

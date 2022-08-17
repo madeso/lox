@@ -25,6 +25,8 @@ struct State
     }
 };
 
+std::shared_ptr<Object>
+interpret_initial_value(MainInterpreter* inter, const VarStatement&);
 
 void
 execute_statements_with_environment
@@ -311,25 +313,46 @@ struct ScriptInstance : Instance
         if(auto found = fields.find(name); found != fields.end())
         {
             found->second = value;
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+
+    }
+
+    bool add_member(const std::string& name, std::shared_ptr<Object> value)
+    {
+        if(auto found = fields.find(name); found != fields.end())
+        {
+            return false;
         }
         else
         {
             fields.insert({name, value});
+            return true;
         }
 
-        return true;
     }
 };
 
 
 struct ScriptKlass : Klass
 {
+    MainInterpreter* inter;
+    std::vector<std::shared_ptr<VarStatement>> members;
+
     ScriptKlass
     (
         const std::string& nm,
-        std::shared_ptr<Klass> sk
+        std::shared_ptr<Klass> sk,
+        MainInterpreter* mi,
+        std::vector<std::shared_ptr<VarStatement>> mems
     )
         : Klass(nm, sk)
+        , inter(mi)
+        , members(mems)
     {
     }
 
@@ -343,11 +366,15 @@ struct ScriptKlass : Klass
     constructor(const Arguments& arguments) override
     {
         auto self = shared_from_this();
-        assert(self != nullptr);
-        assert(self->get_type() == ObjectType::klass);
         auto klass = std::static_pointer_cast<Klass>(self);
 
         auto instance = std::make_shared<ScriptInstance>(klass);
+
+        for(const auto& m: members)
+        {
+            [[maybe_unused]] const auto was_added = instance->add_member(m->name, interpret_initial_value(inter, *m.get()));
+            assert(was_added);
+        }
 
         if (auto initializer = klass->find_method_or_null("init"); initializer != nullptr)
         {
@@ -551,7 +578,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
             }
         }
 
-        auto new_klass = std::make_shared<ScriptKlass>(x.name, superklass);
+        auto new_klass = std::make_shared<ScriptKlass>(x.name, superklass, this, x.members);
         current_environment->define(x.name, new_klass);
 
         std::shared_ptr<Environment> backup_environment;
@@ -674,15 +701,20 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
         }
     }
 
-    void
-    on_var_statement(const VarStatement& x) override
+    std::shared_ptr<Object>
+    create_value(const VarStatement& x)
     {
         // todo(Gustav): make usage of unitialized value an error
-        std::shared_ptr<Object> value = x.initializer != nullptr
+        return x.initializer != nullptr
             ? evaluate(x.initializer)
             : make_nil()
             ;
-        
+    }
+
+    void
+    on_var_statement(const VarStatement& x) override
+    {
+        auto value = create_value(x);
         current_environment->define(x.name, value);
     }
 
@@ -1170,6 +1202,12 @@ void
 execute_statements_with_environment(MainInterpreter* main, const std::vector<std::shared_ptr<Statement>>& statements, std::shared_ptr<Environment> environment, std::shared_ptr<State> state)
 {
     main->execute_statements_with_environment(statements, environment, state);
+}
+
+std::shared_ptr<Object>
+interpret_initial_value(MainInterpreter* inter, const VarStatement& v)
+{
+    return inter->create_value(v);
 }
 
 

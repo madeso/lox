@@ -79,14 +79,28 @@ struct AstPrinter : ExpressionStringVisitor, StatementStringVisitor
             blocks.emplace_back(parenthesize("parent", {x.parent->accept(this)}));
         }
 
-        std::vector<std::string> methods;
-        for(const auto& stmt: x.methods)
         {
-            methods.emplace_back(stmt->accept(this));
+            std::vector<std::string> members;
+            for(const auto& stmt: x.members)
+            {
+                members.emplace_back(stmt->accept(this));
+            }
+            if(members.empty() == false)
+            {
+                blocks.emplace_back(parenthesize("members", members));
+            }
         }
-        if(methods.empty() == false)
+
         {
-            blocks.emplace_back(parenthesize("methods", methods));
+            std::vector<std::string> methods;
+            for(const auto& stmt: x.methods)
+            {
+                methods.emplace_back(stmt->accept(this));
+            }
+            if(methods.empty() == false)
+            {
+                blocks.emplace_back(parenthesize("methods", methods));
+            }
         }
 
         return parenthesize("class", blocks);
@@ -344,14 +358,27 @@ struct GraphvizPrinter : ExpressionStringVisitor, StatementStringVisitor
     {
         const auto n = new_node("class");
         const auto name = link_to(n, new_node(x.name));
-        std::optional<std::string> methods;
-        for(const auto& stmt: x.methods)
         {
-            if(methods.has_value() == false)
+            std::optional<std::string> members;
+            for(const auto& stmt: x.members)
             {
-                methods = link_to(name, new_node("methods"));
+                if(members.has_value() == false)
+                {
+                    members = link_to(name, new_node("members"));
+                }
+                link(*members, stmt->accept(this));
             }
-            link(*methods, stmt->accept(this));
+        }
+        {
+            std::optional<std::string> methods;
+            for(const auto& stmt: x.methods)
+            {
+                if(methods.has_value() == false)
+                {
+                    methods = link_to(name, new_node("methods"));
+                }
+                link(*methods, stmt->accept(this));
+            }
         }
         if(x.parent)
         {
