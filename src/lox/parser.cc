@@ -148,6 +148,8 @@ struct Parser
         std::vector<std::shared_ptr<FunctionStatement>> methods;
         while(check(TokenType::RIGHT_BRACE) == false && is_at_end() == false)
         {
+            consume(TokenType::PUBLIC, "missing visibility specifier");
+            consume(TokenType::FUN, "missing fun statement");
             auto method = parse_function_or_method("method");
             methods.emplace_back(std::move(method));
         }

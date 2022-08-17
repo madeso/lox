@@ -131,7 +131,7 @@ TEST_CASE("interpret fail", "[interpret]")
         const auto run_ok = run_string
         (lx, R"lox(
             class Foo {
-                init()
+                public fun init()
                 {
                     return "something else";
                 }
@@ -140,7 +140,7 @@ TEST_CASE("interpret fail", "[interpret]")
         CHECK_FALSE(run_ok);
         CHECK(StringEq(console_out,{}));
         CHECK(ErrorEq(error_list, {
-            {error, 86, 110, "Can't return value from initializer"},
+            {error, 97, 121, "Can't return value from initializer"},
         }));
     }
 
@@ -305,7 +305,7 @@ TEST_CASE("interpret fail", "[interpret]")
         (lx, R"lox(
             class Base
             {
-                say()
+                public fun say()
                 {
                     super.say();
                     print "Oh no";
@@ -315,7 +315,7 @@ TEST_CASE("interpret fail", "[interpret]")
         CHECK_FALSE(run_ok);
         CHECK(StringEq(console_out,{}));
         CHECK(ErrorEq(error_list, {
-            {error, 98, 107, "Can't use 'super' in class with no superclass"},
+            {error, 109, 118, "Can't use 'super' in class with no superclass"},
         }));
     }
 }
@@ -705,7 +705,7 @@ TEST_CASE("interpret ok", "[interpret]")
         (lx, R"lox(
             class HelloWorlder
             {
-                get_string()
+                public fun get_string()
                 {
                     return "Hello, world!";
                 }
@@ -770,17 +770,17 @@ TEST_CASE("interpret ok", "[interpret]")
         (lx, R"lox(
             class Adder
             {
-                init(start)
+                public fun init(start)
                 {
                     this.string = start;
                 }
 
-                add(more)
+                public fun add(more)
                 {
                     this.string = this.string + more;
                 }
 
-                get()
+                public fun get()
                 {
                     return this.string;
                 }
@@ -805,7 +805,7 @@ TEST_CASE("interpret ok", "[interpret]")
         (lx, R"lox(
             class Foo
             {
-                init()
+                public fun init()
                 {
                     print this;
                 }
@@ -830,7 +830,7 @@ TEST_CASE("interpret ok", "[interpret]")
         (lx, R"lox(
             class Foo
             {
-                nop1() {}
+                public fun nop1() {}
             }
 
             fun nop2() {}
@@ -856,7 +856,7 @@ TEST_CASE("interpret ok", "[interpret]")
         (lx, R"lox(
             class Animal
             {
-                init(val)
+                public fun init(val)
                 {
                     this.val = val;
                     return; // "early" return, weird here but legal
@@ -885,7 +885,7 @@ TEST_CASE("interpret ok", "[interpret]")
         (lx, R"lox(
             class Person
             {
-                sayName()
+                public fun sayName()
                 {
                     print this.name;
                 }
@@ -910,7 +910,7 @@ TEST_CASE("interpret ok", "[interpret]")
         (lx, R"lox(
             class Thing
             {
-                getCallback()
+                public fun getCallback()
                 {
                     fun localFunction()
                     {
@@ -937,7 +937,7 @@ TEST_CASE("interpret ok", "[interpret]")
         (lx, R"lox(
             class Person
             {
-                sayName()
+                public fun sayName()
                 {
                     print this.name;
                 }
@@ -965,7 +965,7 @@ TEST_CASE("interpret ok", "[interpret]")
         (lx, R"lox(
             class Base
             {
-                say()
+                public fun say()
                 {
                     print "Hello, world!";
                 }
@@ -987,7 +987,7 @@ TEST_CASE("interpret ok", "[interpret]")
         (lx, R"lox(
             class Base
             {
-                say()
+                public fun say()
                 {
                     print "base";
                 }
@@ -995,7 +995,7 @@ TEST_CASE("interpret ok", "[interpret]")
 
             class Derived : Base
             {
-                say()
+                public fun say()
                 {
                     print "derived";
                 }
@@ -1015,7 +1015,7 @@ TEST_CASE("interpret ok", "[interpret]")
         (lx, R"lox(
             class Base
             {
-                say()
+                public fun say()
                 {
                     print "base";
                 }
@@ -1023,7 +1023,7 @@ TEST_CASE("interpret ok", "[interpret]")
 
             class Derived : Base
             {
-                say()
+                public fun say()
                 {
                     super.say();
                     print "derived";
@@ -1045,7 +1045,7 @@ TEST_CASE("interpret ok", "[interpret]")
         (lx, R"lox(
             class A
             {
-                method()
+                public fun method()
                 {
                     print "A method";
                 }
@@ -1053,12 +1053,12 @@ TEST_CASE("interpret ok", "[interpret]")
 
             class B : A
             {
-                method()
+                public fun method()
                 {
                     print "B method";
                 }
 
-                test()
+                public fun test()
                 {
                     super.method();
                 }
@@ -1092,7 +1092,7 @@ TEST_CASE("interpret currently allowed", "[interpret]")
         (lx, R"lox(
             class Base
             {
-                say()
+                public fun say()
                 {
                     print this.val;
                 }
@@ -1100,7 +1100,7 @@ TEST_CASE("interpret currently allowed", "[interpret]")
             
             class Derived : Base
             {
-                init(v)
+                public fun init(v)
                 {
                     this.val = v;
                 }
