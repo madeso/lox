@@ -5,6 +5,8 @@
 #endif
 
 #include <string_view>
+#include <cassert>
+
 
 namespace lox
 {
@@ -12,7 +14,7 @@ namespace lox
     {
         // Single-character tokens.
         LEFT_PAREN, RIGHT_PAREN, LEFT_BRACE, RIGHT_BRACE,
-        COMMA, DOT, MINUS, PLUS, SEMICOLON, SLASH, STAR,
+        COMMA, DOT, PLUS, SEMICOLON, SLASH, STAR,
         COLON,
 
         // One or two character tokens.
@@ -21,12 +23,16 @@ namespace lox
         GREATER, GREATER_EQUAL,
         LESS, LESS_EQUAL,
 
+        MINUS, ARROW,
+
         // Literals.
         IDENTIFIER, STRING, NUMBER,
 
         // Keywords.
         AND, CLASS, ELSE, FALSE, FUN, FOR, IF, NIL, OR,
         PRINT, RETURN, SUPER, THIS, TRUE, VAR, WHILE,
+
+        NEW, STATIC, CONST, PUBLIC, PRIVATE,
 
         EOF
     };
@@ -41,7 +47,6 @@ namespace lox
         case TokenType::RIGHT_BRACE:    return "right_brace";
         case TokenType::COMMA:          return "comma";
         case TokenType::DOT:            return "dot";
-        case TokenType::MINUS:          return "minus";
         case TokenType::PLUS:           return "plus";
         case TokenType::SEMICOLON:      return "semicolon";
         case TokenType::SLASH:          return "slash";
@@ -55,6 +60,8 @@ namespace lox
         case TokenType::GREATER_EQUAL:  return "greater_equal";
         case TokenType::LESS:           return "less";
         case TokenType::LESS_EQUAL:     return "less_equal";
+        case TokenType::MINUS:          return "minus";
+        case TokenType::ARROW:          return "arrow";
         case TokenType::IDENTIFIER:     return "identifier";
         case TokenType::STRING:         return "string";
         case TokenType::NUMBER:         return "number";
@@ -74,8 +81,13 @@ namespace lox
         case TokenType::TRUE:           return "true";
         case TokenType::VAR:            return "var";
         case TokenType::WHILE:          return "while";
+        case TokenType::NEW:            return "new";
+        case TokenType::STATIC:         return "static";
+        case TokenType::CONST:          return "const";
+        case TokenType::PUBLIC:         return "public";
+        case TokenType::PRIVATE:        return "private";
         case TokenType::EOF:            return "eof";
-        default:                        return "???";
+        default:                        assert(false); return "???";
         }
     }
 
@@ -89,7 +101,6 @@ namespace lox
         case TokenType::RIGHT_BRACE:    return "}";
         case TokenType::COMMA:          return ",";
         case TokenType::DOT:            return ".";
-        case TokenType::MINUS:          return "-";
         case TokenType::PLUS:           return "+";
         case TokenType::SEMICOLON:      return ";";
         case TokenType::SLASH:          return "/";
@@ -103,6 +114,8 @@ namespace lox
         case TokenType::GREATER_EQUAL:  return ">=";
         case TokenType::LESS:           return "<";
         case TokenType::LESS_EQUAL:     return "<=";
+        case TokenType::MINUS:          return "-";
+        case TokenType::ARROW:          return "->";
         case TokenType::IDENTIFIER:     return "identifier";
         case TokenType::STRING:         return "string";
         case TokenType::NUMBER:         return "number";
@@ -122,8 +135,13 @@ namespace lox
         case TokenType::TRUE:           return "true";
         case TokenType::VAR:            return "var";
         case TokenType::WHILE:          return "while";
+        case TokenType::NEW:            return "new";
+        case TokenType::STATIC:         return "static";
+        case TokenType::CONST:          return "const";
+        case TokenType::PUBLIC:         return "public";
+        case TokenType::PRIVATE:        return "private";
         case TokenType::EOF:            return "eof";
-        default:                        return "???";
+        default:                        assert(false); return "???";
         }
     }
 }

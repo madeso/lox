@@ -547,7 +547,27 @@ struct Parser
     std::shared_ptr<Expression>
     parse_call()
     {
-        auto expr = parse_primary();
+        std::shared_ptr<Expression> expr;
+        
+        if(match({TokenType::NEW}))
+        {
+            consume(TokenType::IDENTIFIER, "expected name of class");
+            auto& prev = previous();
+            expr = std::make_shared<VariableExpression>(prev.offset, new_expr(), std::string(prev.lexeme));
+            consume(TokenType::LEFT_PAREN, "expected start of constructor call");
+            auto call_ptr = finish_parsing_of_call(std::move(expr));
+            assert(call_ptr->get_type() == ExpressionType::call_expression);
+            auto call = std::static_pointer_cast<CallExpression>(call_ptr);
+            // transform from CallExpression to ConstructorExpression
+            expr = std::make_shared<ConstructorExpression>
+            (
+                call->offset, call->uid, std::move(call->callee), std::move(call->arguments)
+            );
+        }
+        else
+        {
+            expr = parse_primary();
+        }
 
         while (true)
         {

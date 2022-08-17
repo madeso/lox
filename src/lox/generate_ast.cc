@@ -286,6 +286,13 @@ write_code
                 }
             },
             {
+                "Constructor",
+                {
+                    {"Expression", "klass"},
+                    {"std::vector<std::shared_ptr<Expression>>", "arguments"}
+                }
+            },
+            {
                 "Get",
                 {
                     {"Expression", "object"},

@@ -58,6 +58,7 @@ find_keyword_or_null(std::string_view str)
     static const std::unordered_map<std::string_view, TokenType> keywords = []() -> auto
     {
         std::unordered_map<std::string_view, TokenType> kw;
+        
         kw["and"] = TokenType::AND;
         kw["class"] = TokenType::CLASS;
         kw["else"] = TokenType::ELSE;
@@ -74,6 +75,13 @@ find_keyword_or_null(std::string_view str)
         kw["true"] = TokenType::TRUE;
         kw["var"] = TokenType::VAR;
         kw["while"] = TokenType::WHILE;
+        
+        kw["new"] = TokenType::NEW;
+        kw["static"] = TokenType::STATIC;
+        kw["const"] = TokenType::CONST;
+        kw["public"] = TokenType::PUBLIC;
+        kw["private"] = TokenType::PRIVATE;
+
         return kw;
     }();
 
@@ -133,7 +141,6 @@ struct Scanner
         case '}': add_token(TokenType::RIGHT_BRACE); break;
         case ',': add_token(TokenType::COMMA);       break;
         case '.': add_token(TokenType::DOT);         break;
-        case '-': add_token(TokenType::MINUS);       break;
         case '+': add_token(TokenType::PLUS);        break;
         case ';': add_token(TokenType::SEMICOLON);   break;
         case '*': add_token(TokenType::STAR);        break;
@@ -144,6 +151,8 @@ struct Scanner
         case '=': add_token(match('=') ? TokenType::EQUAL_EQUAL   : TokenType::EQUAL);   break;
         case '<': add_token(match('=') ? TokenType::LESS_EQUAL    : TokenType::LESS);    break;
         case '>': add_token(match('=') ? TokenType::GREATER_EQUAL : TokenType::GREATER); break;
+        
+        case '-': add_token(match('>') ? TokenType::ARROW         : TokenType::MINUS); break;
 
         // division or comment?
         case '/':

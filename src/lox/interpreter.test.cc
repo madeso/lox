@@ -190,13 +190,29 @@ TEST_CASE("interpret fail", "[interpret]")
         const auto run_ok = run_string
         (lx, R"lox(
             class Foo {}
-            var foo = Foo();
+            var foo = new Foo();
             foo.bar();
         )lox");
         CHECK_FALSE(run_ok);
         CHECK(StringEq(console_out,{}));
         CHECK(ErrorEq(error_list, {
-            {error, 71, 74, "<instance Foo> doesn't have a property named bar"},
+            {error, 75, 78, "<instance Foo> doesn't have a property named bar"},
+        }));
+    }
+
+    SECTION("must use new on class")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            class Foo {}
+            var foo = Foo();
+        )lox");
+        CHECK_FALSE(run_ok);
+        CHECK(StringEq(console_out,{}));
+        CHECK(ErrorEq(error_list, {
+            {error, 48, 51, "class is not a callable, evaluates to <class Foo>"},
+            {note, 48, 51, "did you forget to use new?"},
+            {note, 51, 53, "call occured here"},
         }));
     }
 
@@ -696,7 +712,7 @@ TEST_CASE("interpret ok", "[interpret]")
             }
 
             print HelloWorlder;
-            var instance = HelloWorlder();
+            var instance = new HelloWorlder();
             print instance;
             print instance.get_string();
         )lox");
@@ -714,7 +730,7 @@ TEST_CASE("interpret ok", "[interpret]")
         const auto run_ok = run_string
         (lx, R"lox(
             class Classy{}
-            var instance = Classy();
+            var instance = new Classy();
             instance.animals = "I love cats!";
             print instance.animals;
         )lox");
@@ -737,7 +753,7 @@ TEST_CASE("interpret ok", "[interpret]")
                 print "called function with " + argument;
             }
 
-            var box = Box();
+            var box = new Box();
             box.function = notMethod;
             box.function("argument");
         )lox");
@@ -770,7 +786,7 @@ TEST_CASE("interpret ok", "[interpret]")
                 }
             }
 
-            var str = Adder("Hello");
+            var str = new Adder("Hello");
             str.add(", ");
             str.add("world!");
             print str.get();
@@ -795,7 +811,7 @@ TEST_CASE("interpret ok", "[interpret]")
                 }
             }
 
-            var foo = Foo();
+            var foo = new Foo();
             print foo.init();
         )lox");
         CHECK(run_ok);
@@ -819,7 +835,7 @@ TEST_CASE("interpret ok", "[interpret]")
 
             fun nop2() {}
 
-            var foo = Foo();
+            var foo = new Foo();
             var r1 = foo.nop1();
             var r2 = nop2();
             print r1;
@@ -848,7 +864,7 @@ TEST_CASE("interpret ok", "[interpret]")
             }
 
             var r;
-            var foo = Animal("dogs?");
+            var foo = new Animal("dogs?");
             print foo.val;
             r = foo.init("cats!");
             print foo.val;
@@ -875,7 +891,7 @@ TEST_CASE("interpret ok", "[interpret]")
                 }
             }
 
-            var jane = Person();
+            var jane = new Person();
             jane.name = "Jane";
 
             var method = jane.sayName;
@@ -905,7 +921,7 @@ TEST_CASE("interpret ok", "[interpret]")
                 }
             }
 
-            var callback = Thing().getCallback();
+            var callback = new Thing().getCallback();
             callback();
         )lox");
         CHECK(run_ok);
@@ -927,10 +943,10 @@ TEST_CASE("interpret ok", "[interpret]")
                 }
             }
 
-            var jane = Person();
+            var jane = new Person();
             jane.name = "Jane";
 
-            var bill = Person();
+            var bill = new Person();
             bill.name = "Bill";
 
             bill.sayName = jane.sayName;
@@ -956,7 +972,7 @@ TEST_CASE("interpret ok", "[interpret]")
             }
 
             class Derived : Base {}
-            Derived().say();
+            new Derived().say();
         )lox");
         CHECK(run_ok);
         REQUIRE(StringEq(error_list, {}));
@@ -984,7 +1000,7 @@ TEST_CASE("interpret ok", "[interpret]")
                     print "derived";
                 }
             }
-            Derived().say();
+            new Derived().say();
         )lox");
         CHECK(run_ok);
         REQUIRE(StringEq(error_list, {}));
@@ -1014,7 +1030,7 @@ TEST_CASE("interpret ok", "[interpret]")
                 }
             }
 
-            Derived().say();
+            new Derived().say();
         )lox");
         CHECK(run_ok);
         REQUIRE(StringEq(error_list, {}));
@@ -1050,7 +1066,7 @@ TEST_CASE("interpret ok", "[interpret]")
 
             class C : B {}
 
-            C().test();
+            new C().test();
         )lox");
         CHECK(run_ok);
         REQUIRE(StringEq(error_list, {}));
@@ -1089,7 +1105,7 @@ TEST_CASE("interpret currently allowed", "[interpret]")
                     this.val = v;
                 }
             }
-            Derived("hello").say();
+            new Derived("hello").say();
         )lox");
         CHECK(run_ok);
         REQUIRE(StringEq(error_list, {}));

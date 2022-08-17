@@ -95,12 +95,12 @@ TEST_CASE("lox binding fail" "[lox]")
         {
             const auto run_ok = lox.run_string
             (R"lox(
-                var adder = Adder();
+                var adder = new Adder();
                 adder.value = 24;
             )lox");
             CHECK_FALSE(run_ok);
             CHECK(ErrorEq(error_list, {
-                {error, 60, 70, "number (24) is not accepted for property 'value' on <native instance Adder>, expected string"},
+                {error, 64, 74, "number (24) is not accepted for property 'value' on <native instance Adder>, expected string"},
             }));
             CHECK(StringEq(console_out, {}));
         }
@@ -324,7 +324,7 @@ TEST_CASE("lox binding" "[lox]")
         {
             const auto run_ok = lox.run_string
             (R"lox(
-                var adder = Adder();
+                var adder = new Adder();
                 adder.add("dog");
                 print adder.get();
             )lox");
@@ -343,7 +343,7 @@ TEST_CASE("lox binding" "[lox]")
                     func("cats");
                 }
 
-                var adder = Adder();
+                var adder = new Adder();
                 callback(adder.add);
                 print adder.get();
             )lox");
@@ -401,7 +401,7 @@ TEST_CASE("lox binding" "[lox]")
         {
             const auto run_ok = lox.run_string
             (R"lox(
-                var adder = Adder("good ");
+                var adder = new Adder("good ");
                 adder.add("dog?");
                 print adder.get();
                 adder.value = "yes";
@@ -423,7 +423,7 @@ TEST_CASE("lox binding" "[lox]")
                     func("cats");
                 }
 
-                var adder = Adder("cute ");
+                var adder = new Adder("cute ");
                 callback(adder.add);
                 print adder.get();
             )lox");

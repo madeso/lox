@@ -721,6 +721,10 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
                     callee->to_string()
                 )
             );
+            if(callee->get_type() == ObjectType::klass)
+            {
+                error_handler->on_note(x.callee->offset, "did you forget to use new?");
+            }
             error_handler->on_note(x.offset, "call occured here");
             throw RuntimeError{};
         }
@@ -771,6 +775,101 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
         {
             error_handler->on_error(x.offset, err.error);
             error_handler->on_note(x.callee->offset, "called with {} arguments"_format(x.arguments.size()));
+            for(std::size_t argument_index = 0; argument_index < x.arguments.size(); argument_index += 1)
+            {
+
+                error_handler->on_note
+                (
+                    x.arguments[argument_index]->offset,
+                    "argument {} evaluated to {}: {}"_format
+                    (
+                        argument_index + 1,
+                        objecttype_to_string(arguments[argument_index]->get_type()),
+                        arguments[argument_index]->to_string()
+                    )
+                );
+            }
+            throw RuntimeError{};
+        }
+        catch(RuntimeError&)
+        {
+            error_handler->on_note
+            (
+                x.offset,
+                "called from here"
+            );
+            throw;
+        }
+    }
+
+
+    std::shared_ptr<Object>
+    on_constructor_expression(const ConstructorExpression& x) override
+    {
+        auto klass_object = evaluate(x.klass);
+        
+        auto klass = as_klass(klass_object);
+        if(klass == nullptr)
+        {
+            error_handler->on_error
+            (
+                x.klass->offset,
+                "{} is not a klass, evaluates to {}"_format
+                (
+                    objecttype_to_string(klass_object->get_type()),
+                    klass_object->to_string()
+                )
+            );
+            error_handler->on_note(x.offset, "constructor occured here");
+            throw RuntimeError{};
+        }
+
+        std::vector<std::shared_ptr<Object>> arguments;
+        for(auto& argument : x.arguments)
+        { 
+            arguments.emplace_back(evaluate(argument));
+        }
+
+        try
+        {
+            auto return_value = klass->constructor({arguments});
+            return return_value;
+        }
+        catch(const InvalidArgumentType& invalid_arg_error)
+        {
+            auto invalid_arg_value = arguments[invalid_arg_error.argument_index];
+            // special case for nil, no need to write the value of nil
+            const auto actual_type = invalid_arg_value->get_type();
+            if(actual_type == ObjectType::nil)
+            {
+                error_handler->on_error
+                (
+                    x.offset, "nil is not accepted for constructor argument {}, expected {}"_format
+                    (
+                        invalid_arg_error.argument_index+1,
+                        objecttype_to_string(invalid_arg_error.expected_type)
+                    )
+                );
+            }
+            else
+            {
+                error_handler->on_error
+                (
+                    x.offset, "{} ({}) is not accepted for argument {}, expected {}"_format
+                    (
+                        objecttype_to_string(actual_type),
+                        invalid_arg_value->to_string(),
+                        invalid_arg_error.argument_index+1,
+                        objecttype_to_string(invalid_arg_error.expected_type)
+                    )
+                );
+            }
+            throw RuntimeError{};
+        }
+        catch(const CallError& err)
+        {
+            error_handler->on_error(x.offset, err.error);
+            error_handler->on_note(x.klass->offset, "called with {} arguments"_format(x.arguments.size()));
             for(std::size_t argument_index = 0; argument_index < x.arguments.size(); argument_index += 1)
             {
 

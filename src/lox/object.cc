@@ -295,19 +295,11 @@ Klass::get_type() const
     return ObjectType::klass;
 }
 
-std::shared_ptr<Object>
-Klass::call(const Arguments& arguments)
+bool
+Klass::is_callable() const
 {
-    return constructor(arguments);
+    return false;
 }
-
-std::shared_ptr<Callable>
-Klass::bind(std::shared_ptr<Object>)
-{
-    assert(false && "figure out how to make bind a klass!");
-    return std::static_pointer_cast<Callable>(shared_from_this());
-}
-
 
 bool
 Klass::add_method_or_false(const std::string& name, std::shared_ptr<Callable> method)
@@ -537,6 +529,13 @@ as_callable(std::shared_ptr<Object> o)
     return std::static_pointer_cast<Callable>(o);
 }
 
+std::shared_ptr<Klass>
+as_klass(std::shared_ptr<Object> o)
+{
+    assert(o != nullptr);
+    if(o->get_type() != ObjectType::klass) { return nullptr; }
+    return std::static_pointer_cast<Klass>(o);
+}
 
 // ----------------------------------------------------------------------------
 

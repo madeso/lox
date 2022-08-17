@@ -315,6 +315,15 @@ struct MainResolver : ExpressionVoidVisitor, StatementVoidVisitor
         }
     }
 
+    void on_constructor_expression(const ConstructorExpression& x) override
+    {
+        resolve(x.klass);
+        for(const auto& a: x.arguments)
+        {
+            resolve(a);
+        }
+    }
+
     void on_get_expression(const GetExpression& x) override
     {
         resolve(x.object);

@@ -159,6 +159,17 @@ struct AstPrinter : ExpressionStringVisitor, StatementStringVisitor
     }
 
     std::string
+    on_constructor_expression(const ConstructorExpression& x) override
+    {
+        std::vector<std::string> args { x.klass->accept(this)};
+        for(const auto& a: x.arguments)
+        {
+            args.emplace_back(a->accept(this));
+        }
+        return parenthesize("constructor", args);
+    }
+
+    std::string
     on_get_expression(const GetExpression& x) override
     {
         return parenthesize("get", {x.name, x.object->accept(this)});
@@ -418,6 +429,24 @@ struct GraphvizPrinter : ExpressionStringVisitor, StatementStringVisitor
     {
         const auto n = new_node("call");
         link(n, x.callee->accept(this));
+
+        if(x.arguments.empty() == false)
+        {
+            const auto args = new_node("args");
+            link(n, args);
+            for(const auto& a: x.arguments)
+            {
+                link(args, a->accept(this));
+            }
+        }
+        return n;
+    }
+
+    std::string
+    on_constructor_expression(const ConstructorExpression& x) override
+    {
+        const auto n = new_node("constructor");
+        link(n, x.klass->accept(this));
 
         if(x.arguments.empty() == false)
         {

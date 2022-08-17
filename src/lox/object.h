@@ -93,8 +93,7 @@ struct BoundCallable : Callable
 
 // ----------------------------------------------------------------------------
 
-// todo(Gustav): remove callable and transform to new constructor
-struct Klass : Callable
+struct Klass : Object
 {
     std::string klass_name;
     std::shared_ptr<Klass> superklass;
@@ -106,11 +105,7 @@ struct Klass : Callable
     ObjectType
     get_type() const override;
 
-    std::shared_ptr<Object>
-    call(const Arguments& arguments) override;
-
-    std::shared_ptr<Callable>
-    bind(std::shared_ptr<Object> instance) override;
+    bool is_callable() const override;
 
     virtual std::shared_ptr<Object> constructor(const Arguments& arguments) = 0;
 
@@ -191,6 +186,7 @@ std::optional<std::string>  as_string   (std::shared_ptr<Object> o);
 std::optional<bool>         as_bool     (std::shared_ptr<Object> o);
 std::optional<float>        as_number   (std::shared_ptr<Object> o);
 std::shared_ptr<Callable>   as_callable (std::shared_ptr<Object> o);
+std::shared_ptr<Klass>      as_klass (std::shared_ptr<Object> o);
 
 
 // ----------------------------------------------------------------------------
