@@ -484,8 +484,6 @@ TEST_CASE("lox binding" "[lox]")
         }));
     }
 
-
-    #if 0
     SECTION("single package: native class default constructor")
     {
         struct Adder
@@ -545,5 +543,4 @@ TEST_CASE("lox binding" "[lox]")
             CHECK(StringEq(console_out, {"cats"}));
         }
     }
-    #endif
 }

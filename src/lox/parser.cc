@@ -578,15 +578,33 @@ struct Parser
             consume(TokenType::IDENTIFIER, "expected name of class");
             auto& prev = previous();
             expr = std::make_shared<VariableExpression>(prev.offset, new_expr(), std::string(prev.lexeme));
-            consume(TokenType::LEFT_PAREN, "expected start of constructor call");
-            auto call_ptr = finish_parsing_of_call(std::move(expr));
-            assert(call_ptr->get_type() == ExpressionType::call_expression);
-            auto call = std::static_pointer_cast<CallExpression>(call_ptr);
-            // transform from CallExpression to ConstructorExpression
-            expr = std::make_shared<ConstructorExpression>
-            (
-                call->offset, call->uid, std::move(call->callee), std::move(call->arguments)
-            );
+
+            while (true)
+            {
+                if (match({TokenType::LEFT_PAREN}))
+                {
+                    auto call_ptr = finish_parsing_of_call(std::move(expr));
+                    assert(call_ptr->get_type() == ExpressionType::call_expression);
+                    auto call = std::static_pointer_cast<CallExpression>(call_ptr);
+                    // transform from CallExpression to ConstructorExpression
+                    expr = std::make_shared<ConstructorExpression>
+                    (
+                        call->offset, call->uid, std::move(call->callee), std::move(call->arguments)
+                    );
+                    break;
+                }
+                else if(match({TokenType::DOT}))
+                {
+                    const auto& name = consume(TokenType::IDENTIFIER, "Expected property name after '.'");
+                    expr = std::make_shared<GetExpression>(name.offset, new_expr(), std::move(expr), std::string(name.lexeme));
+                }
+                else
+                {
+                    error_count += 1;
+                    error_handler->on_error(peek().offset, "Invalid token in package evaluation");
+                    break;
+                }
+            }
         }
         else
         {
