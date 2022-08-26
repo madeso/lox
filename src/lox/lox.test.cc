@@ -21,7 +21,7 @@ TEST_CASE("lox binding fail" "[lox]")
 
     SECTION("function 1 string arg")
     {
-        lox.define_global_native_function
+        lox.in_global_scope()->define_native_function
         (
             "nat",
             [](lox::Callable*, lox::ArgumentHelper& helper)
@@ -82,7 +82,7 @@ TEST_CASE("lox binding fail" "[lox]")
         {
             std::string value;
         };
-        lox.define_global_native_class<Adder>("Adder")
+        lox.in_global_scope()->define_native_class<Adder>("Adder")
             .add_property<std::string>
             (
                 "value",
@@ -118,7 +118,7 @@ TEST_CASE("lox binding" "[lox]")
 
     SECTION("lox -> cpp binding")
     {
-        lox.define_global_native_function
+        lox.in_global_scope()->define_native_function
         (
             "nat",
             [](lox::Callable*, lox::ArgumentHelper& helper)
@@ -169,7 +169,7 @@ TEST_CASE("lox binding" "[lox]")
 
     SECTION("argument helper: numbers")
     {
-        lox.define_global_native_function
+        lox.in_global_scope()->define_native_function
         (
             "add",
             [](lox::Callable*, lox::ArgumentHelper& ah)
@@ -194,7 +194,7 @@ TEST_CASE("lox binding" "[lox]")
 
     SECTION("argument helper: strings")
     {
-        lox.define_global_native_function
+        lox.in_global_scope()->define_native_function
         (
             "add",
             [](lox::Callable*, lox::ArgumentHelper& ah)
@@ -220,7 +220,7 @@ TEST_CASE("lox binding" "[lox]")
 
     SECTION("argument helper: boolean")
     {
-        lox.define_global_native_function
+        lox.in_global_scope()->define_native_function
         (
             "add",
             [](lox::Callable*, lox::ArgumentHelper& ah)
@@ -247,7 +247,7 @@ TEST_CASE("lox binding" "[lox]")
     SECTION("argument helper: callable + closure")
     {
         std::shared_ptr<lox::Callable> callable;
-        lox.define_global_native_function
+        lox.in_global_scope()->define_native_function
         (
             "set_fun",
             [&callable](lox::Callable*, lox::ArgumentHelper& ah)
@@ -299,7 +299,7 @@ TEST_CASE("lox binding" "[lox]")
         {
             std::string value;
         };
-        lox.define_global_native_class<Adder>("Adder")
+        lox.in_global_scope()->define_native_class<Adder>("Adder")
             .add_function
             (
                 "get", [](Adder& c, lox::ArgumentHelper& arguments)
@@ -359,7 +359,7 @@ TEST_CASE("lox binding" "[lox]")
         {
             std::string value;
         };
-        lox.define_global_native_class<Adder>
+        lox.in_global_scope()->define_native_class<Adder>
             (
                 "Adder",
                 [](lox::ArgumentHelper& args)

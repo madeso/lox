@@ -138,33 +138,31 @@ struct ClassAdder
     }
 };
 
-struct Lox
+struct Scope
 {
-    Lox(std::unique_ptr<ErrorHandler> error_handler, std::function<void (const std::string&)> on_line);
-    ~Lox();
+    Scope() = default;
+    virtual ~Scope() = default;
 
-    bool run_string(const std::string& source);
-
-    void
-    define_global_native_function
+    virtual void
+    define_native_function
     (
         const std::string& name,
         std::function<std::shared_ptr<Object>(Callable*, ArgumentHelper& arguments)>&& func
-    );
+    ) = 0;
 
-    std::shared_ptr<NativeKlass>
-    register_native_klass
+    virtual std::shared_ptr<NativeKlass>
+    register_native_klass_impl
     (
         const std::string& name,
         std::size_t id,
         std::function<std::shared_ptr<Object> (std::shared_ptr<NativeKlass>, ArgumentHelper& ah)>&& c
-    );
+    ) = 0;
 
     template<typename T>
     ClassAdder<T>
-    define_global_native_class(const std::string& name)
+    define_native_class(const std::string& name)
     {
-        auto native_klass = register_native_klass
+        auto native_klass = register_native_klass_impl
         (
             name,
             detail::get_unique_id<T>(),
@@ -179,9 +177,9 @@ struct Lox
 
     template<typename T>
     ClassAdder<T>
-    define_global_native_class(const std::string& name, std::function<T (ArgumentHelper&)> constructor)
+    define_native_class(const std::string& name, std::function<T (ArgumentHelper&)> constructor)
     {
-        auto native_klass = register_native_klass
+        auto native_klass = register_native_klass_impl
         (
             name,
             detail::get_unique_id<T>(),
@@ -192,11 +190,22 @@ struct Lox
         );
         return ClassAdder<T>{native_klass};
     }
+};
+
+struct LoxImpl;
+
+struct Lox
+{
+    Lox(std::unique_ptr<ErrorHandler> error_handler, std::function<void (const std::string&)> on_line);
+    ~Lox();
+
+    bool run_string(const std::string& source);
+
+    Scope* in_global_scope();
 
     Environment& get_global_environment();
 
-    std::unique_ptr<ErrorHandler> error_handler;
-    std::shared_ptr<Interpreter> interpreter;
+    std::unique_ptr<LoxImpl> impl;
 };
 
 
