@@ -79,7 +79,7 @@ struct NativePackage : Object, WithProperties, Scope
     std::string
     to_string() const override
     {
-        return "<native pkg {}"_format(package_name);
+        return "<native pkg {}>"_format(package_name);
     }
     
     bool

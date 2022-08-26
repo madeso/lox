@@ -459,7 +459,7 @@ TEST_CASE("lox binding" "[lox]")
         }));
     }
 
-    SECTION("multi package: argument helper: numbers")
+    SECTION("nested package: argument helper: numbers")
     {
         lox.in_package("with.some.pkg")->define_native_function
         (
@@ -535,6 +535,66 @@ TEST_CASE("lox binding" "[lox]")
                 }
 
                 var adder = new pkg.Adder();
+                callback(adder.add);
+                print adder.get();
+            )lox");
+            CHECK(run_ok);
+            REQUIRE(StringEq(error_list, {}));
+            CHECK(StringEq(console_out, {"cats"}));
+        }
+    }
+
+    SECTION("nested package: native class default constructor")
+    {
+        struct Adder
+        {
+            std::string value;
+        };
+        lox.in_package("with.some.pkg")->define_native_class<Adder>("Adder")
+            .add_function
+            (
+                "get", [](Adder& c, lox::ArgumentHelper& arguments)
+                {
+                    arguments.complete();
+                    return lox::make_string(c.value);
+                }
+            )
+            .add_function
+            (
+                "add", [](Adder& c, lox::ArgumentHelper& arguments)
+                {
+                    const auto new_value = arguments.require_string();
+                    arguments.complete();
+                    c.value += new_value;
+                    return lox::make_nil();
+                }
+            )
+            ;
+
+        SECTION("call function")
+        {
+            const auto run_ok = lox.run_string
+            (R"lox(
+                var adder = new with.some.pkg.Adder();
+                adder.add("dog");
+                print adder.get();
+            )lox");
+            CHECK(run_ok);
+            REQUIRE(StringEq(error_list, {}));
+            CHECK(StringEq(console_out, {"dog"}));
+        }
+
+        SECTION("pass function as callback")
+        {
+            const auto run_ok = lox.run_string
+            (R"lox(
+
+                fun callback(func)
+                {
+                    func("cats");
+                }
+
+                var adder = new with.some.pkg.Adder();
                 callback(adder.add);
                 print adder.get();
             )lox");
