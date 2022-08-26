@@ -88,15 +88,6 @@ struct Interpreter;
 struct ErrorHandler;
 
 
-void
-define_native_function
-(
-    const std::string& name,
-    Environment& env,
-    std::function<std::shared_ptr<Object>(Callable*, ArgumentHelper& arguments)>&& func
-);
-
-
 template<typename T>
 struct ClassAdder
 {
@@ -143,20 +134,23 @@ struct Scope
     Scope() = default;
     virtual ~Scope() = default;
 
-    virtual void
+    void
     define_native_function
     (
         const std::string& name,
         std::function<std::shared_ptr<Object>(Callable*, ArgumentHelper& arguments)>&& func
-    ) = 0;
+    );
 
-    virtual std::shared_ptr<NativeKlass>
+    std::shared_ptr<NativeKlass>
     register_native_klass_impl
     (
         const std::string& name,
         std::size_t id,
         std::function<std::shared_ptr<Object> (std::shared_ptr<NativeKlass>, ArgumentHelper& ah)>&& c
-    ) = 0;
+    );
+
+    virtual void
+    set_property(const std::string& name, std::shared_ptr<Object> value) = 0;
 
     template<typename T>
     ClassAdder<T>
@@ -202,6 +196,7 @@ struct Lox
     bool run_string(const std::string& source);
 
     Scope* in_global_scope();
+    std::shared_ptr<Scope> in_package(const std::string& name);
 
     Environment& get_global_environment();
 

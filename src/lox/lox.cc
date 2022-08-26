@@ -33,20 +33,6 @@ namespace detail
 
 // ----------------------------------------------------------------------------
 
-void
-define_native_function
-(
-    const std::string& name,
-    Environment& env,
-    std::function<std::shared_ptr<Object>(Callable*, ArgumentHelper& arguments)>&& func
-)
-{
-    env.define(name, make_native_function(name, std::move(func)));
-}
-
-
-// ----------------------------------------------------------------------------
-
 
 struct NativeKlassImpl : NativeKlass
 {
@@ -74,6 +60,90 @@ struct NativeKlassImpl : NativeKlass
 };
 
 
+struct NativePackage : Object, WithProperties, Scope
+{
+    std::string package_name;
+    std::unordered_map<std::string, std::shared_ptr<Object>> members;
+
+    explicit NativePackage(const std::string& name)
+        : package_name(name)
+    {
+    }
+
+    ObjectType
+    get_type() const override
+    {
+        return ObjectType::native_package;
+    }
+
+    std::string
+    to_string() const override
+    {
+        return "<native pkg {}"_format(package_name);
+    }
+    
+    bool
+    is_callable() const override
+    {
+        return false;
+    }
+    
+    WithProperties*
+    get_properties_or_null() override
+    {
+        return this;
+    }
+
+    std::shared_ptr<Object>
+    get_property_or_null(const std::string& name) override
+    {
+        if(auto found = members.find(name); found != members.end())
+        {
+            return found->second;
+        }
+        else
+        {
+            return nullptr;
+        }
+    }
+
+    bool
+    set_property_or_false(const std::string&, std::shared_ptr<Object>) override
+    {
+        return false;
+    }
+
+    void
+    set_property(const std::string& name, std::shared_ptr<Object> value) override
+    {
+        assert(members.find(name) == members.end() && "error: member already added");
+        members.insert({name, value});
+    }
+};
+
+void
+Scope::define_native_function
+(
+    const std::string& name,
+    std::function<std::shared_ptr<Object>(Callable*, ArgumentHelper& arguments)>&& func
+)
+{
+    set_property(name, make_native_function(name, std::move(func)));
+}
+
+std::shared_ptr<NativeKlass>
+Scope::register_native_klass_impl
+(
+    const std::string& name,
+    std::size_t id,
+    std::function<std::shared_ptr<Object> (std::shared_ptr<NativeKlass>, ArgumentHelper& ah)>&& c
+)
+{
+    auto new_klass = std::make_shared<NativeKlassImpl>(name, id, std::move(c));
+    set_property(name, new_klass);
+    return new_klass;
+}
+
 struct GlobalScope : Scope
 {
     Environment& global;
@@ -84,26 +154,9 @@ struct GlobalScope : Scope
     }
 
     void
-    define_native_function
-    (
-        const std::string& name,
-        std::function<std::shared_ptr<Object>(Callable*, ArgumentHelper& arguments)>&& func
-    ) override
+    set_property(const std::string& name, std::shared_ptr<Object> value) override
     {
-        lox::define_native_function(name, global, std::move(func));
-    }
-
-    std::shared_ptr<NativeKlass>
-    register_native_klass_impl
-    (
-        const std::string& name,
-        std::size_t id,
-        std::function<std::shared_ptr<Object> (std::shared_ptr<NativeKlass>, ArgumentHelper& ah)>&& c
-    ) override
-    {
-        auto new_klass = std::make_shared<NativeKlassImpl>(name, id, std::move(c));
-        global.define(name, new_klass);
-        return new_klass;
+        global.define(name, value);
     }
 };
 
@@ -159,6 +212,81 @@ Lox::in_global_scope()
     return impl->global.get();
 }
 
+std::vector<std::string>
+parse_package_path(const std::string& path)
+{
+    const auto package_path = scan_tokens(path, nullptr);
+    if(package_path.errors != 0) { return {}; }
+    if(package_path.tokens.empty()) { return {}; }
+
+    std::size_t token_index=0;
+    const auto tok = [&]() -> const Token& { return package_path.tokens[token_index]; };
+    const auto has_more = [&]() -> bool { return token_index <= package_path.tokens.size(); };
+
+    if(tok().type != TokenType::IDENTIFIER) { return {}; }
+    std::vector<std::string> ret = {std::string(tok().lexeme)};
+
+    token_index += 1;
+    while(has_more())
+    {
+        if(tok().type == TokenType::EOF) { return ret; }
+        if(tok().type != TokenType::DOT) { return {}; }
+
+        token_index += 1;
+        
+        if(tok().type != TokenType::IDENTIFIER) { return {}; }
+        ret.emplace_back(std::string(tok().lexeme));
+
+        token_index += 1;
+    }
+
+    assert(false && "parser error");
+    return {};
+}
+
+std::shared_ptr<Scope>
+Lox::in_package(const std::string& package_path)
+{
+    const auto path = parse_package_path(package_path);
+    assert(path.empty()==false && "invalid path syntax");
+
+    std::shared_ptr<NativePackage> package = nullptr;
+
+    for(const auto& name: path)
+    {
+        const bool use_global = package == nullptr;
+        std::shared_ptr<Object> object = use_global
+            ? get_global_environment().get_at_or_null(0, name)
+            : package->get_property_or_null(name)
+            ;
+        if(object == nullptr)
+        {
+            auto new_package = std::make_shared<NativePackage>(name);
+
+            if(use_global)
+            {
+                get_global_environment().define(name, new_package);
+            }
+            else
+            {
+                package->members.insert({name, new_package});
+            }
+
+            package = new_package;
+        }
+        else if(object->get_type() == ObjectType::native_package)
+        {
+            package = std::static_pointer_cast<NativePackage>(object);
+        }
+        else
+        {
+            assert(false && "named package was set to something other than a package");
+            return nullptr;
+        }
+    }
+    assert(package != nullptr);
+    return package;
+}
 
 Environment&
 Lox::get_global_environment()

@@ -11,7 +11,7 @@ namespace lox
 
 enum class ObjectType
 {
-    nil, string, boolean, number, callable, klass, instance, native_instance
+    nil, string, boolean, number, callable, klass, instance, native_instance, native_package
 };
 
 
@@ -30,6 +30,7 @@ constexpr std::string_view objecttype_to_string(ObjectType ot)
     case ObjectType::klass:           return "class";
     case ObjectType::instance:        return "instance";
     case ObjectType::native_instance: return "native instance";
+    case ObjectType::native_package:  return "native package";
     default:                          assert(false && "invalid type"); return "???";
     }
 }
