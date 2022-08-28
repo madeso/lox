@@ -1,6 +1,7 @@
 #include "lox/scanner.h"
 
 #include <unordered_map>
+#include <sstream>
 
 #include "lox/errorhandler.h"
 #include "lox/object.h"
@@ -33,12 +34,29 @@ is_alphanum_char(char c)
 }
 
 
-float
+template<typename T>
+T
+parse(std::string_view sv)
+{
+    std::string str{sv};
+    std::istringstream ss(str);
+    T t;
+    ss >> t;
+    return t;
+}
+
+
+Ti
+parse_int(std::string_view str)
+{
+    return parse<Ti>(str);
+}
+
+
+Tf
 parse_double(std::string_view str)
 {
-    // hrm... from_chars isn't available for clang + gcc 10?
-    return std::stof(std::string(str));
-    // std::from_chars(str.data(), str.data() + str.size(), out_val);
+    return parse<Tf>(str);
 }
 
 
@@ -216,9 +234,12 @@ struct Scanner
             advance();
         }
 
+        bool is_int = true;
+
         // Look for a fractional part.
         if (peek() == '.' && is_num_char(peek_next()))
         {
+            is_int = false;
             // Consume the "."
             advance();
 
@@ -229,7 +250,14 @@ struct Scanner
         }
 
         const auto str = substr(source, start, current);
-        add_token(TokenType::NUMBER, make_number(parse_double(str)));
+        if(is_int)
+        {
+            add_token(TokenType::NUMBER_INT, make_number_int(parse_int(str)));
+        }
+        else
+        {
+            add_token(TokenType::NUMBER_FLOAT, make_number_float(parse_double(str)));
+        }
     }
 
     void

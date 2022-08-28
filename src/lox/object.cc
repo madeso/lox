@@ -46,12 +46,24 @@ struct Bool : public Object
 };
 
 
-struct Number : public Object
+struct NumberInt : public Object
 {
-    float value;
+    Ti value;
 
-    explicit Number(float f);
-    virtual ~Number() = default;
+    explicit NumberInt(Ti f);
+    virtual ~NumberInt() = default;
+
+    ObjectType get_type() const override;
+    std::string to_string() const override;
+    bool is_callable() const override { return false; }
+};
+
+struct NumberFloat : public Object
+{
+    Tf value;
+
+    explicit NumberFloat(Tf f);
+    virtual ~NumberFloat() = default;
 
     ObjectType get_type() const override;
     std::string to_string() const override;
@@ -186,22 +198,45 @@ Bool::to_string() const
 
 
 
-Number::Number(float f)
+NumberInt::NumberInt(Ti f)
     : value(f)
 {
 }
 
 ObjectType
-Number::get_type() const
+NumberInt::get_type() const
 {
-    return ObjectType::number;
+    return ObjectType::number_int;
 }
 
 std::string
-Number::to_string() const
+NumberInt::to_string() const
 {
     return "{0}"_format(value);
 }
+
+
+// ----------------------------------------------------------------------------
+
+
+
+NumberFloat::NumberFloat(Tf f)
+    : value(f)
+{
+}
+
+ObjectType
+NumberFloat::get_type() const
+{
+    return ObjectType::number_float;
+}
+
+std::string
+NumberFloat::to_string() const
+{
+    return "{0}"_format(value);
+}
+
 
 
 // ----------------------------------------------------------------------------
@@ -468,9 +503,15 @@ make_bool(bool b)
 
 
 std::shared_ptr<Object>
-make_number(float f)
+make_number_int(Ti f)
 {
-    return std::make_shared<Number>(f);
+    return std::make_shared<NumberInt>(f);
+}
+
+std::shared_ptr<Object>
+make_number_float(Tf f)
+{
+    return std::make_shared<NumberFloat>(f);
 }
 
 
@@ -512,12 +553,21 @@ as_bool(std::shared_ptr<Object> o)
     return ptr->value;
 }
 
-std::optional<float>
-as_number(std::shared_ptr<Object> o)
+std::optional<Ti>
+as_int(std::shared_ptr<Object> o)
 {
     assert(o != nullptr);
-    if(o->get_type() != ObjectType::number) { return std::nullopt; }
-    auto* ptr = static_cast<Number*>(o.get());
+    if(o->get_type() != ObjectType::number_int) { return std::nullopt; }
+    auto* ptr = static_cast<NumberInt*>(o.get());
+    return ptr->value;
+}
+
+std::optional<Tf>
+as_float(std::shared_ptr<Object> o)
+{
+    assert(o != nullptr);
+    if(o->get_type() != ObjectType::number_float) { return std::nullopt; }
+    auto* ptr = static_cast<NumberFloat*>(o.get());
     return ptr->value;
 }
 
@@ -540,11 +590,18 @@ as_klass(std::shared_ptr<Object> o)
 // ----------------------------------------------------------------------------
 
 
-float
-get_number_or_ub(std::shared_ptr<Object> o)
+Ti
+get_int_or_ub(std::shared_ptr<Object> o)
 {
-    assert(o->get_type() == ObjectType::number);
-    return static_cast<Number*>(o.get())->value;
+    assert(o->get_type() == ObjectType::number_int);
+    return static_cast<NumberInt*>(o.get())->value;
+}
+
+Tf
+get_float_or_ub(std::shared_ptr<Object> o)
+{
+    assert(o->get_type() == ObjectType::number_float);
+    return static_cast<NumberFloat*>(o.get())->value;
 }
 
 
@@ -617,12 +674,20 @@ ArgumentHelper::require_bool()
     return get_bool_from_arg(args, argument_index);
 }
 
-float
-ArgumentHelper::require_number()
+Ti
+ArgumentHelper::require_int()
 {
     const auto argument_index = next_argument++;
-    if(args.arguments.size() <= argument_index) { return 0.0f; }
-    return get_number_from_arg(args, argument_index);
+    if(args.arguments.size() <= argument_index) { return 0; }
+    return get_int_from_arg(args, argument_index);
+}
+
+Tf
+ArgumentHelper::require_float()
+{
+    const auto argument_index = next_argument++;
+    if(args.arguments.size() <= argument_index) { return 0.0; }
+    return get_float_from_arg(args, argument_index);
 }
 
 std::shared_ptr<Callable>

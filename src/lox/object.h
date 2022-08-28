@@ -8,10 +8,12 @@
 namespace lox
 {
 
+using Ti = i64;
+using Tf = double;
 
 enum class ObjectType
 {
-    nil, string, boolean, number, callable, klass, instance, native_instance, native_package
+    nil, string, boolean, number_int, number_float, callable, klass, instance, native_instance, native_package
 };
 
 
@@ -26,7 +28,8 @@ constexpr std::string_view objecttype_to_string(ObjectType ot)
     case ObjectType::nil:             return "nil";
     case ObjectType::string:          return "string";
     case ObjectType::boolean:         return "boolean";
-    case ObjectType::number:          return "number";
+    case ObjectType::number_int:      return "int";
+    case ObjectType::number_float:    return "float";
     case ObjectType::klass:           return "class";
     case ObjectType::instance:        return "instance";
     case ObjectType::native_instance: return "native instance";
@@ -172,7 +175,8 @@ struct NativeInstance : Instance
 std::shared_ptr<Object>     make_nil              ();
 std::shared_ptr<Object>     make_string           (const std::string& str);
 std::shared_ptr<Object>     make_bool             (bool b);
-std::shared_ptr<Object>     make_number           (float f);
+std::shared_ptr<Object>     make_number_int       (Ti f);
+std::shared_ptr<Object>     make_number_float     (Tf f);
 std::shared_ptr<Callable>   make_native_function
 (
     const std::string& name,
@@ -182,12 +186,13 @@ std::shared_ptr<Callable>   make_native_function
 // ----------------------------------------------------------------------------
 
 
-bool                        is_nil      (std::shared_ptr<Object> o);
-std::optional<std::string>  as_string   (std::shared_ptr<Object> o);
-std::optional<bool>         as_bool     (std::shared_ptr<Object> o);
-std::optional<float>        as_number   (std::shared_ptr<Object> o);
-std::shared_ptr<Callable>   as_callable (std::shared_ptr<Object> o);
-std::shared_ptr<Klass>      as_klass (std::shared_ptr<Object> o);
+bool                        is_nil         (std::shared_ptr<Object> o);
+std::optional<std::string>  as_string      (std::shared_ptr<Object> o);
+std::optional<bool>         as_bool        (std::shared_ptr<Object> o);
+std::optional<Ti>           as_int  (std::shared_ptr<Object> o);
+std::optional<Tf>           as_float(std::shared_ptr<Object> o);
+std::shared_ptr<Callable>   as_callable    (std::shared_ptr<Object> o);
+std::shared_ptr<Klass>      as_klass       (std::shared_ptr<Object> o);
 
 
 // ----------------------------------------------------------------------------
@@ -195,7 +200,8 @@ std::shared_ptr<Klass>      as_klass (std::shared_ptr<Object> o);
 
 std::string  get_string_or_ub  (std::shared_ptr<Object> o);
 bool         get_bool_or_ub    (std::shared_ptr<Object> o);
-float        get_number_or_ub  (std::shared_ptr<Object> o);
+Ti           get_int_or_ub     (std::shared_ptr<Object> o);
+Tf           get_float_or_ub   (std::shared_ptr<Object> o);
 
 
 bool is_truthy(std::shared_ptr<Object> o);
@@ -216,7 +222,8 @@ struct ArgumentHelper
 
     std::string                 require_string   ();
     bool                        require_bool     ();
-    float                       require_number   ();
+    Ti                          require_int      ();
+    Tf                          require_float    ();
     std::shared_ptr<Callable>   require_callable ();
 
     void complete();

@@ -664,7 +664,7 @@ struct Parser
         if (match({TokenType::TRUE})) { return std::make_shared<LiteralExpression>(previous_offset(), new_expr(), make_bool(true)); }
         if (match({TokenType::NIL})) { return std::make_shared<LiteralExpression>(previous_offset(), new_expr(), make_nil()); }
 
-        if (match({TokenType::NUMBER, TokenType::STRING}))
+        if (match({TokenType::NUMBER_INT, TokenType::NUMBER_FLOAT, TokenType::STRING}))
         {
             auto& prev = previous();
             return std::make_shared<LiteralExpression>(prev.offset, new_expr(), std::move(prev.literal));

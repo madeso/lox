@@ -48,7 +48,8 @@ namespace detail
     template<typename T> std::shared_ptr<Object> make_object(T);
     template<> std::shared_ptr<Object> make_object<std::string>(std::string str);
     template<> std::shared_ptr<Object> make_object<bool>(bool b);
-    template<> std::shared_ptr<Object> make_object<float>(float n);
+    template<> std::shared_ptr<Object> make_object<Tf>(Tf n);
+    template<> std::shared_ptr<Object> make_object<Ti>(Ti n);
 
     template<typename T, typename P>
     struct PropertyT : Property

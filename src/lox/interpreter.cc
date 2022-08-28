@@ -162,6 +162,13 @@ struct ScriptFunction : Callable
 };
 
 
+bool
+is_number(ObjectType t)
+{
+    return t == ObjectType::number_int || t == ObjectType::number_float;
+}
+
+
 void
 check_single_number_operand
 (
@@ -172,9 +179,9 @@ check_single_number_operand
 )
 {
     const auto type = object->get_type();
-    if(type == ObjectType::number) { return; }
+    if(is_number(type)) { return; }
 
-    error_handler->on_error(op_offset, "operand must be a number");
+    error_handler->on_error(op_offset, "operand must be a int or a float");
     error_handler->on_error(object_offset, "This evaluated to {}"_format(objecttype_to_string(type)));
     throw RuntimeError();
 }
@@ -193,7 +200,7 @@ check_binary_number_operand
 {
     const auto lhs_type = lhs->get_type();
     const auto rhs_type = rhs->get_type();
-    if(lhs_type == ObjectType::number && rhs_type == ObjectType::number) { return; }
+    if(is_number(lhs_type) && is_number(rhs_type)) { return; }
 
     error_handler->on_error(op_offset, "operands must be a numbers");
     error_handler->on_note(lhs_offset, "left hand evaluated to {}"_format(objecttype_to_string(lhs_type)));
@@ -217,13 +224,13 @@ check_binary_number_or_string_operands
     const auto rhs_type = rhs->get_type();
     if
     (
-        (lhs_type == ObjectType::number && rhs_type == ObjectType::number)
+        (is_number(lhs_type) && is_number(rhs_type))
         ||
         (lhs_type == ObjectType::string && rhs_type == ObjectType::string)
     )
     { return; }
 
-    error_handler->on_error(op_offset, "operands must be a numbers or strings");
+    error_handler->on_error(op_offset, "operands must be numbers or strings");
     error_handler->on_note(lhs_offset, "left hand evaluated to {}"_format(objecttype_to_string(lhs_type)));
     error_handler->on_note(rhs_offset, "right hand evaluated to {}"_format(objecttype_to_string(rhs_type)));
     throw RuntimeError();
@@ -241,8 +248,8 @@ is_equal(std::shared_ptr<Object> lhs, std::shared_ptr<Object> rhs)
     switch(lhs->get_type())
     {
     case ObjectType::nil: return true;
-    case ObjectType::number:
-        return get_number_or_ub(lhs) == get_number_or_ub(rhs);
+    case ObjectType::number_int:
+        return get_int_or_ub(lhs) == get_int_or_ub(rhs);
     case ObjectType::boolean:
         return get_bool_or_ub(lhs) == get_bool_or_ub(rhs);
     case ObjectType::string:
@@ -420,6 +427,24 @@ void report_error_no_properties(const Offset& offset, ErrorHandler* error_handle
         );
     }
 }
+
+
+
+Tf
+get_number_as_float(std::shared_ptr<Object> obj)
+{
+    const auto type = obj->get_type();
+    if(type == ObjectType::number_float)
+    {
+        return get_float_or_ub(obj);
+    }
+    else
+    {
+        assert(type == ObjectType::number_int);
+        return static_cast<Tf>(get_int_or_ub(obj));
+    }
+}
+
 
 
 struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
@@ -1121,18 +1146,32 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
         {
         case TokenType::MINUS:
             check_binary_number_operand(error_handler, x.op_offset, left, right, x.left->offset, x.right->offset);
-            return make_number( get_number_or_ub(left) - get_number_or_ub(right) );
+            if(left->get_type() == ObjectType::number_float || right->get_type() == ObjectType::number_float)
+            {
+                return make_number_float( get_number_as_float(left) - get_number_as_float(right) );
+            }
+            else
+            {
+                return make_number_int( get_int_or_ub(left) - get_int_or_ub(right) );
+            }
         case TokenType::SLASH:
             check_binary_number_operand(error_handler, x.op_offset, left, right, x.left->offset, x.right->offset);
-            return make_number( get_number_or_ub(left) / get_number_or_ub(right) );
+            return make_number_float( get_number_as_float(left) / get_number_as_float(right) );
         case TokenType::STAR:
             check_binary_number_operand(error_handler, x.op_offset, left, right, x.left->offset, x.right->offset);
-            return make_number( get_number_or_ub(left) * get_number_or_ub(right) );
+            return make_number_float( get_number_as_float(left) * get_number_as_float(right) );
         case TokenType::PLUS:
             check_binary_number_or_string_operands(error_handler, x.op_offset, left, right, x.left->offset, x.right->offset);
-            if(left->get_type() == ObjectType::number && right->get_type() == ObjectType::number)
+            if(is_number(left->get_type()) && is_number(right->get_type()))
             {
-                return make_number( get_number_or_ub(left) + get_number_or_ub(right) );
+                if(left->get_type() == ObjectType::number_float || right->get_type() == ObjectType::number_float)
+                {
+                    return make_number_float( get_number_as_float(left) + get_number_as_float(right) );
+                }
+                else
+                {
+                    return make_number_int( get_int_or_ub(left) + get_int_or_ub(right) );
+                }
             }
             else if(left->get_type() == ObjectType::string && right->get_type() == ObjectType::string)
             {
@@ -1145,16 +1184,16 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
             }
         case TokenType::LESS:
             check_binary_number_operand(error_handler, x.op_offset, left, right, x.left->offset, x.right->offset);
-            return make_bool( get_number_or_ub(left) < get_number_or_ub(right) );
+            return make_bool( get_number_as_float(left) < get_number_as_float(right) );
         case TokenType::LESS_EQUAL:
             check_binary_number_operand(error_handler, x.op_offset, left, right, x.left->offset, x.right->offset);
-            return make_bool( get_number_or_ub(left) <= get_number_or_ub(right) );
+            return make_bool( get_number_as_float(left) <= get_number_as_float(right) );
         case TokenType::GREATER:
             check_binary_number_operand(error_handler, x.op_offset, left, right, x.left->offset, x.right->offset);
-            return make_bool( get_number_or_ub(left) > get_number_or_ub(right) );
+            return make_bool( get_number_as_float(left) > get_number_as_float(right) );
         case TokenType::GREATER_EQUAL:
             check_binary_number_operand(error_handler, x.op_offset, left, right, x.left->offset, x.right->offset);
-            return make_bool( get_number_or_ub(left) >= get_number_or_ub(right) );
+            return make_bool( get_number_as_float(left) >= get_number_as_float(right) );
         case TokenType::BANG_EQUAL:
             return make_bool( !is_equal(left, right) );
         case TokenType::EQUAL_EQUAL:
@@ -1187,7 +1226,15 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
             return make_bool(!is_truthy(right));
         case TokenType::MINUS:
             check_single_number_operand(error_handler, x.op_offset, right, x.right->offset);
-            return make_number(-get_number_or_ub(right));
+            if(right->get_type() == ObjectType::number_float)
+            {
+                return make_number_float(-get_float_or_ub(right));
+            }
+            else
+            {
+                assert(right->get_type() == ObjectType::number_int);
+                return make_number_int(-get_int_or_ub(right));
+            }
         default:
             assert(false && "unreachable");
             return make_nil();
@@ -1317,14 +1364,27 @@ get_bool_from_arg(const Arguments& args, u64 argument_index)
 }
 
 
-float
-get_number_from_arg(const Arguments& args, u64 argument_index)
+Ti
+get_int_from_arg(const Arguments& args, u64 argument_index)
 {
     assert(argument_index < args.arguments.size());
-    auto value = as_number(args.arguments[argument_index]);
+    auto value = as_int(args.arguments[argument_index]);
     if(value.has_value() == false)
     {
-        throw InvalidArgumentType(argument_index, ObjectType::number);
+        throw InvalidArgumentType(argument_index, ObjectType::number_int);
+    }
+    return *value;
+}
+
+
+Tf
+get_float_from_arg(const Arguments& args, u64 argument_index)
+{
+    assert(argument_index < args.arguments.size());
+    auto value = as_float(args.arguments[argument_index]);
+    if(value.has_value() == false)
+    {
+        throw InvalidArgumentType(argument_index, ObjectType::number_float);
     }
     return *value;
 }
@@ -1363,15 +1423,26 @@ bool get_bool_from_obj_or_error(std::shared_ptr<Object> obj)
     return *value;
 }
 
-float get_number_from_obj_or_error(std::shared_ptr<Object> obj)
+Tf get_float_from_obj_or_error(std::shared_ptr<Object> obj)
 {
-    auto value = as_number(obj);
+    auto value = as_float(obj);
     if(value.has_value() == false)
     {
-        throw InvalidArgumentType(0, ObjectType::number);
+        throw InvalidArgumentType(0, ObjectType::number_float);
     }
     return *value;
 }
+
+Ti get_int_from_obj_or_error(std::shared_ptr<Object> obj)
+{
+    auto value = as_int(obj);
+    if(value.has_value() == false)
+    {
+        throw InvalidArgumentType(0, ObjectType::number_int);
+    }
+    return *value;
+}
+
 
 std::shared_ptr<Callable>get_callable_from_obj_or_error(std::shared_ptr<Object> obj)
 {

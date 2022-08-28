@@ -26,7 +26,7 @@ namespace lox
         MINUS, ARROW,
 
         // Literals.
-        IDENTIFIER, STRING, NUMBER,
+        IDENTIFIER, STRING, NUMBER_INT, NUMBER_FLOAT,
 
         // Keywords.
         AND, CLASS, ELSE, FALSE, FUN, FOR, IF, NIL, OR,
@@ -64,7 +64,8 @@ namespace lox
         case TokenType::ARROW:          return "arrow";
         case TokenType::IDENTIFIER:     return "identifier";
         case TokenType::STRING:         return "string";
-        case TokenType::NUMBER:         return "number";
+        case TokenType::NUMBER_FLOAT:   return "float";
+        case TokenType::NUMBER_INT:     return "int";
         case TokenType::AND:            return "and";
         case TokenType::CLASS:          return "class";
         case TokenType::ELSE:           return "else";
@@ -118,7 +119,8 @@ namespace lox
         case TokenType::ARROW:          return "->";
         case TokenType::IDENTIFIER:     return "identifier";
         case TokenType::STRING:         return "string";
-        case TokenType::NUMBER:         return "number";
+        case TokenType::NUMBER_FLOAT:   return "float";
+        case TokenType::NUMBER_INT:     return "int";
         case TokenType::AND:            return "and";
         case TokenType::CLASS:          return "class";
         case TokenType::ELSE:           return "else";

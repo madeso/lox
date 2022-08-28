@@ -54,7 +54,7 @@ TEST_CASE("lox binding fail" "[lox]")
             )lox");
             CHECK_FALSE(run_ok);
             CHECK(ErrorEq(error_list, {
-                {error, 20, 24, "number (42) is not accepted for argument 1, expected string"},
+                {error, 20, 24, "int (42) is not accepted for argument 1, expected string"},
             }));
             CHECK(StringEq(console_out,{}));
         }
@@ -100,7 +100,7 @@ TEST_CASE("lox binding fail" "[lox]")
             )lox");
             CHECK_FALSE(run_ok);
             CHECK(ErrorEq(error_list, {
-                {error, 64, 74, "number (24) is not accepted for property 'value' on <native instance Adder>, expected string"},
+                {error, 64, 74, "int (24) is not accepted for property 'value' on <native instance Adder>, expected string"},
             }));
             CHECK(StringEq(console_out, {}));
         }
@@ -174,10 +174,10 @@ TEST_CASE("lox binding" "[lox]")
             "add",
             [](lox::Callable*, lox::ArgumentHelper& ah)
             {
-                auto lhs = ah.require_number();
-                auto rhs = ah.require_number();
+                auto lhs = ah.require_int();
+                auto rhs = ah.require_int();
                 ah.complete();
-                return lox::make_number(lhs + rhs);
+                return lox::make_number_int(lhs + rhs);
             }
         );
 
@@ -282,8 +282,8 @@ TEST_CASE("lox binding" "[lox]")
         auto fir_val = callable->call({{}});
         auto sec_val = callable->call({{}});
         
-        auto fir = lox::as_number(fir_val);
-        auto sec = lox::as_number(sec_val);
+        auto fir = lox::as_int(fir_val);
+        auto sec = lox::as_int(sec_val);
         
         INFO(fir_val->to_string());
         REQUIRE(fir);
@@ -441,10 +441,10 @@ TEST_CASE("lox binding" "[lox]")
             "add",
             [](lox::Callable*, lox::ArgumentHelper& ah)
             {
-                auto lhs = ah.require_number();
-                auto rhs = ah.require_number();
+                auto lhs = ah.require_int();
+                auto rhs = ah.require_int();
                 ah.complete();
-                return lox::make_number(lhs + rhs);
+                return lox::make_number_int(lhs + rhs);
             }
         );
 
@@ -466,10 +466,10 @@ TEST_CASE("lox binding" "[lox]")
             "add",
             [](lox::Callable*, lox::ArgumentHelper& ah)
             {
-                auto lhs = ah.require_number();
-                auto rhs = ah.require_number();
+                auto lhs = ah.require_int();
+                auto rhs = ah.require_int();
                 ah.complete();
-                return lox::make_number(lhs + rhs);
+                return lox::make_number_int(lhs + rhs);
             }
         );
 

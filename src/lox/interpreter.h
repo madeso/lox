@@ -48,12 +48,14 @@ verify_number_of_arguments(const Arguments& args, u64 arity);
 
 std::string               get_string_from_arg    (const Arguments& args, u64 argument_index);
 bool                      get_bool_from_arg      (const Arguments& args, u64 argument_index);
-float                     get_number_from_arg    (const Arguments& args, u64 argument_index);
+Ti                        get_int_from_arg       (const Arguments& args, u64 argument_index);
+Tf                        get_float_from_arg     (const Arguments& args, u64 argument_index);
 std::shared_ptr<Callable> get_callable_from_arg  (const Arguments& args, u64 argument_index);
 
 std::string               get_string_from_obj_or_error    (std::shared_ptr<Object> obj);
 bool                      get_bool_from_obj_or_error      (std::shared_ptr<Object> obj);
-float                     get_number_from_obj_or_error    (std::shared_ptr<Object> obj);
+Tf                        get_float_from_obj_or_error     (std::shared_ptr<Object> obj);
+Ti                        get_int_from_obj_or_error       (std::shared_ptr<Object> obj);
 std::shared_ptr<Callable> get_callable_from_obj_or_error  (std::shared_ptr<Object> obj);
 
 }

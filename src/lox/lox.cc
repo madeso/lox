@@ -24,11 +24,13 @@ namespace detail
 
     template<> std::string get_from_obj_or_error<std::string>(std::shared_ptr<Object> obj) { return lox::get_string_from_obj_or_error(obj); }
     template<> bool get_from_obj_or_error<bool>(std::shared_ptr<Object> obj) { return lox::get_bool_from_obj_or_error(obj); }
-    template<> float get_from_obj_or_error<float>(std::shared_ptr<Object> obj) { return lox::get_number_from_obj_or_error(obj); }
+    template<> Tf get_from_obj_or_error<Tf>(std::shared_ptr<Object> obj) { return lox::get_float_from_obj_or_error(obj); }
+    template<> Ti get_from_obj_or_error<Ti>(std::shared_ptr<Object> obj) { return lox::get_int_from_obj_or_error(obj); }
 
     template<> std::shared_ptr<Object> make_object<std::string>(std::string str) { return lox::make_string(str); }
     template<> std::shared_ptr<Object> make_object<bool>(bool b) { return lox::make_bool(b); }
-    template<> std::shared_ptr<Object> make_object<float>(float n) { return lox::make_number(n); }
+    template<> std::shared_ptr<Object> make_object<Tf>(Tf n) { return lox::make_number_float(n); }
+    template<> std::shared_ptr<Object> make_object<Ti>(Ti n) { return lox::make_number_int(n); }
 }
 
 // ----------------------------------------------------------------------------
