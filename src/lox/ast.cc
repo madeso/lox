@@ -103,6 +103,18 @@ struct AstPrinter : ExpressionStringVisitor, StatementStringVisitor
             }
         }
 
+        {
+            std::vector<std::string> static_methods;
+            for(const auto& stmt: x.static_methods)
+            {
+                static_methods.emplace_back(stmt->accept(this));
+            }
+            if(static_methods.empty() == false)
+            {
+                blocks.emplace_back(parenthesize("static_methods", static_methods));
+            }
+        }
+
         return parenthesize("class", blocks);
     }
 
@@ -378,6 +390,17 @@ struct GraphvizPrinter : ExpressionStringVisitor, StatementStringVisitor
                     methods = link_to(name, new_node("methods"));
                 }
                 link(*methods, stmt->accept(this));
+            }
+        }
+        {
+            std::optional<std::string> static_methods;
+            for(const auto& stmt: x.static_methods)
+            {
+                if(static_methods.has_value() == false)
+                {
+                    static_methods = link_to(name, new_node("static methods"));
+                }
+                link(*static_methods, stmt->accept(this));
             }
         }
         if(x.parent)

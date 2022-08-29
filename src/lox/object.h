@@ -97,11 +97,12 @@ struct BoundCallable : Callable
 
 // ----------------------------------------------------------------------------
 
-struct Klass : Object
+struct Klass : Object, WithProperties
 {
     std::string klass_name;
     std::shared_ptr<Klass> superklass;
     std::unordered_map<std::string, std::shared_ptr<Callable>> methods;
+    std::unordered_map<std::string, std::shared_ptr<Callable>> static_methods;
 
     Klass(const std::string& n, std::shared_ptr<Klass> sk);
     
@@ -115,6 +116,11 @@ struct Klass : Object
 
     bool add_method_or_false(const std::string& name, std::shared_ptr<Callable> method);
     std::shared_ptr<Callable> find_method_or_null(const std::string& name);
+
+    bool add_static_method_or_false(const std::string& name, std::shared_ptr<Callable> method);
+    WithProperties* get_properties_or_null() override;
+    std::shared_ptr<Object> get_property_or_null(const std::string& name) override;
+    bool set_property_or_false(const std::string& name, std::shared_ptr<Object> value) override;
 };
 
 // ----------------------------------------------------------------------------

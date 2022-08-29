@@ -367,6 +367,49 @@ Klass::find_method_or_null(const std::string& method_name)
 }
 
 
+bool
+Klass::add_static_method_or_false(const std::string& name, std::shared_ptr<Callable> method)
+{
+    if(static_methods.find(name) == methods.end())
+    {
+        // static_methods.insert({name, method});
+        static_methods.insert({name, std::move(method)});
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+
+WithProperties*
+Klass::get_properties_or_null()
+{
+    return this;
+}
+
+
+std::shared_ptr<Object>
+Klass::get_property_or_null(const std::string& method_name)
+{
+    if(auto found = static_methods.find(method_name); found != methods.end())
+    {
+        return found->second;
+    }
+
+    return nullptr;
+}
+
+
+bool
+Klass::set_property_or_false(const std::string&, std::shared_ptr<Object>)
+{
+    return false;
+}
+
+
+
 // ----------------------------------------------------------------------------
 
 

@@ -319,6 +319,53 @@ TEST_CASE("interpret fail", "[interpret]")
         }));
     }
 
+    SECTION("super in static function")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            class Base
+            {
+                public fun say()
+                {
+                    print "hello";
+                }
+            }
+
+            class Derived
+            {
+                public static fun fail()
+                {
+                    super.say();
+                }
+            }
+        )lox");
+        CHECK_FALSE(run_ok);
+        CHECK(StringEq(console_out,{}));
+        CHECK(ErrorEq(error_list, {
+            {error, 276, 285, "Can't use 'super' in a static method"},
+        }));
+    }
+
+    SECTION("this in static function")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            class Base
+            {
+                public var member;
+                public static fun say()
+                {
+                    this.member = "fail";
+                }
+            }
+        )lox");
+        CHECK_FALSE(run_ok);
+        CHECK(StringEq(console_out,{}));
+        CHECK(ErrorEq(error_list, {
+            {error, 151, 155, "Can't use 'this' in a static method"},
+        }));
+    }
+
     SECTION("now invalid headscratcher: can't assign missing var/override functions in class")
     {
         const auto run_ok = run_string
@@ -1112,6 +1159,53 @@ TEST_CASE("interpret ok", "[interpret]")
         REQUIRE(StringEq(error_list, {}));
         CHECK(StringEq(console_out,{
             "A method"
+        }));
+    }
+
+    SECTION("static method")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            class A
+            {
+                public static fun method()
+                {
+                    print "Hello, world!";
+                }
+            }
+
+            A.method();
+        )lox");
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
+            "Hello, world!"
+        }));
+    }
+
+    SECTION("method calls static method")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            class A
+            {
+                public static fun method()
+                {
+                    print "Hello, world!";
+                }
+
+                public fun say()
+                {
+                    A.method();
+                }
+            }
+
+            new A().say();
+        )lox");
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
+            "Hello, world!"
         }));
     }
 }

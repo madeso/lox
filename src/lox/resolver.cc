@@ -39,6 +39,7 @@ struct MainResolver : ExpressionVoidVisitor, StatementVoidVisitor
     std::vector<Scope> scopes;
     FunctionType current_function = FunctionType::none;
     ClassType current_class = ClassType::none;
+    bool inside_static_method = false;
 
     //-------------------------------------------------------------------------
     // constructor
@@ -172,6 +173,13 @@ struct MainResolver : ExpressionVoidVisitor, StatementVoidVisitor
             error_handler->on_error(x.parent->offset, "A class can't inherit from itself");
             has_errors = true;
         }
+
+        inside_static_method = true;
+        for(auto& method: x.static_methods)
+        {
+            resolve_function(*method, FunctionType::method);
+        }
+        inside_static_method = false;
 
         if(x.parent != nullptr)
         {
@@ -345,22 +353,30 @@ struct MainResolver : ExpressionVoidVisitor, StatementVoidVisitor
 
     void on_super_expression(const SuperExpression& x) override
     {
-        switch(current_class)
+        if(inside_static_method)
         {
-        case ClassType::none:
-            error_handler->on_error(x.offset, "Can't use 'super' outside of class");
+            error_handler->on_error(x.offset, "Can't use 'super' in a static method");
             has_errors = true;
-            break;
+        }
+        else
+        {
+            switch(current_class)
+            {
+            case ClassType::none:
+                error_handler->on_error(x.offset, "Can't use 'super' outside of class");
+                has_errors = true;
+                break;
 
-        case ClassType::klass:
-            error_handler->on_error(x.offset, "Can't use 'super' in class with no superclass");
-            has_errors = true;
-            break;
+            case ClassType::klass:
+                error_handler->on_error(x.offset, "Can't use 'super' in class with no superclass");
+                has_errors = true;
+                break;
 
-        case ClassType::derived:
-            break;
+            case ClassType::derived:
+                break;
 
-        default: assert(false && "unhandled case"); break;
+            default: assert(false && "unhandled case"); break;
+            }
         }
 
         resolve_local(x, "super");
@@ -368,7 +384,12 @@ struct MainResolver : ExpressionVoidVisitor, StatementVoidVisitor
 
     void on_this_expression(const ThisExpression& x) override
     {
-        if(current_class == ClassType::none)
+        if(inside_static_method)
+        {
+            error_handler->on_error(x.offset, "Can't use 'this' in a static method");
+            has_errors = true;
+        }
+        else if(current_class == ClassType::none)
         {
             error_handler->on_error(x.offset, "Can't use 'this' outside of a class");
             has_errors = true;

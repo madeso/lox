@@ -606,6 +606,26 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
         auto new_klass = std::make_shared<ScriptKlass>(x.name, superklass, this, x.members);
         current_environment->define(x.name, new_klass);
 
+        for(const auto& method: x.static_methods)
+        {
+            auto function = std::make_shared<ScriptFunction>
+            (
+                this,
+                current_environment,
+                current_state,
+                "static method {}"_format(method->name), method->params, method->body,
+                false
+            );
+
+            auto added = new_klass->add_static_method_or_false(method->name, std::move(function));
+            if(added == false)
+            {
+                error_handler->on_error(method->offset, "method already defined in this class");
+                assert(false && "refactor resolver so that it handles this with note to first definition");
+                throw RuntimeError{};
+            }
+        }
+
         std::shared_ptr<Environment> backup_environment;
         if(superklass != nullptr)
         {

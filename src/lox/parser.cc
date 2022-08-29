@@ -146,18 +146,29 @@ struct Parser
 
 
         std::vector<std::shared_ptr<FunctionStatement>> methods;
+        std::vector<std::shared_ptr<FunctionStatement>> static_methods;
         std::vector<std::shared_ptr<VarStatement>> members;
         while(check(TokenType::RIGHT_BRACE) == false && is_at_end() == false)
         {
             consume(TokenType::PUBLIC, "missing visibility specifier");
 
+            const auto is_static = match({TokenType::STATIC});
+
             if(match({TokenType::FUN}))
             {
                 auto method = parse_function_or_method("method");
-                methods.emplace_back(std::move(method));
+                if(is_static)
+                {
+                    static_methods.emplace_back(std::move(method));
+                }
+                else
+                {
+                    methods.emplace_back(std::move(method));
+                }
             }
             else if(match({TokenType::VAR}))
             {
+                assert(is_static == false && "todo: support static variables");
                 auto mem = parse_var_declaration();
                 members.emplace_back(std::move(mem));
             }
@@ -178,7 +189,8 @@ struct Parser
             std::string(name),
             std::move(superclass),
             std::move(members),
-            std::move(methods)
+            std::move(methods),
+            std::move(static_methods)
         );
     }
 
