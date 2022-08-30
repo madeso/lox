@@ -370,7 +370,7 @@ Klass::find_method_or_null(const std::string& method_name)
 bool
 Klass::add_static_method_or_false(const std::string& name, std::shared_ptr<Callable> method)
 {
-    if(static_methods.find(name) == methods.end())
+    if(static_methods.find(name) == static_methods.end())
     {
         // static_methods.insert({name, method});
         static_methods.insert({name, std::move(method)});
@@ -393,7 +393,7 @@ Klass::get_properties_or_null()
 std::shared_ptr<Object>
 Klass::get_property_or_null(const std::string& method_name)
 {
-    if(auto found = static_methods.find(method_name); found != methods.end())
+    if(auto found = static_methods.find(method_name); found != static_methods.end())
     {
         return found->second;
     }
