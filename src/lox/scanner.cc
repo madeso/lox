@@ -381,6 +381,39 @@ struct Scanner
 namespace lox
 {
 
+
+std::vector<std::string>
+parse_package_path(const std::string& path)
+{
+    const auto package_path = scan_tokens(path, nullptr);
+    if(package_path.errors != 0) { return {}; }
+    if(package_path.tokens.empty()) { return {}; }
+
+    std::size_t token_index=0;
+    const auto tok = [&]() -> const Token& { return package_path.tokens[token_index]; };
+    const auto has_more = [&]() -> bool { return token_index <= package_path.tokens.size(); };
+
+    if(tok().type != TokenType::IDENTIFIER) { return {}; }
+    std::vector<std::string> ret = {std::string(tok().lexeme)};
+
+    token_index += 1;
+    while(has_more())
+    {
+        if(tok().type == TokenType::EOF) { return ret; }
+        if(tok().type != TokenType::DOT) { return {}; }
+
+        token_index += 1;
+        
+        if(tok().type != TokenType::IDENTIFIER) { return {}; }
+        ret.emplace_back(std::string(tok().lexeme));
+
+        token_index += 1;
+    }
+
+    assert(false && "parser error");
+    return {};
+}
+
 ScanResult
 scan_tokens(std::string_view source, ErrorHandler* error_handler)
 {

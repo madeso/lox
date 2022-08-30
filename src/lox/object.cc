@@ -1,6 +1,7 @@
 #include "lox/object.h"
 
-#include "interpreter.h"
+#include "lox/interpreter.h"
+#include "lox/scanner.h"
 
 
 namespace lox { namespace
@@ -742,6 +743,217 @@ ArgumentHelper::require_callable()
 }
 
 // ----------------------------------------------------------------------------
+
+
+
 // ----------------------------------------------------------------------------
+
+namespace detail
+{
+    std::size_t create_type_id()
+    {
+        static std::size_t next_id = 1;
+        return next_id++;
+    }
+
+    template<> std::string get_from_obj_or_error<std::string>(std::shared_ptr<Object> obj) { return lox::get_string_from_obj_or_error(obj); }
+    template<> bool get_from_obj_or_error<bool>(std::shared_ptr<Object> obj) { return lox::get_bool_from_obj_or_error(obj); }
+    template<> Tf get_from_obj_or_error<Tf>(std::shared_ptr<Object> obj) { return lox::get_float_from_obj_or_error(obj); }
+    template<> Ti get_from_obj_or_error<Ti>(std::shared_ptr<Object> obj) { return lox::get_int_from_obj_or_error(obj); }
+
+    template<> std::shared_ptr<Object> make_object<std::string>(std::string str) { return lox::make_string(str); }
+    template<> std::shared_ptr<Object> make_object<bool>(bool b) { return lox::make_bool(b); }
+    template<> std::shared_ptr<Object> make_object<Tf>(Tf n) { return lox::make_number_float(n); }
+    template<> std::shared_ptr<Object> make_object<Ti>(Ti n) { return lox::make_number_int(n); }
+}
+
+// ----------------------------------------------------------------------------
+
+
+struct NativeKlassImpl : NativeKlass
+{
+    std::function<std::shared_ptr<Object> (std::shared_ptr<NativeKlass>, ArgumentHelper& ah)> constr;
+
+    NativeKlassImpl
+    (
+        const std::string& name,
+        std::size_t id,
+        std::function<std::shared_ptr<Object> (std::shared_ptr<NativeKlass>, ArgumentHelper& ah)>&& c    
+    )
+    : NativeKlass(name, id, nullptr)
+    , constr(std::move(c))
+    {
+    }
+
+    std::shared_ptr<Object> constructor(const Arguments& arguments) override
+    {
+        auto obj = shared_from_this();
+        assert(obj.get() == this);
+        auto self = std::static_pointer_cast<NativeKlassImpl>(obj);
+        ArgumentHelper ah{arguments};
+        return constr(self, ah);
+    }
+};
+
+
+struct NativePackage : Object, WithProperties, Scope
+{
+    std::string package_name;
+    std::unordered_map<std::string, std::shared_ptr<Object>> members;
+
+    explicit NativePackage(const std::string& name)
+        : package_name(name)
+    {
+    }
+
+    ObjectType
+    get_type() const override
+    {
+        return ObjectType::native_package;
+    }
+
+    std::string
+    to_string() const override
+    {
+        return "<native pkg {}>"_format(package_name);
+    }
+    
+    bool
+    is_callable() const override
+    {
+        return false;
+    }
+    
+    WithProperties*
+    get_properties_or_null() override
+    {
+        return this;
+    }
+
+    std::shared_ptr<Object>
+    get_property_or_null(const std::string& name) override
+    {
+        if(auto found = members.find(name); found != members.end())
+        {
+            return found->second;
+        }
+        else
+        {
+            return nullptr;
+        }
+    }
+
+    bool
+    set_property_or_false(const std::string&, std::shared_ptr<Object>) override
+    {
+        return false;
+    }
+
+    void
+    set_property(const std::string& name, std::shared_ptr<Object> value) override
+    {
+        assert(members.find(name) == members.end() && "error: member already added");
+        members.insert({name, value});
+    }
+};
+
+void
+Scope::define_native_function
+(
+    const std::string& name,
+    std::function<std::shared_ptr<Object>(Callable*, ArgumentHelper& arguments)>&& func
+)
+{
+    set_property(name, make_native_function(name, std::move(func)));
+}
+
+std::shared_ptr<NativeKlass>
+Scope::register_native_klass_impl
+(
+    const std::string& name,
+    std::size_t id,
+    std::function<std::shared_ptr<Object> (std::shared_ptr<NativeKlass>, ArgumentHelper& ah)>&& c
+)
+{
+    auto new_klass = std::make_shared<NativeKlassImpl>(name, id, std::move(c));
+    set_property(name, new_klass);
+    return new_klass;
+}
+
+struct GlobalScope : Scope
+{
+    Environment& global;
+
+    explicit GlobalScope(Environment& g)
+        : global(g)
+    {
+    }
+
+    void
+    set_property(const std::string& name, std::shared_ptr<Object> value) override
+    {
+        global.define(name, value);
+    }
+};
+
+
+// ----------------------------------------------------------------------------
+
+std::shared_ptr<Scope>
+get_global_scope(Interpreter* interpreter)
+{
+    return std::make_shared<GlobalScope>(interpreter->get_global_environment());
+}
+
+
+
+std::shared_ptr<Scope>
+get_package_scope_from_known_path(Interpreter* interpreter, const std::string& package_path)
+{
+    const auto path = parse_package_path(package_path);
+    assert(path.empty()==false && "invalid path syntax");
+
+    std::shared_ptr<NativePackage> package = nullptr;
+
+    Environment& global_environment = interpreter->get_global_environment();
+
+    for(const auto& name: path)
+    {
+        const bool use_global = package == nullptr;
+        std::shared_ptr<Object> object = use_global
+            ? global_environment.get_at_or_null(0, name)
+            : package->get_property_or_null(name)
+            ;
+        if(object == nullptr)
+        {
+            auto new_package = std::make_shared<NativePackage>(name);
+
+            if(use_global)
+            {
+                global_environment.define(name, new_package);
+            }
+            else
+            {
+                package->members.insert({name, new_package});
+            }
+
+            package = new_package;
+        }
+        else if(object->get_type() == ObjectType::native_package)
+        {
+            package = std::static_pointer_cast<NativePackage>(object);
+        }
+        else
+        {
+            assert(false && "named package was set to something other than a package");
+            return nullptr;
+        }
+    }
+    assert(package != nullptr);
+    return package;
+}
+
+// ----------------------------------------------------------------------------
+
 
 }

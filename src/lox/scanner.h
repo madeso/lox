@@ -13,6 +13,11 @@ struct ScanResult
     std::vector<Token> tokens;
 };
 
-ScanResult scan_tokens(const std::string_view source, ErrorHandler* error_handler);
+
+ScanResult
+scan_tokens(const std::string_view source, ErrorHandler* error_handler);
+
+std::vector<std::string>
+parse_package_path(const std::string& path);
 
 }
