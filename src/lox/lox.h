@@ -19,6 +19,16 @@ struct Lox
 
     Environment& get_global_environment();
 
+    std::shared_ptr<NativeKlass> get_native_klass_or_null(std::size_t id);
+
+    template<typename T>
+    std::shared_ptr<Object> make_native(T t)
+    {
+        auto klass = get_native_klass_or_null(detail::get_unique_id<T>());
+        assert(klass != nullptr && "klass not registered!");
+        return std::make_shared<detail::NativeInstanceT<T>>(std::move(t), klass);
+    }
+
     std::unique_ptr<LoxImpl> impl;
 };
 

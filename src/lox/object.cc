@@ -824,8 +824,9 @@ struct NativePackage : Object, WithProperties, Scope
     std::string package_name;
     std::unordered_map<std::string, std::shared_ptr<Object>> members;
 
-    explicit NativePackage(const std::string& name)
-        : package_name(name)
+    NativePackage(Interpreter* inter, const std::string& name)
+        : Scope(inter)
+        , package_name(name)
     {
     }
 
@@ -880,6 +881,12 @@ struct NativePackage : Object, WithProperties, Scope
     }
 };
 
+Scope::Scope(Interpreter* inter)
+    : interpreter(inter)
+{
+    assert(interpreter);
+}
+
 void
 Scope::define_native_function
 (
@@ -900,6 +907,7 @@ Scope::register_native_klass_impl
 {
     auto new_klass = std::make_shared<NativeKlassImpl>(name, id, std::move(c));
     set_property(name, new_klass);
+    interpreter->register_native_klass(id, new_klass);
     return new_klass;
 }
 
@@ -907,8 +915,9 @@ struct GlobalScope : Scope
 {
     Environment& global;
 
-    explicit GlobalScope(Environment& g)
-        : global(g)
+    GlobalScope(Interpreter* inter, Environment& g)
+        : Scope(inter)
+        , global(g)
     {
     }
 
@@ -925,7 +934,7 @@ struct GlobalScope : Scope
 std::shared_ptr<Scope>
 get_global_scope(Interpreter* interpreter)
 {
-    return std::make_shared<GlobalScope>(interpreter->get_global_environment());
+    return std::make_shared<GlobalScope>(interpreter, interpreter->get_global_environment());
 }
 
 
@@ -949,7 +958,7 @@ get_package_scope_from_known_path(Interpreter* interpreter, const std::string& p
             ;
         if(object == nullptr)
         {
-            auto new_package = std::make_shared<NativePackage>(name);
+            auto new_package = std::make_shared<NativePackage>(interpreter, name);
 
             if(use_global)
             {

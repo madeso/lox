@@ -31,6 +31,9 @@ struct Interpreter
     (
         Program& expression, const Resolved& resolved
     ) = 0;
+
+    virtual std::shared_ptr<NativeKlass> get_native_klass_or_null(std::size_t id) = 0;
+    virtual void register_native_klass(std::size_t id, std::shared_ptr<NativeKlass> klass) = 0;
 };
 
 

@@ -482,6 +482,29 @@ TEST_CASE("lox binding" "[lox]")
             REQUIRE(StringEq(error_list, {}));
             CHECK(StringEq(console_out, {"abc", "abc"}));
         }
+
+        SECTION("string -> class")
+        {
+            lox.in_global_scope()->define_native_function
+            (
+                "test", [&lox](lox::Callable*, lox::ArgumentHelper& ah)
+                {
+                    auto initial = ah.require_string();
+                    ah.complete();
+                    Adder a;
+                    a.value = initial;
+                    return lox.make_native(a);
+                }
+            );
+            const auto run_ok = lox.run_string
+            (R"lox(
+                var a = test("doggy dog");
+                print a.get();
+            )lox");
+            CHECK(run_ok);
+            REQUIRE(StringEq(error_list, {}));
+            CHECK(StringEq(console_out, {"doggy dog"}));
+        }
     }
 
 

@@ -19,6 +19,7 @@ enum class ObjectType
 
 struct Environment;
 struct ArgumentHelper;
+struct Interpreter;
 
 
 constexpr std::string_view objecttype_to_string(ObjectType ot)
@@ -415,7 +416,8 @@ struct ArgumentHelper
 
 struct Scope
 {
-    Scope() = default;
+    Interpreter* interpreter;
+    explicit Scope(Interpreter* inter);
     virtual ~Scope() = default;
 
     void

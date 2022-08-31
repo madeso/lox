@@ -74,6 +74,11 @@ Lox::get_global_environment()
     return impl->interpreter->get_global_environment();
 }
 
+std::shared_ptr<NativeKlass>
+Lox::get_native_klass_or_null(std::size_t id)
+{
+    return impl->interpreter->get_native_klass_or_null(id);
+}
 
 }
 

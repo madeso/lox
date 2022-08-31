@@ -454,6 +454,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     std::shared_ptr<Environment> current_environment;
     std::shared_ptr<State> current_state;
     std::function<void (std::string)> on_line;
+    std::unordered_map<std::size_t, std::shared_ptr<NativeKlass>> registered_klasses;
 
     //-------------------------------------------------------------------------
     // constructor
@@ -1317,6 +1318,25 @@ struct PublicInterpreter : Interpreter
         {
             return false;
         }
+    }
+    
+    std::shared_ptr<NativeKlass>
+    get_native_klass_or_null(std::size_t id) override
+    {
+        if(auto found = interpreter.registered_klasses.find(id); found != interpreter.registered_klasses.end())
+        {
+            return found->second;
+        }
+        else
+        {
+            return nullptr;
+        }
+    }
+    
+    void
+    register_native_klass(std::size_t id, std::shared_ptr<NativeKlass> klass) override
+    {
+        interpreter.registered_klasses.insert({id, klass});
     }
 };
 
