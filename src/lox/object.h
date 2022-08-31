@@ -199,7 +199,7 @@ std::optional<Ti>           as_int  (std::shared_ptr<Object> o);
 std::optional<Tf>           as_float(std::shared_ptr<Object> o);
 std::shared_ptr<Callable>   as_callable    (std::shared_ptr<Object> o);
 std::shared_ptr<Klass>      as_klass       (std::shared_ptr<Object> o);
-
+std::shared_ptr<NativeInstance> as_native_instance_of_type(std::shared_ptr<Object> o, std::size_t type);
 
 // ----------------------------------------------------------------------------
 
@@ -214,34 +214,6 @@ bool is_truthy(std::shared_ptr<Object> o);
 
 
 // ----------------------------------------------------------------------------
-
-struct ArgumentHelper
-{
-    const lox::Arguments& args;
-    u64 next_argument;
-    bool has_read_all_arguments;
-
-    explicit ArgumentHelper(const lox::Arguments& args);
-    void verify_completion();
-
-    // todo(Gustav): add some match/switch helper to handle overloads
-
-    std::string                 require_string   ();
-    bool                        require_bool     ();
-    Ti                          require_int      ();
-    Tf                          require_float    ();
-    std::shared_ptr<Callable>   require_callable ();
-
-    void complete();
-
-    ArgumentHelper(ArgumentHelper&&) = delete;
-    ArgumentHelper(const ArgumentHelper&) = delete;
-    void operator=(ArgumentHelper&&) = delete;
-    void operator=(const ArgumentHelper&) = delete;
-};
-
-// ----------------------------------------------------------------------------
-
 
 
 namespace detail
@@ -364,6 +336,82 @@ struct ClassAdder
         return *this;
     }
 };
+
+
+
+
+
+
+// ----------------------------------------------------------------------------
+
+template<typename T>
+struct NativeRef
+{
+    std::shared_ptr<NativeInstance> instance;
+
+    explicit NativeRef(std::shared_ptr<NativeInstance>&& in)
+        : instance(std::move(in))
+    {
+    }
+
+    T* get_ptr()
+    {
+        if(instance == nullptr) { return nullptr; }
+        return &std::static_pointer_cast<detail::NativeInstanceT<T>>(instance)->data;
+    }
+
+    T* operator->()
+    {
+        return get_ptr();
+    }
+
+    operator bool()
+    {
+        return instance != nullptr;
+    }
+};
+
+
+
+// ----------------------------------------------------------------------------
+
+
+struct ArgumentHelper
+{
+    const lox::Arguments& args;
+    u64 next_argument;
+    bool has_read_all_arguments;
+
+    explicit ArgumentHelper(const lox::Arguments& args);
+    void verify_completion();
+
+    // todo(Gustav): add some match/switch helper to handle overloads
+
+    std::string                 require_string   ();
+    bool                        require_bool     ();
+    Ti                          require_int      ();
+    Tf                          require_float    ();
+    std::shared_ptr<Callable>   require_callable ();
+
+    std::shared_ptr<NativeInstance> impl_require_native_instance(std::size_t klass);
+
+    template<typename T>
+    NativeRef<T> require_native()
+    {
+        return NativeRef<T>{impl_require_native_instance(detail::get_unique_id<T>())};
+    }
+
+    void complete();
+
+    ArgumentHelper(ArgumentHelper&&) = delete;
+    ArgumentHelper(const ArgumentHelper&) = delete;
+    void operator=(ArgumentHelper&&) = delete;
+    void operator=(const ArgumentHelper&) = delete;
+};
+
+
+// ----------------------------------------------------------------------------
+
 
 struct Scope
 {

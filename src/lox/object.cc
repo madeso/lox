@@ -631,6 +631,21 @@ as_klass(std::shared_ptr<Object> o)
     return std::static_pointer_cast<Klass>(o);
 }
 
+std::shared_ptr<NativeInstance>
+as_native_instance_of_type(std::shared_ptr<Object> o, std::size_t type)
+{
+    assert(o != nullptr);
+    
+    if(o->get_type() != ObjectType::native_instance) { return nullptr; }
+    
+    auto instance = std::static_pointer_cast<NativeInstance>(o);
+    auto klass = std::static_pointer_cast<NativeKlass>(instance->klass);
+    
+    if(klass->native_id != type) { return nullptr; }
+    
+    return instance;
+}
+
 // ----------------------------------------------------------------------------
 
 
@@ -740,6 +755,14 @@ ArgumentHelper::require_callable()
     const auto argument_index = next_argument++;
     if(args.arguments.size() <= argument_index) { return nullptr; }
     return get_callable_from_arg(args, argument_index);
+}
+
+std::shared_ptr<NativeInstance>
+ArgumentHelper::impl_require_native_instance(std::size_t klass)
+{
+    const auto argument_index = next_argument++;
+    if(args.arguments.size() <= argument_index) { return nullptr; }
+    return get_native_instance_from_arg(args, argument_index, klass);
 }
 
 // ----------------------------------------------------------------------------

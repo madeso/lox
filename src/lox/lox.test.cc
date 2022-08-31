@@ -434,6 +434,57 @@ TEST_CASE("lox binding" "[lox]")
     }
 
 
+    SECTION("native class: free functions")
+    {
+        struct Adder
+        {
+            std::string value;
+        };
+        lox.in_global_scope()->define_native_class<Adder>
+            (
+                "Adder",
+                [](lox::ArgumentHelper& args)
+                {
+                    const auto initial = args.require_string();
+                    args.complete();
+                    Adder a;
+                    a.value = initial;
+                    return a;
+                }
+            )
+            .add_function
+            (
+                "get", [](Adder& c, lox::ArgumentHelper& arguments)
+                {
+                    arguments.complete();
+                    return lox::make_string(c.value);
+                }
+            );
+
+        SECTION("class -> string")
+        {
+            lox.in_global_scope()->define_native_function
+            (
+                "test", [](lox::Callable*, lox::ArgumentHelper& ah)
+                {
+                    auto adder = ah.require_native<Adder>();
+                    ah.complete();
+                    return lox::make_string(adder->value);
+                }
+            );
+            const auto run_ok = lox.run_string
+            (R"lox(
+                var a = new Adder("abc");
+                print test(a);
+                print a.get();
+            )lox");
+            CHECK(run_ok);
+            REQUIRE(StringEq(error_list, {}));
+            CHECK(StringEq(console_out, {"abc", "abc"}));
+        }
+    }
+
+
     SECTION("single package: argument helper: numbers")
     {
         lox.in_package("pkg")->define_native_function

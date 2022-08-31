@@ -1422,6 +1422,19 @@ get_callable_from_arg(const Arguments& args, u64 argument_index)
     return value;
 }
 
+std::shared_ptr<NativeInstance>
+get_native_instance_from_arg(const Arguments& args, u64 argument_index, std::size_t klass)
+{
+    assert(argument_index < args.arguments.size());
+    auto value = as_native_instance_of_type(args.arguments[argument_index], klass);
+    if(value == nullptr)
+    {
+        // todo(Gustav): provide requested klass here...
+        throw InvalidArgumentType(argument_index, ObjectType::native_instance);
+    }
+    return value;
+}
+
 
 std::string get_string_from_obj_or_error(std::shared_ptr<Object> obj)
 {
