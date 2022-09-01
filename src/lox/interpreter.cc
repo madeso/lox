@@ -61,14 +61,17 @@ struct InvalidArgumentType
 {
     u64 argument_index;
     ObjectType expected_type;
+    std::optional<std::size_t> native_klass;
 
     InvalidArgumentType
     (
         u64 aargument_index,
-        ObjectType atype
+        ObjectType atype,
+        std::optional<std::size_t> anative_klass = std::nullopt
     )
         : argument_index(aargument_index)
         , expected_type(atype)
+        , native_klass(anative_klass)
     {
     }
 };
@@ -474,6 +477,49 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     //---------------------------------------------------------------------------------------------
     // util functions
 
+    std::string
+    get_klass_name(std::size_t klass_index)
+    {
+        if(auto found = registered_klasses.find(klass_index); found != registered_klasses.end())
+        {
+            return found->second->klass_name;
+        }
+        else
+        {
+            return "<unregistred native klass {}>"_format(klass_index);
+        }
+    }
+
+    std::string
+    invalidarg_to_string(const InvalidArgumentType& invalid_arg_error)
+    {
+        if(invalid_arg_error.expected_type == ObjectType::native_instance)
+        {
+            assert(invalid_arg_error.native_klass);
+            return get_klass_name(*invalid_arg_error.native_klass);
+        }
+        else
+        {
+            return std::string{objecttype_to_string(invalid_arg_error.expected_type)};
+        }
+    }
+
+    std::string
+    smart_object_to_type_string(std::shared_ptr<Object> obj)
+    {
+        const auto type = obj->get_type();
+        if(type == ObjectType::native_instance)
+        {
+            // todo(Gustav): also include script klasses here?
+            auto native = std::static_pointer_cast<NativeInstance>(obj);
+            return native->klass->klass_name;
+        }
+        else
+        {
+            return std::string{objecttype_to_string(type)};
+        }
+    }
+
     std::shared_ptr<Object>
     evaluate(std::shared_ptr<Expression> x)
     {
@@ -830,7 +876,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
                     x.offset, "nil is not accepted for argument {}, expected {}"_format
                     (
                         invalid_arg_error.argument_index+1,
-                        objecttype_to_string(invalid_arg_error.expected_type)
+                        invalidarg_to_string(invalid_arg_error)
                     )
                 );
             }
@@ -840,10 +886,10 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
                 (
                     x.offset, "{} ({}) is not accepted for argument {}, expected {}"_format
                     (
-                        objecttype_to_string(actual_type),
+                        smart_object_to_type_string(invalid_arg_value),
                         invalid_arg_value->to_string(),
                         invalid_arg_error.argument_index+1,
-                        objecttype_to_string(invalid_arg_error.expected_type)
+                        invalidarg_to_string(invalid_arg_error)
                     )
                 );
             }
@@ -925,7 +971,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
                     x.offset, "nil is not accepted for constructor argument {}, expected {}"_format
                     (
                         invalid_arg_error.argument_index+1,
-                        objecttype_to_string(invalid_arg_error.expected_type)
+                        invalidarg_to_string(invalid_arg_error)
                     )
                 );
             }
@@ -935,10 +981,10 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
                 (
                     x.offset, "{} ({}) is not accepted for argument {}, expected {}"_format
                     (
-                        objecttype_to_string(actual_type),
+                        smart_object_to_type_string(invalid_arg_value),
                         invalid_arg_value->to_string(),
                         invalid_arg_error.argument_index+1,
-                        objecttype_to_string(invalid_arg_error.expected_type)
+                        invalidarg_to_string(invalid_arg_error)
                     )
                 );
             }
@@ -1047,7 +1093,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
                     (
                         x.name,
                         object->to_string(),
-                        objecttype_to_string(invalid_arg_error.expected_type)
+                        invalidarg_to_string(invalid_arg_error)
                     )
                 );
             }
@@ -1057,11 +1103,11 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
                 (
                     x.offset, "{} ({}) is not accepted for property '{}' on {}, expected {}"_format
                     (
-                        objecttype_to_string(actual_type),
+                        smart_object_to_type_string(value),
                         value->to_string(),
                         x.name,
                         object->to_string(),
-                        objecttype_to_string(invalid_arg_error.expected_type)
+                        invalidarg_to_string(invalid_arg_error)
                     )
                 );
             }
@@ -1449,8 +1495,7 @@ get_native_instance_from_arg(const Arguments& args, u64 argument_index, std::siz
     auto value = as_native_instance_of_type(args.arguments[argument_index], klass);
     if(value == nullptr)
     {
-        // todo(Gustav): provide requested klass here...
-        throw InvalidArgumentType(argument_index, ObjectType::native_instance);
+        throw InvalidArgumentType(argument_index, ObjectType::native_instance, klass);
     }
     return value;
 }

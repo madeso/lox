@@ -105,6 +105,38 @@ TEST_CASE("lox binding fail" "[lox]")
             CHECK(StringEq(console_out, {}));
         }
     }
+
+    SECTION("native class: free functions")
+    {
+        struct Adder { };
+        struct Subber {};
+        lox.in_global_scope()->define_native_class<Adder>("Adder");
+        lox.in_global_scope()->define_native_class<Subber>("Subber");
+
+        lox.in_global_scope()->define_native_function
+            (
+                "add", [](lox::Callable*, lox::ArgumentHelper& ah)
+                {
+                    auto adder = ah.require_native<Subber>();
+                    ah.complete();
+                    return lox::make_nil();
+                }
+            );
+
+        SECTION("take wrong argument")
+        {
+            const auto run_ok = lox.run_string
+            (R"lox(
+                var sub = new Adder();
+                add(sub);
+            )lox");
+            CHECK_FALSE(run_ok);
+            CHECK(ErrorEq(error_list, {
+                {error, 59, 64, "Adder (<native instance Adder>) is not accepted for argument 1, expected Subber"},
+            }));
+            CHECK(StringEq(console_out, {}));
+        }
+    }
 }
 
 
