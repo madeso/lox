@@ -23,7 +23,7 @@ std::string Token::to_string() const
 
     if(literal != nullptr)
     {
-        return "{}({}) {} value=<{}>"_format(tokentype_to_string(type), lexeme, of, literal->to_string());
+        return "{}({}) {} value=<{}>"_format(tokentype_to_string(type), lexeme, of, literal->to_flat_string());
     }
     else
     {

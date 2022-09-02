@@ -1,5 +1,7 @@
 #include "lox/object.h"
 
+#include <sstream>
+
 #include "lox/interpreter.h"
 #include "lox/scanner.h"
 
@@ -16,7 +18,7 @@ struct Nil : public Object
     virtual ~Nil() = default;
 
     ObjectType get_type() const override;
-    std::string to_string() const override;
+    std::vector<std::string> to_string() const override;
     bool is_callable() const override { return false; }
 };
 
@@ -29,7 +31,7 @@ struct String : public Object
     virtual ~String() = default;
 
     ObjectType get_type() const override;
-    std::string to_string() const override;
+    std::vector<std::string> to_string() const override;
     bool is_callable() const override { return false; }
 };
 
@@ -42,7 +44,7 @@ struct Bool : public Object
     virtual ~Bool() = default;
 
     ObjectType get_type() const override;
-    std::string to_string() const override;
+    std::vector<std::string> to_string() const override;
     bool is_callable() const override { return false; }
 };
 
@@ -55,7 +57,7 @@ struct NumberInt : public Object
     virtual ~NumberInt() = default;
 
     ObjectType get_type() const override;
-    std::string to_string() const override;
+    std::vector<std::string> to_string() const override;
     bool is_callable() const override { return false; }
 };
 
@@ -67,7 +69,7 @@ struct NumberFloat : public Object
     virtual ~NumberFloat() = default;
 
     ObjectType get_type() const override;
-    std::string to_string() const override;
+    std::vector<std::string> to_string() const override;
     bool is_callable() const override { return false; }
 };
 
@@ -100,10 +102,10 @@ struct NativeFunction : Callable
     {
     }
 
-    std::string
+    std::vector<std::string>
     to_string() const override
     {
-        return "<native fun {}>"_format(name);
+        return {"<native fun {}>"_format(name)};
     }
 
     std::shared_ptr<Object>
@@ -141,10 +143,10 @@ Nil::get_type() const
     return ObjectType::nil;
 }
 
-std::string
+std::vector<std::string>
 Nil::to_string() const
 {
-    return "nil";
+    return {"nil"};
 }
 
 
@@ -163,10 +165,10 @@ String::get_type() const
     return ObjectType::string;
 }
 
-std::string
+std::vector<std::string>
 String::to_string() const
 {
-    return value;
+    return {value};
 }
 
 
@@ -186,11 +188,11 @@ Bool::get_type() const
     return ObjectType::boolean;
 }
 
-std::string
+std::vector<std::string>
 Bool::to_string() const
 {
-    if(value) { return "true"; }
-    else { return "false"; }
+    if(value) { return {"true"}; }
+    else { return {"false"}; }
 }
 
 
@@ -210,10 +212,10 @@ NumberInt::get_type() const
     return ObjectType::number_int;
 }
 
-std::string
+std::vector<std::string>
 NumberInt::to_string() const
 {
-    return "{0}"_format(value);
+    return {"{0}"_format(value)};
 }
 
 
@@ -232,15 +234,36 @@ NumberFloat::get_type() const
     return ObjectType::number_float;
 }
 
-std::string
+std::vector<std::string>
 NumberFloat::to_string() const
 {
-    return "{0}"_format(value);
+    return {"{0}"_format(value)};
 }
 
 
 
 // ----------------------------------------------------------------------------
+
+
+std::string
+Object::to_flat_string() const
+{
+    std::ostringstream ss;
+    const auto arr = to_string();
+    const auto many = arr.size() > 1;
+    if(many) { ss << "["; }
+
+    bool first = true;
+    for(const auto& a: arr)
+    {
+        if(first) { first = false; }
+        else {ss << ", ";}
+        ss << a;
+    }
+
+    if(many) { ss << "]"; }
+    return ss.str();
+}
 
 
 WithProperties*
@@ -285,10 +308,10 @@ BoundCallable::BoundCallable(std::shared_ptr<Object> b, std::shared_ptr<NativeFu
 
 BoundCallable::~BoundCallable() = default;
 
-std::string
+std::vector<std::string>
 BoundCallable::to_string() const
 {
-    return "<{} bound to {}>"_format(bound->to_string(), callable->to_string());
+    return {"<{} bound to {}>"_format(bound->to_flat_string(), callable->to_flat_string())};
 }
 
 std::shared_ptr<Object>
@@ -462,10 +485,10 @@ NativeKlass::NativeKlass(const std::string& n, std::size_t id, std::shared_ptr<K
 {
 }
 
-std::string
+std::vector<std::string>
 NativeKlass::to_string() const
 {
-    return "<native class {}>"_format(klass_name);
+    return {"<native class {}>"_format(klass_name)};
 }
 
 
@@ -482,18 +505,21 @@ NativeInstance::NativeInstance(std::shared_ptr<NativeKlass> o)
 {
 }
 
-ObjectType NativeInstance::get_type() const
+ObjectType
+NativeInstance::get_type() const
 {
     return ObjectType::native_instance;
 }
 
-std::string NativeInstance::to_string() const
+std::vector<std::string>
+NativeInstance::to_string() const
 {
-    return "<native instance {}>"_format(klass->klass_name);
+    return {"<native instance {}>"_format(klass->klass_name)};
 }
 
 
-std::shared_ptr<Object> NativeInstance::get_field_or_null(const std::string& name)
+std::shared_ptr<Object>
+NativeInstance::get_field_or_null(const std::string& name)
 {
     NativeKlass* nk = static_cast<NativeKlass*>(klass.get());
     if(auto found = nk->properties.find(name); found != nk->properties.end())
@@ -506,7 +532,8 @@ std::shared_ptr<Object> NativeInstance::get_field_or_null(const std::string& nam
     }
 }
 
-bool NativeInstance::set_field_or_false(const std::string& name, std::shared_ptr<Object> value)
+bool
+NativeInstance::set_field_or_false(const std::string& name, std::shared_ptr<Object> value)
 {
     NativeKlass* nk = static_cast<NativeKlass*>(klass.get());
     if(auto found = nk->properties.find(name); found != nk->properties.end())
@@ -836,10 +863,10 @@ struct NativePackage : Object, WithProperties, Scope
         return ObjectType::native_package;
     }
 
-    std::string
+    std::vector<std::string>
     to_string() const override
     {
-        return "<native pkg {}>"_format(package_name);
+        return {"<native pkg {}>"_format(package_name)};
     }
     
     bool

@@ -317,7 +317,7 @@ TEST_CASE("lox binding" "[lox]")
         auto fir = lox::as_int(fir_val);
         auto sec = lox::as_int(sec_val);
         
-        INFO(fir_val->to_string());
+        // INFO(fir_val->to_string());
         REQUIRE(fir);
         REQUIRE(sec);
 

@@ -120,10 +120,10 @@ struct ScriptFunction : Callable
         return std::make_shared<ScriptFunction>(interpreter, env, state, to_str, params, body, is_initializer);
     }
 
-    std::string
+    std::vector<std::string>
     to_string() const override
     {
-        return "<{}>"_format(to_str);
+        return {"<{}>"_format(to_str)};
     }
 
     std::shared_ptr<Object>
@@ -302,10 +302,10 @@ struct ScriptInstance : Instance
         return ObjectType::instance;
     }
 
-    std::string
+    std::vector<std::string>
     to_string() const override
     {
-        return "<instance {}>"_format(klass->klass_name);
+        return {"<instance {}>"_format(klass->klass_name)};
     }
 
     std::shared_ptr<Object> get_field_or_null(const std::string& name) override
@@ -366,10 +366,10 @@ struct ScriptKlass : Klass
     {
     }
 
-    std::string
+    std::vector<std::string>
     to_string() const override
     {
-        return "<class {}>"_format(klass_name);
+        return {"<class {}>"_format(klass_name)};
     }
 
     std::shared_ptr<Object>
@@ -425,7 +425,7 @@ void report_error_no_properties(const Offset& offset, ErrorHandler* error_handle
             offset, "{} is not capable of having any properties, has value {}"_format
             (
                 objecttype_to_string(type),
-                object->to_string()
+                object->to_flat_string()
             )
         );
     }
@@ -815,7 +815,10 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     {
         auto value = evaluate(x.expression);
         const auto to_print = value->to_string();
-        on_line(to_print);
+        for(const auto& p: to_print)
+        {
+            on_line(p);
+        }
     }
 
     void
@@ -842,7 +845,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
                 "{} is not a callable, evaluates to {}"_format
                 (
                     objecttype_to_string(callee->get_type()),
-                    callee->to_string()
+                    callee->to_flat_string()
                 )
             );
             if(callee->get_type() == ObjectType::klass)
@@ -887,7 +890,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
                     x.offset, "{} ({}) is not accepted for argument {}, expected {}"_format
                     (
                         smart_object_to_type_string(invalid_arg_value),
-                        invalid_arg_value->to_string(),
+                        invalid_arg_value->to_flat_string(),
                         invalid_arg_error.argument_index+1,
                         invalidarg_to_string(invalid_arg_error)
                     )
@@ -909,7 +912,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
                     (
                         argument_index + 1,
                         objecttype_to_string(arguments[argument_index]->get_type()),
-                        arguments[argument_index]->to_string()
+                        arguments[argument_index]->to_flat_string()
                     )
                 );
             }
@@ -941,7 +944,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
                 "{} is not a klass, evaluates to {}"_format
                 (
                     objecttype_to_string(klass_object->get_type()),
-                    klass_object->to_string()
+                    klass_object->to_flat_string()
                 )
             );
             error_handler->on_note(x.offset, "constructor occured here");
@@ -982,7 +985,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
                     x.offset, "{} ({}) is not accepted for argument {}, expected {}"_format
                     (
                         smart_object_to_type_string(invalid_arg_value),
-                        invalid_arg_value->to_string(),
+                        invalid_arg_value->to_flat_string(),
                         invalid_arg_error.argument_index+1,
                         invalidarg_to_string(invalid_arg_error)
                     )
@@ -1004,7 +1007,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
                     (
                         argument_index + 1,
                         objecttype_to_string(arguments[argument_index]->get_type()),
-                        arguments[argument_index]->to_string()
+                        arguments[argument_index]->to_flat_string()
                     )
                 );
             }
@@ -1036,7 +1039,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
                 (
                     x.offset, "{} doesn't have a property named {}"_format
                     (
-                        object->to_string(),
+                        object->to_flat_string(),
                         x.name
                     )
                 );
@@ -1074,7 +1077,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
                 (
                     x.offset, "{} doesn't have a property named {}"_format
                     (
-                        object->to_string(),
+                        object->to_flat_string(),
                         x.name
                     )
                 );
@@ -1092,7 +1095,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
                     x.offset, "nil is not accepted for property '{}' on {}, expected {}"_format
                     (
                         x.name,
-                        object->to_string(),
+                        object->to_flat_string(),
                         invalidarg_to_string(invalid_arg_error)
                     )
                 );
@@ -1104,9 +1107,9 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
                     x.offset, "{} ({}) is not accepted for property '{}' on {}, expected {}"_format
                     (
                         smart_object_to_type_string(value),
-                        value->to_string(),
+                        value->to_flat_string(),
                         x.name,
-                        object->to_string(),
+                        object->to_flat_string(),
                         invalidarg_to_string(invalid_arg_error)
                     )
                 );
@@ -1142,7 +1145,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
             (
                 x.offset, "{} doesn't have a property named {}"_format
                 (
-                    superklass->to_string(),
+                    superklass->to_flat_string(),
                     x.property
                 )
             );

@@ -58,8 +58,10 @@ struct Object : std::enable_shared_from_this<Object>
     Object() = default;
     virtual ~Object() = default;
 
+    std::string to_flat_string() const;
+
     virtual ObjectType get_type() const = 0;
-    virtual std::string to_string() const = 0;
+    virtual std::vector<std::string> to_string() const = 0;
     virtual bool is_callable() const = 0;
     
     virtual WithProperties* get_properties_or_null();
@@ -90,7 +92,7 @@ struct BoundCallable : Callable
 
     BoundCallable(std::shared_ptr<Object> bound, std::shared_ptr<NativeFunction> callable);
     ~BoundCallable();
-    std::string to_string() const override;
+    std::vector<std::string> to_string() const override;
     std::shared_ptr<Object> call(const Arguments& arguments) override;
     std::shared_ptr<Callable> bind(std::shared_ptr<Object> instance) override;
     bool is_bound() const override;
@@ -160,7 +162,7 @@ struct NativeKlass : Klass
 
     NativeKlass(const std::string& n, std::size_t id, std::shared_ptr<Klass> sk);
 
-    std::string to_string() const override;
+    std::vector<std::string> to_string() const override;
 
     void add_property(const std::string& name, std::unique_ptr<Property> prop);
 };
@@ -170,7 +172,7 @@ struct NativeInstance : Instance
     NativeInstance(std::shared_ptr<NativeKlass> o);
 
     ObjectType get_type() const override;
-    std::string to_string() const override;
+    std::vector<std::string> to_string() const override;
 
     std::shared_ptr<Object> get_field_or_null(const std::string& name) override;
     bool set_field_or_false(const std::string& name, std::shared_ptr<Object> value) override;
@@ -310,7 +312,7 @@ struct ClassAdder
             name,
             [func](Callable* callable, ArgumentHelper& helper) -> std::shared_ptr<Object>
             {
-                const auto cc = callable->to_string();
+                // const auto cc = callable->to_string();
                 assert(callable->is_bound());
                 BoundCallable* bound = static_cast<BoundCallable*>(callable);
                 assert(bound->bound != nullptr);
