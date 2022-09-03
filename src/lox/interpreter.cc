@@ -400,53 +400,97 @@ struct ScriptKlass : Klass
 };
 
 
-void report_error_object(ErrorHandler* error_handler, const Offset& offset, const std::string& message, std::shared_ptr<Object> object)
+template<typename T>
+void append(std::vector<T>* dst, const std::vector<T>& src)
 {
-    error_handler->on_error
-    (
-        offset, "{}{}"_format
-        (
-            message,
-            object->to_flat_string()
-        )
-    );
+    dst->insert(dst->end(), src.begin(), src.end());
 }
 
-void report_error_object(ErrorHandler* error_handler, const Offset& offset, std::shared_ptr<Object> object, const std::string& message)
+std::vector<std::string> flatten_message(const std::string& message, std::shared_ptr<Object> after)
 {
-    error_handler->on_error
-    (
-        offset, "{}{}"_format
-        (
-            object->to_flat_string(),
-            message
-        )
-    );
+    const auto end = after->to_string();
+    if(end.size() == 1)
+    {
+        return { message + end[0] };
+    }
+    else
+    {
+        std::vector<std::string> r;
+        r.reserve(end.size() + 1);
+        r.emplace_back(message);
+        append(&r, end);
+        return r;
+    }
+}
+
+std::vector<std::string> flatten_message(std::shared_ptr<Object> before, const std::string& message)
+{
+    const auto start = before->to_string();
+    if(start.size() == 1)
+    {
+        return { start[0] + message };
+    }
+    else
+    {
+        std::vector<std::string> r;
+        r.reserve(start.size() + 1);
+        append(&r, start);
+        r.emplace_back(message);
+        return r;
+    }
+}
+
+std::vector<std::string> flatten_message(std::shared_ptr<Object> before, const std::string& message, std::shared_ptr<Object> after)
+{
+    const auto start = before->to_string();
+    const auto end = after->to_string();
+    
+    std::vector<std::string> r;
+    r.reserve(start.size() + 1 + end.size());
+    
+    auto m = message;
+
+    if(start.size() == 1)
+    {
+        m = start[0] + message;
+    }
+    else
+    {
+        append(&r, start);
+    }
+
+    if(end.size() == 1)
+    {
+        r.emplace_back(m + end[0]);
+    }
+    else
+    {
+        r.emplace_back(m);
+        append(&r, end);
+    }
+
+    return r;
+}
+
+
+void report_error_object(ErrorHandler* error_handler, const Offset& offset, const std::string& message, std::shared_ptr<Object> after)
+{
+    error_handler->on_errors(offset, flatten_message(message, after));
+}
+
+void report_error_object(ErrorHandler* error_handler, const Offset& offset, std::shared_ptr<Object> before, const std::string& message)
+{
+    error_handler->on_errors(offset, flatten_message(before, message));
 }
 
 void report_error_object(ErrorHandler* error_handler, const Offset& offset, std::shared_ptr<Object> before, const std::string& message, std::shared_ptr<Object> after)
 {
-    error_handler->on_error
-    (
-        offset, "{}{}{}"_format
-        (
-            before->to_flat_string(),
-            message,
-            after->to_flat_string()
-        )
-    );
+    error_handler->on_errors(offset, flatten_message(before, message, after));
 }
 
-void report_note_object(ErrorHandler* error_handler, const Offset& offset, const std::string& message, std::shared_ptr<Object> object)
+void report_note_object(ErrorHandler* error_handler, const Offset& offset, const std::string& message, std::shared_ptr<Object> after)
 {
-    error_handler->on_note
-    (
-        offset, "{}{}"_format
-        (
-            message,
-            object->to_flat_string()
-        )
-    );
+    error_handler->on_notes(offset, flatten_message(message, after));
 }
 
 void report_error_no_properties(const Offset& offset, ErrorHandler* error_handler, std::shared_ptr<Object> object)
@@ -1152,7 +1196,6 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
             }
             else
             {
-                // todo(Gustav): fix to_flat_string
                 report_error_object
                 (
                     error_handler, x.offset,
