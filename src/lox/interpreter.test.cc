@@ -61,8 +61,8 @@ TEST_CASE("interpret fail", "[interpret]")
         CHECK_FALSE(run_ok);
         CHECK(StringEq(console_out,{}));
         CHECK(ErrorEq(error_list, {
-            {error, 74, 91, "There is already a variable with this name in this scope"},
-            {note, 41, 57, "declared here"}
+            {error, 74, 91, {"There is already a variable with this name in this scope"}},
+            {note, 41, 57, {"declared here"}}
         }));
     }
 
@@ -75,7 +75,7 @@ TEST_CASE("interpret fail", "[interpret]")
         CHECK_FALSE(run_ok);
         CHECK(StringEq(console_out,{}));
         CHECK(ErrorEq(error_list, {
-            {error, 13, 25, "Can't return from top-level code"}
+            {error, 13, 25, {"Can't return from top-level code"}}
         }));
     }
 
@@ -92,8 +92,8 @@ TEST_CASE("interpret fail", "[interpret]")
         CHECK_FALSE(run_ok);
         CHECK(StringEq(console_out,{}));
         CHECK(ErrorEq(error_list, {
-            {error, 62, 63, "Can't read local variable in its own initializer"},
-            {note, 54, 68, "declared here"}
+            {error, 62, 63, {"Can't read local variable in its own initializer"}},
+            {note, 54, 68, {"declared here"}}
         }));
     }
 
@@ -106,7 +106,7 @@ TEST_CASE("interpret fail", "[interpret]")
         CHECK_FALSE(run_ok);
         CHECK(StringEq(console_out,{}));
         CHECK(ErrorEq(error_list, {
-            {error, 19, 23, "Can't use 'this' outside of a class"},
+            {error, 19, 23, {"Can't use 'this' outside of a class"}},
         }));
     }
 
@@ -122,7 +122,7 @@ TEST_CASE("interpret fail", "[interpret]")
         CHECK_FALSE(run_ok);
         CHECK(StringEq(console_out,{}));
         CHECK(ErrorEq(error_list, {
-            {error, 66, 70, "Can't use 'this' outside of a class"},
+            {error, 66, 70, {"Can't use 'this' outside of a class"}}
         }));
     }
     
@@ -140,7 +140,7 @@ TEST_CASE("interpret fail", "[interpret]")
         CHECK_FALSE(run_ok);
         CHECK(StringEq(console_out,{}));
         CHECK(ErrorEq(error_list, {
-            {error, 97, 121, "Can't return value from initializer"},
+            {error, 97, 121, {"Can't return value from initializer"}}
         }));
     }
 
@@ -153,7 +153,7 @@ TEST_CASE("interpret fail", "[interpret]")
         CHECK_FALSE(run_ok);
         CHECK(StringEq(console_out,{}));
         CHECK(ErrorEq(error_list, {
-            {error, 19, 22, "Undefined variable foo"},
+            {error, 19, 22, {"Undefined variable foo"}},
         }));
     }
 
@@ -166,7 +166,7 @@ TEST_CASE("interpret fail", "[interpret]")
         CHECK_FALSE(run_ok);
         CHECK(StringEq(console_out,{}));
         CHECK(ErrorEq(error_list, {
-            {error, 13, 21, "Global variable foo was never declared"},
+            {error, 13, 21, {"Global variable foo was never declared"}},
         }));
     }
 
@@ -180,8 +180,8 @@ TEST_CASE("interpret fail", "[interpret]")
         CHECK_FALSE(run_ok);
         CHECK(StringEq(console_out,{}));
         CHECK(ErrorEq(error_list, {
-            {error, 26, 34, "Variable foo was neither declared in global nor local scope"},
-            {note, 54, 56, "called from here"}
+            {error, 26, 34, {"Variable foo was neither declared in global nor local scope"}},
+            {note, 54, 56, {"called from here"}}
         }));
     }
 
@@ -196,7 +196,7 @@ TEST_CASE("interpret fail", "[interpret]")
         CHECK_FALSE(run_ok);
         CHECK(StringEq(console_out,{}));
         CHECK(ErrorEq(error_list, {
-            {error, 75, 78, "<instance Foo> doesn't have a property named bar"},
+            {error, 75, 78, {"<instance Foo> doesn't have a property named bar"}},
         }));
     }
 
@@ -210,9 +210,9 @@ TEST_CASE("interpret fail", "[interpret]")
         CHECK_FALSE(run_ok);
         CHECK(StringEq(console_out,{}));
         CHECK(ErrorEq(error_list, {
-            {error, 48, 51, "class is not a callable, evaluates to <class Foo>"},
-            {note, 48, 51, "did you forget to use new?"},
-            {note, 51, 53, "call occured here"},
+            {error, 48, 51, {"class is not a callable, evaluates to <class Foo>"}},
+            {note, 48, 51, {"did you forget to use new?"}},
+            {note, 51, 53, {"call occured here"}},
         }));
     }
 
@@ -227,7 +227,7 @@ TEST_CASE("interpret fail", "[interpret]")
         CHECK_FALSE(run_ok);
         CHECK(StringEq(console_out,{}));
         CHECK(ErrorEq(error_list, {
-            {error, 84, 87, "nil is not capable of having any properties"},
+            {error, 84, 87, {"nil is not capable of having any properties"}},
         }));
     }
 
@@ -242,7 +242,7 @@ TEST_CASE("interpret fail", "[interpret]")
         CHECK_FALSE(run_ok);
         CHECK(StringEq(console_out,{}));
         CHECK(ErrorEq(error_list, {
-            {error, 87, 90, "string is not capable of having any properties, has value cats"},
+            {error, 87, 90, {"string is not capable of having any properties, has value cats"}},
         }));
     }
     
@@ -255,7 +255,7 @@ TEST_CASE("interpret fail", "[interpret]")
         CHECK_FALSE(run_ok);
         CHECK(StringEq(console_out,{}));
         CHECK(ErrorEq(error_list, {
-            {error, 26, 30, "A class can't inherit from itself"},
+            {error, 26, 30, {"A class can't inherit from itself"}},
         }));
     }
     
@@ -269,7 +269,7 @@ TEST_CASE("interpret fail", "[interpret]")
         CHECK_FALSE(run_ok);
         CHECK(StringEq(console_out,{}));
         CHECK(ErrorEq(error_list, {
-            {error, 86, 95, "Superclass must be a class, was string"},
+            {error, 86, 95, {"Superclass must be a class, was string"}},
         }));
     }
     
@@ -282,7 +282,7 @@ TEST_CASE("interpret fail", "[interpret]")
         CHECK_FALSE(run_ok);
         CHECK(StringEq(console_out,{}));
         CHECK(ErrorEq(error_list, {
-            {error, 24, 25, "Expected '.' after 'super' keyword"},
+            {error, 24, 25, {"Expected '.' after 'super' keyword"}},
         }));
     }
     
@@ -295,7 +295,7 @@ TEST_CASE("interpret fail", "[interpret]")
         CHECK_FALSE(run_ok);
         CHECK(StringEq(console_out,{}));
         CHECK(ErrorEq(error_list, {
-            {error, 13, 34, "Can't use 'super' outside of class"},
+            {error, 13, 34, {"Can't use 'super' outside of class"}},
         }));
     }
     
@@ -315,7 +315,7 @@ TEST_CASE("interpret fail", "[interpret]")
         CHECK_FALSE(run_ok);
         CHECK(StringEq(console_out,{}));
         CHECK(ErrorEq(error_list, {
-            {error, 109, 118, "Can't use 'super' in class with no superclass"},
+            {error, 109, 118, {"Can't use 'super' in class with no superclass"}},
         }));
     }
 
@@ -342,7 +342,7 @@ TEST_CASE("interpret fail", "[interpret]")
         CHECK_FALSE(run_ok);
         CHECK(StringEq(console_out,{}));
         CHECK(ErrorEq(error_list, {
-            {error, 276, 285, "Can't use 'super' in a static method"},
+            {error, 276, 285, {"Can't use 'super' in a static method"}},
         }));
     }
 
@@ -362,7 +362,7 @@ TEST_CASE("interpret fail", "[interpret]")
         CHECK_FALSE(run_ok);
         CHECK(StringEq(console_out,{}));
         CHECK(ErrorEq(error_list, {
-            {error, 151, 155, "Can't use 'this' in a static method"},
+            {error, 151, 155, {"Can't use 'this' in a static method"}},
         }));
     }
 
@@ -392,7 +392,7 @@ TEST_CASE("interpret fail", "[interpret]")
         CHECK_FALSE(run_ok);
         CHECK(StringEq(console_out,{}));
         CHECK(ErrorEq(error_list, {
-            {error, 356, 378, "<instance Person> doesn't have a property named sayName"},
+            {error, 356, 378, {"<instance Person> doesn't have a property named sayName"}},
         }));
     }
 
@@ -423,8 +423,8 @@ TEST_CASE("interpret fail", "[interpret]")
         CHECK_FALSE(run_ok);
         CHECK(StringEq(console_out,{}));
         CHECK(ErrorEq(error_list, {
-            {error, 433, 440, "nil is not a callable, evaluates to nil"},
-            {note, 440, 442, "call occured here"},
+            {error, 433, 440, {"nil is not a callable, evaluates to nil"}},
+            {note, 440, 442, {"call occured here"}},
         }));
     }
 }

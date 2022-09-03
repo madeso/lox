@@ -1,6 +1,7 @@
 #include "lox/test.h"
 
 #include "catchy/vectorequals.h"
+#include "catchy/stringeq.h"
 
 #include "fmt/format.h"
 using namespace fmt::literals;
@@ -24,15 +25,15 @@ AddErrorErrors::AddErrorErrors(std::vector<ReportedError>* e)
 }
 
 void
-AddErrorErrors::on_error(const lox::Offset& o, const std::string& message)
+AddErrorErrors::on_errors(const lox::Offset& o, const std::vector<std::string>& messages)
 {
-    errors->emplace_back(ReportedError{ReportedError::Type::error, o.start, o.end, message});
+    errors->emplace_back(ReportedError{ReportedError::Type::error, o.start, o.end, messages});
 }
 
 void
-AddErrorErrors::on_note(const lox::Offset& o, const std::string& message)
+AddErrorErrors::on_notes(const lox::Offset& o, const std::vector<std::string>& messages)
 {
-    errors->emplace_back(ReportedError{ReportedError::Type::note, o.start, o.end, message});
+    errors->emplace_back(ReportedError{ReportedError::Type::note, o.start, o.end, messages});
 }
 
 std::string_view
@@ -51,7 +52,7 @@ type_to_string(ReportedError::Type t)
 std::string
 ErrorToString(const ReportedError& e)
 {
-    return "({} {} {}: {})"_format(type_to_string(e.type), e.start, e.end, e.message);
+    return "({} {} {}: [{}])"_format(type_to_string(e.type), e.start, e.end, fmt::join(e.messages, ", "));
 }
 
 catchy::FalseString
@@ -68,7 +69,9 @@ SingleErrorEq(const ReportedError& lhs, const ReportedError& rhs)
 
     if(lhs.start != rhs.start || lhs.end != rhs.end) { add("({} {}) != ({} {})"_format(lhs.start, lhs.end, rhs.start, rhs.end)); }
 
-    if(lhs.message != rhs.message) { add("<{}> != <{}>"_format(lhs.message, rhs.message)); }
+    const auto message_compare = catchy::StringEq(lhs.messages, rhs.messages);
+    if(message_compare.IsTrue() == false) { add(message_compare.reason); }
+    // if(lhs.messages != rhs.messages) { add("<{}> != <{}>"_format(lhs.message, rhs.message)); }
 
     if(err.empty()) { return catchy::FalseString::True(); }
     else { return catchy::FalseString::False(err); }

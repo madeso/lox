@@ -40,8 +40,8 @@ TEST_CASE("lox binding fail" "[lox]")
             )lox");
             CHECK_FALSE(run_ok);
             CHECK(ErrorEq(error_list, {
-                {error, 20, 22, "Expected 1 arguments but got 0"},
-                {note, 17, 20, "called with 0 arguments"}
+                {error, 20, 22, {"Expected 1 arguments but got 0"}},
+                {note, 17, 20, {"called with 0 arguments"}}
             }));
             CHECK(StringEq(console_out,{}));
         }
@@ -54,7 +54,7 @@ TEST_CASE("lox binding fail" "[lox]")
             )lox");
             CHECK_FALSE(run_ok);
             CHECK(ErrorEq(error_list, {
-                {error, 20, 24, "int (42) is not accepted for argument 1, expected string"},
+                {error, 20, 24, {"int (42) is not accepted for argument 1, expected string"}},
             }));
             CHECK(StringEq(console_out,{}));
         }
@@ -67,10 +67,10 @@ TEST_CASE("lox binding fail" "[lox]")
             )lox");
             CHECK_FALSE(run_ok);
             CHECK(ErrorEq(error_list, {
-                {error, 20, 38, "Expected 1 arguments but got 2"},
-                {note, 17, 20, "called with 2 arguments"},
-                {note, 21, 28, "argument 1 evaluated to string: hello"},
-                {note, 30, 37, "argument 2 evaluated to string: world"},
+                {error, 20, 38, {"Expected 1 arguments but got 2"}},
+                {note, 17, 20, {"called with 2 arguments"}},
+                {note, 21, 28, {"argument 1 evaluated to string: hello"}},
+                {note, 30, 37, {"argument 2 evaluated to string: world"}},
             }));
             CHECK(StringEq(console_out,{}));
         }
@@ -100,7 +100,7 @@ TEST_CASE("lox binding fail" "[lox]")
             )lox");
             CHECK_FALSE(run_ok);
             CHECK(ErrorEq(error_list, {
-                {error, 64, 74, "int (24) is not accepted for property 'value' on <native instance Adder>, expected string"},
+                {error, 64, 74, {"int (24) is not accepted for property 'value' on <native instance Adder>, expected string"}},
             }));
             CHECK(StringEq(console_out, {}));
         }
@@ -132,7 +132,7 @@ TEST_CASE("lox binding fail" "[lox]")
             )lox");
             CHECK_FALSE(run_ok);
             CHECK(ErrorEq(error_list, {
-                {error, 59, 64, "Adder (<native instance Adder>) is not accepted for argument 1, expected Subber"},
+                {error, 59, 64, {"Adder (<native instance Adder>) is not accepted for argument 1, expected Subber"}},
             }));
             CHECK(StringEq(console_out, {}));
         }

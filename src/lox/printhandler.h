@@ -17,10 +17,10 @@ struct PrintHandler : ErrorHandler
     on_line(std::string_view line) = 0;
 
     void
-    on_error(const Offset& offset, const std::string& message) override;
+    on_errors(const Offset& offset, const std::vector<std::string>& message) override;
 
     void
-    on_note(const Offset& offset, const std::string& message) override;
+    on_notes(const Offset& offset, const std::vector<std::string>& message) override;
 };
 
 

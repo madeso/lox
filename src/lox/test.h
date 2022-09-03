@@ -31,7 +31,7 @@ struct ReportedError
     Type type;
     std::size_t start;
     std::size_t end;
-    std::string message;
+    std::vector<std::string> messages;
 };
 
 struct AddErrorErrors : lox::ErrorHandler
@@ -41,10 +41,10 @@ struct AddErrorErrors : lox::ErrorHandler
     explicit AddErrorErrors(std::vector<ReportedError>* e);
 
     void
-    on_error(const lox::Offset& offset, const std::string& message) override;
+    on_errors(const lox::Offset& offset, const std::vector<std::string>& message) override;
 
     void
-    on_note(const lox::Offset& offset, const std::string& message) override;
+    on_notes(const lox::Offset& offset, const std::vector<std::string>& message) override;
 };
 
 catchy::FalseString

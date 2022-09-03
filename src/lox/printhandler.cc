@@ -1,5 +1,6 @@
 #include "lox/printhandler.h"
 
+
 #include "lox/source.h"
 
 
@@ -62,8 +63,10 @@ print_line(PrintHandler* print, std::string_view current_source, const LineData&
 
 
 void
-print_message(PrintHandler* print, std::string_view type, const Offset& offset, const std::string& message)
+print_message(PrintHandler* print, std::string_view type, const Offset& offset, const std::vector<std::string>& messages)
 {
+    assert(messages.empty() == false);
+
     const auto& map = offset.source->get_or_create_map();
     std::string_view current_source = offset.source->source;
     const auto start_line = map.get_line_from_offset(offset.start);
@@ -72,18 +75,24 @@ print_message(PrintHandler* print, std::string_view type, const Offset& offset, 
     if(start_line.line == end_line.line)
     {
         print_line(print, current_source, start_line);
-        print->on_line("{}{}: {}"_format(
-            get_underline_for(start_line, offset, '^'),
-            type, message
-        ));
+        for(const auto& message: messages)
+        {
+            print->on_line("{}{}: {}"_format(
+                get_underline_for(start_line, offset, '^'),
+                type, message
+            ));
+        }
     }
     else
     {
         print_line(print, current_source, end_line);
-        print->on_line("{}{}: {}"_format(
-            get_marker_at(end_line, offset.end),
-            type, message
-        ));
+        for(const auto& message: messages)
+        {
+            print->on_line("{}{}: {}"_format(
+                get_marker_at(end_line, offset.end),
+                type, message
+            ));
+        }
 
         print_line(print, current_source, start_line);
         print->on_line("{} starts here"_format(
@@ -105,13 +114,13 @@ namespace lox
 {
 
 void
-PrintHandler::on_error(const Offset& offset, const std::string& message)
+PrintHandler::on_errors(const Offset& offset, const std::vector<std::string>& message)
 {
     print_message(this, "Error", offset, message);
 }
 
 void
-PrintHandler::on_note(const Offset& offset, const std::string& message)
+PrintHandler::on_notes(const Offset& offset, const std::vector<std::string>& message)
 {
     print_message(this, "Note", offset, message);
 }
