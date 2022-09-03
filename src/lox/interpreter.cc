@@ -400,6 +400,54 @@ struct ScriptKlass : Klass
 };
 
 
+void report_error_object(ErrorHandler* error_handler, const Offset& offset, const std::string& message, std::shared_ptr<Object> object)
+{
+    error_handler->on_error
+    (
+        offset, "{}{}"_format
+        (
+            message,
+            object->to_flat_string()
+        )
+    );
+}
+
+void report_error_object(ErrorHandler* error_handler, const Offset& offset, std::shared_ptr<Object> object, const std::string& message)
+{
+    error_handler->on_error
+    (
+        offset, "{}{}"_format
+        (
+            object->to_flat_string(),
+            message
+        )
+    );
+}
+
+void report_error_object(ErrorHandler* error_handler, const Offset& offset, std::shared_ptr<Object> before, const std::string& message, std::shared_ptr<Object> after)
+{
+    error_handler->on_error
+    (
+        offset, "{}{}{}"_format
+        (
+            before->to_flat_string(),
+            message,
+            after->to_flat_string()
+        )
+    );
+}
+
+void report_note_object(ErrorHandler* error_handler, const Offset& offset, const std::string& message, std::shared_ptr<Object> object)
+{
+    error_handler->on_note
+    (
+        offset, "{}{}"_format
+        (
+            message,
+            object->to_flat_string()
+        )
+    );
+}
 
 void report_error_no_properties(const Offset& offset, ErrorHandler* error_handler, std::shared_ptr<Object> object)
 {
@@ -420,13 +468,14 @@ void report_error_no_properties(const Offset& offset, ErrorHandler* error_handle
     }
     else
     {
-        error_handler->on_error
+        report_error_object
         (
-            offset, "{} is not capable of having any properties, has value {}"_format
+            error_handler, offset,
+            "{} is not capable of having any properties, has value "_format
             (
-                objecttype_to_string(type),
-                object->to_flat_string()
-            )
+                objecttype_to_string(type)
+            ),
+            object
         );
     }
 }
@@ -839,14 +888,13 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
         auto function = as_callable(callee);
         if(function == nullptr)
         {
-            error_handler->on_error
+            report_error_object
             (
-                x.callee->offset,
-                "{} is not a callable, evaluates to {}"_format
-                (
-                    objecttype_to_string(callee->get_type()),
-                    callee->to_flat_string()
-                )
+                error_handler, x.callee->offset,
+                "{} is not a callable, evaluates to "_format(
+                    objecttype_to_string(callee->get_type())
+                ),
+                callee
             );
             if(callee->get_type() == ObjectType::klass)
             {
@@ -885,12 +933,13 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
             }
             else
             {
-                error_handler->on_error
+                report_error_object
                 (
-                    x.offset, "{} ({}) is not accepted for argument {}, expected {}"_format
+                    error_handler, x.offset,
+                    invalid_arg_value,
+                    " ({}) is not accepted for argument {}, expected {}"_format
                     (
                         smart_object_to_type_string(invalid_arg_value),
-                        invalid_arg_value->to_flat_string(),
                         invalid_arg_error.argument_index+1,
                         invalidarg_to_string(invalid_arg_error)
                     )
@@ -904,16 +953,16 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
             error_handler->on_note(x.callee->offset, "called with {} arguments"_format(x.arguments.size()));
             for(std::size_t argument_index = 0; argument_index < x.arguments.size(); argument_index += 1)
             {
-
-                error_handler->on_note
+                report_note_object
                 (
+                    error_handler,
                     x.arguments[argument_index]->offset,
-                    "argument {} evaluated to {}: {}"_format
+                    "argument {} evaluated to {}: "_format
                     (
                         argument_index + 1,
-                        objecttype_to_string(arguments[argument_index]->get_type()),
-                        arguments[argument_index]->to_flat_string()
-                    )
+                        objecttype_to_string(arguments[argument_index]->get_type())
+                    ),
+                    arguments[argument_index]
                 );
             }
             throw RuntimeError{};
@@ -938,14 +987,14 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
         auto klass = as_klass(klass_object);
         if(klass == nullptr)
         {
-            error_handler->on_error
+            report_error_object
             (
-                x.klass->offset,
-                "{} is not a klass, evaluates to {}"_format
+                error_handler, x.klass->offset,
+                "{} is not a klass, evaluates to "_format
                 (
-                    objecttype_to_string(klass_object->get_type()),
-                    klass_object->to_flat_string()
-                )
+                    objecttype_to_string(klass_object->get_type())
+                ),
+                klass_object
             );
             error_handler->on_note(x.offset, "constructor occured here");
             throw RuntimeError{};
@@ -980,12 +1029,13 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
             }
             else
             {
-                error_handler->on_error
+                report_error_object
                 (
-                    x.offset, "{} ({}) is not accepted for argument {}, expected {}"_format
+                    error_handler, x.offset,
+                    invalid_arg_value,
+                    " ({}) is not accepted for argument {}, expected {}"_format
                     (
                         smart_object_to_type_string(invalid_arg_value),
-                        invalid_arg_value->to_flat_string(),
                         invalid_arg_error.argument_index+1,
                         invalidarg_to_string(invalid_arg_error)
                     )
@@ -999,16 +1049,15 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
             error_handler->on_note(x.klass->offset, "called with {} arguments"_format(x.arguments.size()));
             for(std::size_t argument_index = 0; argument_index < x.arguments.size(); argument_index += 1)
             {
-
-                error_handler->on_note
+                report_note_object
                 (
-                    x.arguments[argument_index]->offset,
-                    "argument {} evaluated to {}: {}"_format
+                    error_handler, x.arguments[argument_index]->offset,
+                    "argument {} evaluated to {}: "_format
                     (
                         argument_index + 1,
-                        objecttype_to_string(arguments[argument_index]->get_type()),
-                        arguments[argument_index]->to_flat_string()
-                    )
+                        objecttype_to_string(arguments[argument_index]->get_type())
+                    ),
+                    arguments[argument_index]
                 );
             }
             throw RuntimeError{};
@@ -1035,11 +1084,11 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
             if(r == nullptr)
             {
                 // todo(Gustav): edit distance search for best named property
-                error_handler->on_error
+                report_error_object
                 (
-                    x.offset, "{} doesn't have a property named {}"_format
+                    error_handler, x.offset, object,
+                    " doesn't have a property named {}"_format
                     (
-                        object->to_flat_string(),
                         x.name
                     )
                 );
@@ -1073,11 +1122,11 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
             if(was_set == false)
             {
                 // todo(Gustav): edit distance + custom error message?
-                error_handler->on_error
+                report_error_object
                 (
-                    x.offset, "{} doesn't have a property named {}"_format
+                    error_handler, x.offset, object,
+                    " doesn't have a property named {}"_format
                     (
-                        object->to_flat_string(),
                         x.name
                     )
                 );
@@ -1090,28 +1139,31 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
             const auto actual_type = value->get_type();
             if(actual_type == ObjectType::nil)
             {
-                error_handler->on_error
+                report_error_object
                 (
-                    x.offset, "nil is not accepted for property '{}' on {}, expected {}"_format
+                    error_handler, x.offset,
+                    "expected {} but got nil for property '{}' on "_format
                     (
-                        x.name,
-                        object->to_flat_string(),
-                        invalidarg_to_string(invalid_arg_error)
-                    )
+                        invalidarg_to_string(invalid_arg_error),
+                        x.name
+                    ),
+                    object
                 );
             }
             else
             {
-                error_handler->on_error
+                // todo(Gustav): fix to_flat_string
+                report_error_object
                 (
-                    x.offset, "{} ({}) is not accepted for property '{}' on {}, expected {}"_format
+                    error_handler, x.offset,
+                    value,
+                    " ({}) is not accepted for property '{}', expected {}, on "_format
                     (
                         smart_object_to_type_string(value),
-                        value->to_flat_string(),
                         x.name,
-                        object->to_flat_string(),
                         invalidarg_to_string(invalid_arg_error)
-                    )
+                    ),
+                    object
                 );
             }
             throw RuntimeError{};
@@ -1141,11 +1193,11 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
 
         if(method == nullptr)
         {
-            error_handler->on_error
+            report_error_object
             (
-                x.offset, "{} doesn't have a property named {}"_format
+                error_handler, x.offset, superklass,
+                " doesn't have a property named {}"_format
                 (
-                    superklass->to_flat_string(),
                     x.property
                 )
             );
@@ -1316,7 +1368,13 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
 
 
 void
-execute_statements_with_environment(MainInterpreter* main, const std::vector<std::shared_ptr<Statement>>& statements, std::shared_ptr<Environment> environment, std::shared_ptr<State> state)
+execute_statements_with_environment
+(
+    MainInterpreter* main,
+    const std::vector<std::shared_ptr<Statement>>& statements,
+    std::shared_ptr<Environment> environment,
+    std::shared_ptr<State> state
+)
 {
     main->execute_statements_with_environment(statements, environment, state);
 }
