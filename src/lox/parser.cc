@@ -55,6 +55,16 @@ offset_for_range_error(const Offset& previous, const Token& token)
 }
 
 
+std::string
+token_to_string(const Token& tok)
+{
+    return "{}"_format
+    (
+        tokentype_to_string(tok.type)
+    );
+}
+
+
 struct Parser
 {
     std::vector<Token>& tokens;
@@ -175,7 +185,7 @@ struct Parser
             else
             {
                 auto& next = peek();
-                throw error(next.offset, "Expected fun or var but found {}"_format(next.to_string()));
+                throw error(next.offset, "Expected fun or var but found {}"_format(token_to_string(next)));
             }
         }
 

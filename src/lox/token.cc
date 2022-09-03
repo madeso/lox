@@ -14,7 +14,7 @@ Token::Token(TokenType the_type, std::string_view the_lexeme, std::shared_ptr<Ob
 }
 
 
-std::string Token::to_string() const
+std::string Token::to_debug_string() const
 {
     const std::string of = offset.start != offset.end
         ? "({} {})"_format(offset.start, offset.end)
