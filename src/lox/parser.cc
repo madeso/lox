@@ -686,6 +686,11 @@ struct Parser
         if (match({TokenType::TRUE})) { return std::make_shared<LiteralExpression>(previous_offset(), new_expr(), make_bool(true)); }
         if (match({TokenType::NIL})) { return std::make_shared<LiteralExpression>(previous_offset(), new_expr(), make_nil()); }
 
+        if(match({TokenType::LEFT_BRACKET}))
+        {
+            return parse_array();
+        }
+
         if (match({TokenType::NUMBER_INT, TokenType::NUMBER_FLOAT, TokenType::STRING}))
         {
             auto& prev = previous();
@@ -723,6 +728,24 @@ struct Parser
         }
 
         throw error(offset_for_range_error(previous_offset(), peek()), "Expected expression.");
+    }
+
+    std::shared_ptr<Expression>
+    parse_array()
+    {
+        const Offset start = previous_offset();
+        std::vector<std::shared_ptr<Expression>> values;
+        if (check(TokenType::RIGHT_BRACKET) == false)
+        {
+            do
+            {
+                values.emplace_back(parse_expression());
+            } while(match({TokenType::COMMA}));
+        }
+
+        const auto end = consume(TokenType::RIGHT_BRACKET, "Expect ']' to end array").offset;
+
+        return std::make_shared<ArrayExpression>(offset_start_end(start, end), new_expr(), std::move(values));
     }
 
 

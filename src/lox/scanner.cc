@@ -153,16 +153,18 @@ struct Scanner
         switch (first_char)
         {
         // single character tokens
-        case '(': add_token(TokenType::LEFT_PAREN);  break;
-        case ')': add_token(TokenType::RIGHT_PAREN); break;
-        case '{': add_token(TokenType::LEFT_BRACE);  break;
-        case '}': add_token(TokenType::RIGHT_BRACE); break;
-        case ',': add_token(TokenType::COMMA);       break;
-        case '.': add_token(TokenType::DOT);         break;
-        case '+': add_token(TokenType::PLUS);        break;
-        case ';': add_token(TokenType::SEMICOLON);   break;
-        case '*': add_token(TokenType::STAR);        break;
-        case ':': add_token(TokenType::COLON);       break;
+        case '(': add_token(TokenType::LEFT_PAREN);    break;
+        case ')': add_token(TokenType::RIGHT_PAREN);   break;
+        case '{': add_token(TokenType::LEFT_BRACE);    break;
+        case '}': add_token(TokenType::RIGHT_BRACE);   break;
+        case '[': add_token(TokenType::LEFT_BRACKET);  break;
+        case ']': add_token(TokenType::RIGHT_BRACKET); break;
+        case ',': add_token(TokenType::COMMA);         break;
+        case '.': add_token(TokenType::DOT);           break;
+        case '+': add_token(TokenType::PLUS);          break;
+        case ';': add_token(TokenType::SEMICOLON);     break;
+        case '*': add_token(TokenType::STAR);          break;
+        case ':': add_token(TokenType::COLON);         break;
 
         // 1 or 2 character tokens
         case '!': add_token(match('=') ? TokenType::BANG_EQUAL    : TokenType::BANG);    break;

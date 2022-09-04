@@ -925,6 +925,17 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     // expressions
 
     std::shared_ptr<Object>
+    on_array_expression(const ArrayExpression& x) override
+    {
+        std::vector<std::shared_ptr<Object>> values;
+        for(auto& val : x.values)
+        { 
+            values.emplace_back(evaluate(val));
+        }
+        return make_array(std::move(values));
+    }
+
+    std::shared_ptr<Object>
     on_call_expression(const CallExpression& x) override
     {
         auto callee = evaluate(x.callee);

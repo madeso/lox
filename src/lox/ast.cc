@@ -183,6 +183,17 @@ struct AstPrinter : ExpressionStringVisitor, StatementStringVisitor
         }
         return parenthesize("call", args);
     }
+    
+    std::string
+    on_array_expression(const ArrayExpression& x) override
+    {
+        std::vector<std::string> values {};
+        for(const auto& a: x.values)
+        {
+            values.emplace_back(a->accept(this));
+        }
+        return parenthesize("array", values);
+    }
 
     std::string
     on_constructor_expression(const ConstructorExpression& x) override
@@ -489,6 +500,19 @@ struct GraphvizPrinter : ExpressionStringVisitor, StatementStringVisitor
                 link(args, a->accept(this));
             }
         }
+        return n;
+    }
+    
+    std::string
+    on_array_expression(const ArrayExpression& x) override
+    {
+        const auto n = new_node("array");
+
+        for(const auto& a: x.values)
+        {
+            link(n, a->accept(this));
+        }
+
         return n;
     }
 

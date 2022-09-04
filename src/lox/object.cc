@@ -49,6 +49,20 @@ struct Bool : public Object
 };
 
 
+struct Array : public Object
+{
+    std::vector<std::shared_ptr<Object>> values;
+    explicit Array(std::vector<std::shared_ptr<Object>>&& b);
+    virtual ~Array() = default;
+
+    ObjectType get_type() const override;
+    std::vector<std::string> to_string() const override;
+    bool is_callable() const override { return false; }
+
+    std::optional<std::string> to_flat_string_representation() const;
+};
+
+
 struct NumberInt : public Object
 {
     Ti value;
@@ -193,6 +207,74 @@ Bool::to_string() const
 {
     if(value) { return {"true"}; }
     else { return {"false"}; }
+}
+
+
+
+// ----------------------------------------------------------------------------
+
+
+Array::Array(std::vector<std::shared_ptr<Object>>&& v)
+    : values(v)
+{
+}
+
+ObjectType
+Array::get_type() const
+{
+    return ObjectType::array;
+}
+
+
+std::optional<std::string>
+Array::to_flat_string_representation() const
+{
+    std::ostringstream ss;
+    ss << "[";
+    bool first = true;
+    for(const auto& v: values)
+    {
+        if(first) { first = false; }
+        else { ss <<  ", "; }
+
+        const auto s = v->to_string();
+        if(s.size() != 1) { return std::nullopt; }
+
+        ss << s[0];
+    }
+    ss << "]";
+    return ss.str();
+}
+
+
+std::vector<std::string>
+Array::to_string() const
+{
+    // todo(Gustav): move to setting)
+    constexpr std::string_view indent = "    ";
+    constexpr std::size_t max_length = 40;
+
+    if(auto flat = to_flat_string_representation(); flat && flat->length() < max_length)
+    {
+        return {*flat};
+    }
+
+    std::vector<std::string> r;
+    r.emplace_back("[");
+    bool first = true;
+    for(const auto& v: values)
+    {
+        if(first) { first = false; }
+        else { *r.rbegin() += ","; }
+
+        const auto ss = v->to_string();
+        for(const auto& s: ss)
+        {
+            r.emplace_back("{}{}"_format(indent, s));
+        }
+    }
+    r.emplace_back("]");
+    return r;
 }
 
 
@@ -570,6 +652,13 @@ std::shared_ptr<Object>
 make_bool(bool b)
 {
     return std::make_shared<Bool>(b);
+}
+
+
+std::shared_ptr<Object>
+make_array(std::vector<std::shared_ptr<Object>>&& values)
+{
+    return std::make_shared<Array>(std::move(values));
 }
 
 

@@ -331,6 +331,14 @@ struct MainResolver : ExpressionVoidVisitor, StatementVoidVisitor
         }
     }
 
+    void on_array_expression(const ArrayExpression& x) override
+    {
+        for(const auto& a: x.values)
+        {
+            resolve(a);
+        }
+    }
+
     void on_constructor_expression(const ConstructorExpression& x) override
     {
         resolve(x.klass);

@@ -286,6 +286,12 @@ write_code
                 }
             },
             {
+                "Array",
+                {
+                    {"std::vector<std::shared_ptr<Expression>>", "values"}
+                }
+            },
+            {
                 "Constructor",
                 {
                     {"Expression", "klass"},

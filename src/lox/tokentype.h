@@ -13,7 +13,9 @@ namespace lox
     enum class TokenType
     {
         // Single-character tokens.
-        LEFT_PAREN, RIGHT_PAREN, LEFT_BRACE, RIGHT_BRACE,
+        LEFT_PAREN, RIGHT_PAREN,
+        LEFT_BRACE, RIGHT_BRACE,
+        LEFT_BRACKET, RIGHT_BRACKET,
         COMMA, DOT, PLUS, SEMICOLON, SLASH, STAR,
         COLON,
 
@@ -45,6 +47,8 @@ namespace lox
         case TokenType::RIGHT_PAREN:    return "right_paren";
         case TokenType::LEFT_BRACE:     return "left_brace";
         case TokenType::RIGHT_BRACE:    return "right_brace";
+        case TokenType::LEFT_BRACKET:   return "left_bracket";
+        case TokenType::RIGHT_BRACKET:  return "right_bracket";
         case TokenType::COMMA:          return "comma";
         case TokenType::DOT:            return "dot";
         case TokenType::PLUS:           return "plus";
@@ -100,6 +104,8 @@ namespace lox
         case TokenType::RIGHT_PAREN:    return ")";
         case TokenType::LEFT_BRACE:     return "{";
         case TokenType::RIGHT_BRACE:    return "}";
+        case TokenType::LEFT_BRACKET:   return "[";
+        case TokenType::RIGHT_BRACKET:  return "]";
         case TokenType::COMMA:          return ",";
         case TokenType::DOT:            return ".";
         case TokenType::PLUS:           return "+";

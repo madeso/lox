@@ -13,7 +13,7 @@ using Tf = double;
 
 enum class ObjectType
 {
-    nil, string, boolean, number_int, number_float, callable, klass, instance, native_instance, native_package
+    nil, string, boolean, array, number_int, number_float, callable, klass, instance, native_instance, native_package
 };
 
 
@@ -29,6 +29,7 @@ constexpr std::string_view objecttype_to_string(ObjectType ot)
     case ObjectType::nil:             return "nil";
     case ObjectType::string:          return "string";
     case ObjectType::boolean:         return "boolean";
+    case ObjectType::array:         return "array";
     case ObjectType::number_int:      return "int";
     case ObjectType::number_float:    return "float";
     case ObjectType::klass:           return "class";
@@ -184,6 +185,7 @@ struct NativeInstance : Instance
 std::shared_ptr<Object>     make_nil              ();
 std::shared_ptr<Object>     make_string           (const std::string& str);
 std::shared_ptr<Object>     make_bool             (bool b);
+std::shared_ptr<Object>     make_array            (std::vector<std::shared_ptr<Object>>&& values);
 std::shared_ptr<Object>     make_number_int       (Ti f);
 std::shared_ptr<Object>     make_number_float     (Tf f);
 std::shared_ptr<Callable>   make_native_function

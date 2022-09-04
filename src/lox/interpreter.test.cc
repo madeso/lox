@@ -1208,6 +1208,21 @@ TEST_CASE("interpret ok", "[interpret]")
             "Hello, world!"
         }));
     }
+
+
+    SECTION("print array")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            var a = [1, 2, 3];
+            print a;
+        )lox");
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
+            "[1, 2, 3]"
+        }));
+    }
 }
 
 
