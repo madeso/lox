@@ -1209,7 +1209,6 @@ TEST_CASE("interpret ok", "[interpret]")
         }));
     }
 
-
     SECTION("print array")
     {
         const auto run_ok = run_string
@@ -1221,6 +1220,20 @@ TEST_CASE("interpret ok", "[interpret]")
         REQUIRE(StringEq(error_list, {}));
         CHECK(StringEq(console_out,{
             "[1, 2, 3]"
+        }));
+    }
+
+    SECTION("print array length")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            var a = [4, 5, 6];
+            print a.len();
+        )lox");
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
+            "3"
         }));
     }
 }

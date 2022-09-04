@@ -550,6 +550,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     std::shared_ptr<Environment> current_environment;
     std::shared_ptr<State> current_state;
     std::function<void (std::string)> on_line;
+    std::unique_ptr<ObjectIntegration> integration;
     std::unordered_map<std::size_t, std::shared_ptr<NativeKlass>> registered_klasses;
 
     //-------------------------------------------------------------------------
@@ -564,6 +565,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
         : error_handler(eh)
         , global_environment(ge)
         , on_line(ol)
+        , integration(make_object_integration())
     {
     }
 
@@ -932,7 +934,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
         { 
             values.emplace_back(evaluate(val));
         }
-        return make_array(std::move(values));
+        return integration->make_array(std::move(values));
     }
 
     std::shared_ptr<Object>

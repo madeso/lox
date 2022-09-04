@@ -43,6 +43,14 @@ constexpr std::string_view objecttype_to_string(ObjectType ot)
 
 // ----------------------------------------------------------------------------
 
+// thrown when there is a native error that needs to be reported back to the script
+struct NativeError
+{
+    std::string message;
+};
+
+// ----------------------------------------------------------------------------
+
 struct Object;
 struct NativeFunction;
 
@@ -185,7 +193,6 @@ struct NativeInstance : Instance
 std::shared_ptr<Object>     make_nil              ();
 std::shared_ptr<Object>     make_string           (const std::string& str);
 std::shared_ptr<Object>     make_bool             (bool b);
-std::shared_ptr<Object>     make_array            (std::vector<std::shared_ptr<Object>>&& values);
 std::shared_ptr<Object>     make_number_int       (Ti f);
 std::shared_ptr<Object>     make_number_float     (Tf f);
 std::shared_ptr<Callable>   make_native_function
@@ -193,6 +200,16 @@ std::shared_ptr<Callable>   make_native_function
     const std::string& name,
     std::function<std::shared_ptr<Object>(Callable*, ArgumentHelper& arguments)>&& func
 );
+
+struct ObjectIntegration
+{
+    ObjectIntegration() = default;
+    virtual ~ObjectIntegration() = default;
+
+    virtual std::shared_ptr<Object> make_array(std::vector<std::shared_ptr<Object>>&& values) = 0;
+};
+
+std::unique_ptr<ObjectIntegration> make_object_integration();
 
 // ----------------------------------------------------------------------------
 

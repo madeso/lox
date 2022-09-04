@@ -12,6 +12,46 @@ namespace lox { namespace
 
 // ----------------------------------------------------------------------------
 
+
+struct ObjectIntegrationImpl : ObjectIntegration
+{
+    std::unordered_map<std::string, std::shared_ptr<Callable>> array_methods;
+    
+    ObjectIntegrationImpl()
+    {
+        register_functions();
+    }
+
+    void add_array_method
+    (
+        const std::string& name,
+        std::function<std::shared_ptr<Object>(Callable*, ArgumentHelper& arguments)>&& func
+    )
+    {
+        array_methods.insert({name, make_native_function(name, std::move(func))});
+    }
+
+    std::shared_ptr<Callable>
+    find_array_method_or_null(const std::string& name)
+    {
+        auto found = array_methods.find(name);
+        if(found == array_methods.end())
+        {
+            return nullptr;
+        }
+
+        return found->second;
+    }
+
+    void register_functions();
+
+    std::shared_ptr<Object>
+    make_array(std::vector<std::shared_ptr<Object>>&& values) override;
+};
+
+
+// ----------------------------------------------------------------------------
+
 struct Nil : public Object
 {
     Nil() = default;
@@ -49,10 +89,12 @@ struct Bool : public Object
 };
 
 
-struct Array : public Object
+struct Array : public Object, WithProperties
 {
+    ObjectIntegrationImpl* integration;
     std::vector<std::shared_ptr<Object>> values;
-    explicit Array(std::vector<std::shared_ptr<Object>>&& b);
+    
+    Array(ObjectIntegrationImpl* i, std::vector<std::shared_ptr<Object>>&& b);
     virtual ~Array() = default;
 
     ObjectType get_type() const override;
@@ -60,6 +102,10 @@ struct Array : public Object
     bool is_callable() const override { return false; }
 
     std::optional<std::string> to_flat_string_representation() const;
+
+    WithProperties* get_properties_or_null() override { return this; }
+    std::shared_ptr<Object> get_property_or_null(const std::string& name) override;
+    bool set_property_or_false(const std::string& name, std::shared_ptr<Object> value) override;
 };
 
 
@@ -214,8 +260,9 @@ Bool::to_string() const
 // ----------------------------------------------------------------------------
 
 
-Array::Array(std::vector<std::shared_ptr<Object>>&& v)
-    : values(v)
+Array::Array(ObjectIntegrationImpl* i, std::vector<std::shared_ptr<Object>>&& v)
+    : integration(i)
+    , values(v)
 {
 }
 
@@ -275,6 +322,58 @@ Array::to_string() const
     }
     r.emplace_back("]");
     return r;
+}
+
+
+
+std::shared_ptr<Object>
+Array::get_property_or_null(const std::string& name)
+{
+    if(auto method = integration->find_array_method_or_null(name); method != nullptr)
+    {
+        auto self = shared_from_this();
+        assert(self != nullptr);
+        return method->bind(self);
+    }
+
+    return nullptr;
+}
+
+
+bool
+Array::set_property_or_false(const std::string&, std::shared_ptr<Object>)
+{
+    return false;
+}
+
+
+
+// ----------------------------------------------------------------------------
+
+
+void
+ObjectIntegrationImpl::register_functions()
+{
+    add_array_method("len", [](Callable* callable, ArgumentHelper& arguments) -> std::shared_ptr<Object>
+    {
+        // todo(Gustav): move to a more clean place?
+        assert(callable->is_bound());
+        BoundCallable* bound = static_cast<BoundCallable*>(callable);
+        assert(bound->bound != nullptr);
+        assert(bound->bound->get_type() == ObjectType::array);
+        std::shared_ptr<Array> array = std::static_pointer_cast<Array>(bound->bound);
+        assert(array != nullptr);
+
+        arguments.complete();
+
+        const std::size_t length = array->values.size();
+        if(static_cast<std::size_t>(std::numeric_limits<Ti>::max()) < length)
+        {
+            throw NativeError { "array length too big for script numbers" };
+        }
+
+        return make_number_int( static_cast<Ti>(length) );
+    });
 }
 
 
@@ -656,9 +755,14 @@ make_bool(bool b)
 
 
 std::shared_ptr<Object>
-make_array(std::vector<std::shared_ptr<Object>>&& values)
+ObjectIntegrationImpl::make_array(std::vector<std::shared_ptr<Object>>&& values)
 {
-    return std::make_shared<Array>(std::move(values));
+    return std::make_shared<Array>(this, std::move(values));
+}
+
+std::unique_ptr<ObjectIntegration> make_object_integration()
+{
+    return std::make_unique<ObjectIntegrationImpl>();
 }
 
 
