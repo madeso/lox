@@ -28,6 +28,7 @@ struct ObjectIntegrationImpl : ObjectIntegration
         std::function<std::shared_ptr<Object>(Callable*, ArgumentHelper& arguments)>&& func
     )
     {
+        assert(array_methods.find(name) == array_methods.end());
         array_methods.insert({name, make_native_function(name, std::move(func))});
     }
 
@@ -373,6 +374,24 @@ ObjectIntegrationImpl::register_functions()
         }
 
         return make_number_int( static_cast<Ti>(length) );
+    });
+
+    add_array_method("push", [](Callable* callable, ArgumentHelper& arguments) -> std::shared_ptr<Object>
+    {
+        // todo(Gustav): move to a more clean place?
+        assert(callable->is_bound());
+        BoundCallable* bound = static_cast<BoundCallable*>(callable);
+        assert(bound->bound != nullptr);
+        assert(bound->bound->get_type() == ObjectType::array);
+        std::shared_ptr<Array> array = std::static_pointer_cast<Array>(bound->bound);
+        assert(array != nullptr);
+
+        auto to_add = arguments.require_object();
+        arguments.complete();
+
+        array->values.emplace_back(std::move(to_add));
+
+        return make_nil();
     });
 }
 
@@ -935,6 +954,14 @@ ArgumentHelper::complete()
     assert(has_read_all_arguments==false && "complete() called twice!");
     has_read_all_arguments = true;
     verify_number_of_arguments(args, next_argument);
+}
+
+std::shared_ptr<Object>
+ArgumentHelper::require_object()
+{
+    const auto argument_index = next_argument++;
+    if(args.arguments.size() <= argument_index) { return nullptr; }
+    return get_object_from_arg(args, argument_index);
 }
 
 std::string

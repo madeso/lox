@@ -409,6 +409,7 @@ struct ArgumentHelper
 
     // todo(Gustav): add some match/switch helper to handle overloads
 
+    std::shared_ptr<Object>     require_object   ();
     std::string                 require_string   ();
     bool                        require_bool     ();
     Ti                          require_int      ();

@@ -1541,6 +1541,15 @@ verify_number_of_arguments(const Arguments& args, u64 arity)
 
 
 
+std::shared_ptr<Object>
+get_object_from_arg(const Arguments& args, u64 argument_index)
+{
+    assert(argument_index < args.arguments.size());
+    return args.arguments[argument_index];
+}
+
+
+
 std::string
 get_string_from_arg(const Arguments& args, u64 argument_index)
 {

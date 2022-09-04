@@ -1236,6 +1236,23 @@ TEST_CASE("interpret ok", "[interpret]")
             "3"
         }));
     }
+
+    SECTION("push items to array")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            var a = [];
+            print a;
+            a.push(42);
+            print a;
+        )lox");
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
+            "[]",
+            "[42]"
+        }));
+    }
 }
 
 
