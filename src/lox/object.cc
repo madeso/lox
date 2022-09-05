@@ -22,14 +22,19 @@ std::string quote_string(const std::string& str)
         {
         case '\r':
             ss << "\\r";
+            break;
         case '\t':
             ss << "\\t";
+            break;
         case '\n':
             ss << "\\n";
+            break;
         case '"':
             ss << "\\\"";
+            break;
         default:
             ss << c;
+            break;
         }
     }
     ss << '\"';
