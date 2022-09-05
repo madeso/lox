@@ -55,15 +55,26 @@ struct Object;
 struct NativeFunction;
 
 
+struct ToStringOptions
+{
+    std::string_view indent = "    ";
+    std::size_t max_length = 40;
+    bool quote_string;
+
+    static ToStringOptions for_error();
+    static ToStringOptions for_print();
+    static ToStringOptions for_debug();
+};
+
 struct Object : std::enable_shared_from_this<Object>
 {
     Object() = default;
     virtual ~Object() = default;
 
-    std::string to_flat_string() const;
+    std::string to_flat_string(const ToStringOptions& tso) const;
 
     virtual ObjectType get_type() const = 0;
-    virtual std::vector<std::string> to_string() const = 0;
+    virtual std::vector<std::string> to_string(const ToStringOptions&) const = 0;
     virtual bool is_callable() const = 0;
     
     virtual bool has_properties();
@@ -100,7 +111,7 @@ struct BoundCallable : Callable
 
     BoundCallable(std::shared_ptr<Object> bound, std::shared_ptr<NativeFunction> callable);
     ~BoundCallable();
-    std::vector<std::string> to_string() const override;
+    std::vector<std::string> to_string(const ToStringOptions&) const override;
     std::shared_ptr<Object> call(const Arguments& arguments) override;
     std::shared_ptr<Callable> bind(std::shared_ptr<Object> instance) override;
     bool is_bound() const override;
@@ -170,7 +181,7 @@ struct NativeKlass : Klass
 
     NativeKlass(const std::string& n, std::size_t id, std::shared_ptr<Klass> sk);
 
-    std::vector<std::string> to_string() const override;
+    std::vector<std::string> to_string(const ToStringOptions&) const override;
 
     void add_property(const std::string& name, std::unique_ptr<Property> prop);
 };
@@ -180,7 +191,7 @@ struct NativeInstance : Instance
     NativeInstance(std::shared_ptr<NativeKlass> o);
 
     ObjectType get_type() const override;
-    std::vector<std::string> to_string() const override;
+    std::vector<std::string> to_string(const ToStringOptions&) const override;
 
     std::shared_ptr<Object> get_field_or_null(const std::string& name) override;
     bool set_field_or_false(const std::string& name, std::shared_ptr<Object> value) override;

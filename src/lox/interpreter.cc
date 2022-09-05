@@ -121,7 +121,7 @@ struct ScriptFunction : Callable
     }
 
     std::vector<std::string>
-    to_string() const override
+    to_string(const ToStringOptions&) const override
     {
         return {"<{}>"_format(to_str)};
     }
@@ -303,7 +303,7 @@ struct ScriptInstance : Instance
     }
 
     std::vector<std::string>
-    to_string() const override
+    to_string(const ToStringOptions&) const override
     {
         return {"<instance {}>"_format(klass->klass_name)};
     }
@@ -367,7 +367,7 @@ struct ScriptKlass : Klass
     }
 
     std::vector<std::string>
-    to_string() const override
+    to_string(const ToStringOptions&) const override
     {
         return {"<class {}>"_format(klass_name)};
     }
@@ -406,9 +406,9 @@ void append(std::vector<T>* dst, const std::vector<T>& src)
     dst->insert(dst->end(), src.begin(), src.end());
 }
 
-std::vector<std::string> flatten_message(const std::string& message, std::shared_ptr<Object> after)
+std::vector<std::string> flatten_message(const ToStringOptions& tso, const std::string& message, std::shared_ptr<Object> after)
 {
-    const auto end = after->to_string();
+    const auto end = after->to_string(tso);
     if(end.size() == 1)
     {
         return { message + end[0] };
@@ -423,9 +423,9 @@ std::vector<std::string> flatten_message(const std::string& message, std::shared
     }
 }
 
-std::vector<std::string> flatten_message(std::shared_ptr<Object> before, const std::string& message)
+std::vector<std::string> flatten_message(const ToStringOptions& tso, std::shared_ptr<Object> before, const std::string& message)
 {
-    const auto start = before->to_string();
+    const auto start = before->to_string(tso);
     if(start.size() == 1)
     {
         return { start[0] + message };
@@ -440,10 +440,10 @@ std::vector<std::string> flatten_message(std::shared_ptr<Object> before, const s
     }
 }
 
-std::vector<std::string> flatten_message(std::shared_ptr<Object> before, const std::string& message, std::shared_ptr<Object> after)
+std::vector<std::string> flatten_message(const ToStringOptions& tso, std::shared_ptr<Object> before, const std::string& message, std::shared_ptr<Object> after)
 {
-    const auto start = before->to_string();
-    const auto end = after->to_string();
+    const auto start = before->to_string(tso);
+    const auto end = after->to_string(tso);
     
     std::vector<std::string> r;
     r.reserve(start.size() + 1 + end.size());
@@ -475,22 +475,22 @@ std::vector<std::string> flatten_message(std::shared_ptr<Object> before, const s
 
 void report_error_object(ErrorHandler* error_handler, const Offset& offset, const std::string& message, std::shared_ptr<Object> after)
 {
-    error_handler->on_errors(offset, flatten_message(message, after));
+    error_handler->on_errors(offset, flatten_message(ToStringOptions::for_error(), message, after));
 }
 
 void report_error_object(ErrorHandler* error_handler, const Offset& offset, std::shared_ptr<Object> before, const std::string& message)
 {
-    error_handler->on_errors(offset, flatten_message(before, message));
+    error_handler->on_errors(offset, flatten_message(ToStringOptions::for_error(), before, message));
 }
 
 void report_error_object(ErrorHandler* error_handler, const Offset& offset, std::shared_ptr<Object> before, const std::string& message, std::shared_ptr<Object> after)
 {
-    error_handler->on_errors(offset, flatten_message(before, message, after));
+    error_handler->on_errors(offset, flatten_message(ToStringOptions::for_error(), before, message, after));
 }
 
 void report_note_object(ErrorHandler* error_handler, const Offset& offset, const std::string& message, std::shared_ptr<Object> after)
 {
-    error_handler->on_notes(offset, flatten_message(message, after));
+    error_handler->on_notes(offset, flatten_message(ToStringOptions::for_error(), message, after));
 }
 
 void report_error_no_properties(const Offset& offset, ErrorHandler* error_handler, std::shared_ptr<Object> object)
@@ -940,7 +940,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     on_print_statement(const PrintStatement& x) override
     {
         auto value = evaluate(x.expression);
-        const auto to_print = value->to_string();
+        const auto to_print = value->to_string(ToStringOptions::for_print());
         for(const auto& p: to_print)
         {
             on_line(p);

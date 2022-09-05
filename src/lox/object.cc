@@ -59,7 +59,7 @@ struct Nil : public Object
     virtual ~Nil() = default;
 
     ObjectType get_type() const override;
-    std::vector<std::string> to_string() const override;
+    std::vector<std::string> to_string(const ToStringOptions&) const override;
     bool is_callable() const override { return false; }
 };
 
@@ -72,7 +72,7 @@ struct String : public Object
     virtual ~String() = default;
 
     ObjectType get_type() const override;
-    std::vector<std::string> to_string() const override;
+    std::vector<std::string> to_string(const ToStringOptions&) const override;
     bool is_callable() const override { return false; }
 };
 
@@ -85,7 +85,7 @@ struct Bool : public Object
     virtual ~Bool() = default;
 
     ObjectType get_type() const override;
-    std::vector<std::string> to_string() const override;
+    std::vector<std::string> to_string(const ToStringOptions&) const override;
     bool is_callable() const override { return false; }
 };
 
@@ -99,10 +99,10 @@ struct Array : public Object
     virtual ~Array() = default;
 
     ObjectType get_type() const override;
-    std::vector<std::string> to_string() const override;
+    std::vector<std::string> to_string(const ToStringOptions&) const override;
     bool is_callable() const override { return false; }
 
-    std::optional<std::string> to_flat_string_representation() const;
+    std::optional<std::string> to_flat_string_representation(const ToStringOptions&) const;
 
     bool has_properties() override { return true; }
     std::shared_ptr<Object> get_property_or_null(const std::string& name) override;
@@ -159,7 +159,7 @@ struct NumberInt : public Object
     virtual ~NumberInt() = default;
 
     ObjectType get_type() const override;
-    std::vector<std::string> to_string() const override;
+    std::vector<std::string> to_string(const ToStringOptions&) const override;
     bool is_callable() const override { return false; }
 };
 
@@ -171,7 +171,7 @@ struct NumberFloat : public Object
     virtual ~NumberFloat() = default;
 
     ObjectType get_type() const override;
-    std::vector<std::string> to_string() const override;
+    std::vector<std::string> to_string(const ToStringOptions&) const override;
     bool is_callable() const override { return false; }
 };
 
@@ -205,7 +205,7 @@ struct NativeFunction : Callable
     }
 
     std::vector<std::string>
-    to_string() const override
+    to_string(const ToStringOptions&) const override
     {
         return {"<native fun {}>"_format(name)};
     }
@@ -246,7 +246,7 @@ Nil::get_type() const
 }
 
 std::vector<std::string>
-Nil::to_string() const
+Nil::to_string(const ToStringOptions&) const
 {
     return {"nil"};
 }
@@ -268,7 +268,7 @@ String::get_type() const
 }
 
 std::vector<std::string>
-String::to_string() const
+String::to_string(const ToStringOptions&) const
 {
     return {value};
 }
@@ -291,7 +291,7 @@ Bool::get_type() const
 }
 
 std::vector<std::string>
-Bool::to_string() const
+Bool::to_string(const ToStringOptions&) const
 {
     if(value) { return {"true"}; }
     else { return {"false"}; }
@@ -316,7 +316,7 @@ Array::get_type() const
 
 
 std::optional<std::string>
-Array::to_flat_string_representation() const
+Array::to_flat_string_representation(const ToStringOptions& tso) const
 {
     std::ostringstream ss;
     ss << "[";
@@ -326,7 +326,7 @@ Array::to_flat_string_representation() const
         if(first) { first = false; }
         else { ss <<  ", "; }
 
-        const auto s = v->to_string();
+        const auto s = v->to_string(tso);
         if(s.size() != 1) { return std::nullopt; }
 
         ss << s[0];
@@ -337,13 +337,9 @@ Array::to_flat_string_representation() const
 
 
 std::vector<std::string>
-Array::to_string() const
+Array::to_string(const ToStringOptions& tso) const
 {
-    // todo(Gustav): move to setting)
-    constexpr std::string_view indent = "    ";
-    constexpr std::size_t max_length = 40;
-
-    if(auto flat = to_flat_string_representation(); flat && flat->length() < max_length)
+    if(auto flat = to_flat_string_representation(tso); flat && flat->length() < tso.max_length)
     {
         return {*flat};
     }
@@ -356,10 +352,10 @@ Array::to_string() const
         if(first) { first = false; }
         else { *r.rbegin() += ","; }
 
-        const auto ss = v->to_string();
+        const auto ss = v->to_string(tso);
         for(const auto& s: ss)
         {
-            r.emplace_back("{}{}"_format(indent, s));
+            r.emplace_back("{}{}"_format(tso.indent, s));
         }
     }
     r.emplace_back("]");
@@ -454,7 +450,7 @@ NumberInt::get_type() const
 }
 
 std::vector<std::string>
-NumberInt::to_string() const
+NumberInt::to_string(const ToStringOptions&) const
 {
     return {"{0}"_format(value)};
 }
@@ -476,7 +472,7 @@ NumberFloat::get_type() const
 }
 
 std::vector<std::string>
-NumberFloat::to_string() const
+NumberFloat::to_string(const ToStringOptions&) const
 {
     return {"{0}"_format(value)};
 }
@@ -487,10 +483,10 @@ NumberFloat::to_string() const
 
 
 std::string
-Object::to_flat_string() const
+Object::to_flat_string(const ToStringOptions& tso) const
 {
     std::ostringstream ss;
-    const auto arr = to_string();
+    const auto arr = to_string(tso);
     const auto many = arr.size() > 1;
     if(many) { ss << "["; }
 
@@ -582,9 +578,9 @@ BoundCallable::BoundCallable(std::shared_ptr<Object> b, std::shared_ptr<NativeFu
 BoundCallable::~BoundCallable() = default;
 
 std::vector<std::string>
-BoundCallable::to_string() const
+BoundCallable::to_string(const ToStringOptions&) const
 {
-    return {"<{} bound to {}>"_format(bound->to_flat_string(), callable->to_flat_string())};
+    return {"<{} bound to {}>"_format(bound->to_flat_string(ToStringOptions::for_debug()), callable->to_flat_string(ToStringOptions::for_debug()))};
 }
 
 std::shared_ptr<Object>
@@ -760,7 +756,7 @@ NativeKlass::NativeKlass(const std::string& n, std::size_t id, std::shared_ptr<K
 }
 
 std::vector<std::string>
-NativeKlass::to_string() const
+NativeKlass::to_string(const ToStringOptions&) const
 {
     return {"<native class {}>"_format(klass_name)};
 }
@@ -786,7 +782,7 @@ NativeInstance::get_type() const
 }
 
 std::vector<std::string>
-NativeInstance::to_string() const
+NativeInstance::to_string(const ToStringOptions&) const
 {
     return {"<native instance {}>"_format(klass->klass_name)};
 }
@@ -1092,6 +1088,46 @@ ArgumentHelper::impl_require_native_instance(std::size_t klass)
 
 // ----------------------------------------------------------------------------
 
+
+
+// std::string_view indent = "    ";
+// std::size_t max_length = 40;
+// bool quote_string;
+
+ToStringOptions ToStringOptions::for_error()
+{
+    return
+    {
+        "    ",
+        40,
+        true
+    };
+}
+
+ToStringOptions ToStringOptions::for_print()
+{
+    return
+    {
+        "    ",
+        40,
+        false
+    };
+}
+
+ToStringOptions ToStringOptions::for_debug()
+{
+    return
+    {
+        "    ",
+        40,
+        true
+    };
+}
+
+
+
+// ----------------------------------------------------------------------------
+
 namespace detail
 {
     std::size_t create_type_id()
@@ -1158,7 +1194,7 @@ struct NativePackage : Object, Scope
     }
 
     std::vector<std::string>
-    to_string() const override
+    to_string(const ToStringOptions&) const override
     {
         return {"<native pkg {}>"_format(package_name)};
     }
