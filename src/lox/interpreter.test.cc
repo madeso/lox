@@ -366,6 +366,105 @@ TEST_CASE("interpret fail", "[interpret]")
         }));
     }
 
+    SECTION("index array set with string")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            var a = [42];
+            a['dog'] = 24;
+        )lox");
+        CHECK_FALSE(run_ok);
+        CHECK(StringEq(console_out,{}));
+        CHECK(ErrorEq(error_list, {
+            {error, 40, 52, {"array index needs to be a int, was string"}},
+            {note, 39, 40, {"object evaluated to [42]"}},
+            {note, 41, 46, {"index evaluated to dog"}},
+            {note, 50, 52, {"value evaluated to 24"}},
+        }));
+    }
+
+    SECTION("index array set outside positive")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            var a = [42];
+            a[1] = 24;
+        )lox");
+        CHECK_FALSE(run_ok);
+        CHECK(StringEq(console_out,{}));
+        CHECK(ErrorEq(error_list, {
+            {error, 40, 48, {"array index 1 is out of range, needs to be lower than 1"}},
+            {note, 39, 40, {"object evaluated to [42]"}},
+            {note, 41, 42, {"index evaluated to 1"}},
+            {note, 46, 48, {"value evaluated to 24"}},
+        }));
+    }
+
+    SECTION("index array set outside negative")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            var a = [42];
+            a[-42] = 24;
+        )lox");
+        CHECK_FALSE(run_ok);
+        CHECK(StringEq(console_out,{}));
+        CHECK(ErrorEq(error_list, {
+            {error, 40, 50, {"array index needs to be positive, was -42"}},
+            {note, 39, 40, {"object evaluated to [42]"}},
+            {note, 41, 44, {"index evaluated to -42"}},
+            {note, 48, 50, {"value evaluated to 24"}},
+        }));
+    }
+
+    SECTION("index array get with string")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            var a = [42];
+            print a['dog'];
+        )lox");
+        CHECK_FALSE(run_ok);
+        CHECK(StringEq(console_out,{}));
+        CHECK(ErrorEq(error_list, {
+            {error, 46, 53, {"array index needs to be a int, was string"}},
+            {note, 45, 46, {"object evaluated to [42]"}},
+            {note, 47, 52, {"index evaluated to dog"}},
+        }));
+    }
+
+    SECTION("index array get outside positive")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            var a = [42];
+            print a[1];
+        )lox");
+        CHECK_FALSE(run_ok);
+        CHECK(StringEq(console_out,{}));
+        CHECK(ErrorEq(error_list, {
+            {error, 46, 49, {"array index 1 out of range, needs to be lower than 1"}},
+            {note, 45, 46, {"object evaluated to [42]"}},
+            {note, 47, 48, {"index evaluated to 1"}},
+        }));
+    }
+
+    SECTION("index array get outside negative")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            var a = [42];
+            print a[-42];
+        )lox");
+        CHECK_FALSE(run_ok);
+        CHECK(StringEq(console_out,{}));
+        CHECK(ErrorEq(error_list, {
+            {error, 46, 51, {"array index needs to be positive, was -42"}},
+            {note, 45, 46, {"object evaluated to [42]"}},
+            {note, 47, 50, {"index evaluated to -42"}},
+        }));
+    }
+
     SECTION("now invalid headscratcher: can't assign missing var/override functions in class")
     {
         const auto run_ok = run_string
@@ -1251,6 +1350,21 @@ TEST_CASE("interpret ok", "[interpret]")
         CHECK(StringEq(console_out,{
             "[]",
             "[42]"
+        }));
+    }
+
+    SECTION("index get and set")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            var a = [42];
+            a[0] = 24;
+            print a[0];
+        )lox");
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
+            "24"
         }));
     }
 }

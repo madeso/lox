@@ -207,15 +207,27 @@ struct AstPrinter : ExpressionStringVisitor, StatementStringVisitor
     }
 
     std::string
-    on_get_expression(const GetExpression& x) override
+    on_getproperty_expression(const GetPropertyExpression& x) override
     {
-        return parenthesize("get", {x.name, x.object->accept(this)});
+        return parenthesize("get_prop", {x.name, x.object->accept(this)});
     }
 
     std::string
-    on_set_expression(const SetExpression& x) override
+    on_setproperty_expression(const SetPropertyExpression& x) override
     {
-        return parenthesize("set", {x.value->accept(this), x.name, x.object->accept(this)});
+        return parenthesize("set_prop", {x.value->accept(this), x.name, x.object->accept(this)});
+    }
+
+    std::string
+    on_getindex_expression(const GetIndexExpression& x) override
+    {
+        return parenthesize("get_index", {x.index->accept(this), x.object->accept(this)});
+    }
+
+    std::string
+    on_setindex_expression(const SetIndexExpression& x) override
+    {
+        return parenthesize("set_index", {x.value->accept(this), x.index->accept(this), x.object->accept(this)});
     }
     
     std::string
@@ -535,9 +547,9 @@ struct GraphvizPrinter : ExpressionStringVisitor, StatementStringVisitor
     }
 
     std::string
-    on_get_expression(const GetExpression& x) override
+    on_getproperty_expression(const GetPropertyExpression& x) override
     {
-        const auto n = new_node("get");
+        const auto n = new_node("get_prop");
         const auto v = new_node(x.name);
         link(n, v);
         link(v, x.object->accept(this));
@@ -545,10 +557,31 @@ struct GraphvizPrinter : ExpressionStringVisitor, StatementStringVisitor
     }
 
     std::string
-    on_set_expression(const SetExpression& x) override
+    on_setproperty_expression(const SetPropertyExpression& x) override
     {
-        const auto n = new_node("set");
+        const auto n = new_node("set_prop");
         const auto v = new_node(x.name);
+        link(n, v);
+        link(n, x.value->accept(this));
+        link(v, x.object->accept(this));
+        return n;
+    }
+
+    std::string
+    on_getindex_expression(const GetIndexExpression& x) override
+    {
+        const auto n = new_node("get_index");
+        const auto v = new_node(x.index->accept(this));
+        link(n, v);
+        link(v, x.object->accept(this));
+        return n;
+    }
+
+    std::string
+    on_setindex_expression(const SetIndexExpression& x) override
+    {
+        const auto n = new_node("set_index");
+        const auto v = new_node(x.index->accept(this));
         link(n, v);
         link(n, x.value->accept(this));
         link(v, x.object->accept(this));

@@ -348,14 +348,27 @@ struct MainResolver : ExpressionVoidVisitor, StatementVoidVisitor
         }
     }
 
-    void on_get_expression(const GetExpression& x) override
+    void on_getproperty_expression(const GetPropertyExpression& x) override
     {
         resolve(x.object);
     }
 
-    void on_set_expression(const SetExpression& x) override
+    void on_setproperty_expression(const SetPropertyExpression& x) override
     {
         resolve(x.value);
+        resolve(x.object);
+    }
+
+    void on_getindex_expression(const GetIndexExpression& x) override
+    {
+        resolve(x.index);
+        resolve(x.object);
+    }
+
+    void on_setindex_expression(const SetIndexExpression& x) override
+    {
+        resolve(x.value);
+        resolve(x.index);
         resolve(x.object);
     }
 

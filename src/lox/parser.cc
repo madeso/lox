@@ -459,13 +459,22 @@ struct Parser
                     name, expr->offset, std::move(rhs)
                 );
             }
-            else if(expr->get_type() == ExpressionType::get_expression)
+            else if(expr->get_type() == ExpressionType::getproperty_expression)
             {
-                auto* set = static_cast<GetExpression*>(expr.get());
-                return std::make_shared<SetExpression>
+                auto* set = static_cast<GetPropertyExpression*>(expr.get());
+                return std::make_shared<SetPropertyExpression>
                 (
                     offset_start_end(expr->offset, rhs->offset), new_expr(), 
                     std::move(set->object), set->name, std::move(rhs)
+                );
+            }
+            else if(expr->get_type() == ExpressionType::getindex_expression)
+            {
+                auto* set = static_cast<GetIndexExpression*>(expr.get());
+                return std::make_shared<SetIndexExpression>
+                (
+                    offset_start_end(expr->offset, rhs->offset), new_expr(), 
+                    std::move(set->object), std::move(set->index), std::move(rhs)
                 );
             }
 
@@ -618,7 +627,7 @@ struct Parser
                 else if(match({TokenType::DOT}))
                 {
                     const auto& name = consume(TokenType::IDENTIFIER, "Expected property name after '.'");
-                    expr = std::make_shared<GetExpression>(name.offset, new_expr(), std::move(expr), std::string(name.lexeme));
+                    expr = std::make_shared<GetPropertyExpression>(name.offset, new_expr(), std::move(expr), std::string(name.lexeme));
                 }
                 else
                 {
@@ -642,7 +651,16 @@ struct Parser
             else if(match({TokenType::DOT}))
             {
                 const auto& name = consume(TokenType::IDENTIFIER, "Expected property name after '.'");
-                expr = std::make_shared<GetExpression>(name.offset, new_expr(), std::move(expr), std::string(name.lexeme));
+                expr = std::make_shared<GetPropertyExpression>(name.offset, new_expr(), std::move(expr), std::string(name.lexeme));
+            }
+            else if(match({TokenType::LEFT_BRACKET}))
+            {
+                // todo(Gustav): copy to new parsing
+                const auto start = previous_offset();
+                auto index = parse_expression();
+                consume(TokenType::RIGHT_BRACKET, "expected ']' after array indexer");
+                const auto end = previous_offset();
+                expr = std::make_shared<GetIndexExpression>(offset_start_end(start, end), new_expr(), std::move(expr), std::move(index));
             }
             else
             {

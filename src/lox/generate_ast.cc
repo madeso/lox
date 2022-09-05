@@ -299,17 +299,32 @@ write_code
                 }
             },
             {
-                "Get",
+                "GetProperty",
                 {
                     {"Expression", "object"},
                     {"std::string", "name"}
                 }
             },
             {
-                "Set",
+                "SetProperty",
                 {
                     {"Expression", "object"},
                     {"std::string", "name"},
+                    {"Expression", "value"}
+                }
+            },
+            {
+                "GetIndex",
+                {
+                    {"Expression", "object"},
+                    {"Expression", "index"}
+                }
+            },
+            {
+                "SetIndex",
+                {
+                    {"Expression", "object"},
+                    {"Expression", "index"},
                     {"Expression", "value"}
                 }
             },

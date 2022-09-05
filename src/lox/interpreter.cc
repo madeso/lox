@@ -524,6 +524,37 @@ void report_error_no_properties(const Offset& offset, ErrorHandler* error_handle
     }
 }
 
+void report_error_no_indexer(const Offset& offset, ErrorHandler* error_handler, std::shared_ptr<Object> object)
+{
+    assert(error_handler);
+    assert(object);
+    const auto type = object->get_type();
+
+    // special case for nil, no need to write the value of nil
+    if(type == ObjectType::nil)
+    {
+        error_handler->on_error
+        (
+            offset, "{} can't be indexed"_format
+            (
+                objecttype_to_string(type)
+            )
+        );
+    }
+    else
+    {
+        report_error_object
+        (
+            error_handler, offset,
+            "{} can't be indexed, has value "_format
+            (
+                objecttype_to_string(type)
+            ),
+            object
+        );
+    }
+}
+
 
 
 Tf
@@ -1131,7 +1162,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     }
 
     std::shared_ptr<Object>
-    on_get_expression(const GetExpression& x) override
+    on_getproperty_expression(const GetPropertyExpression& x) override
     {
         auto object = evaluate(x.object);
         if(WithProperties* props = object->get_properties_or_null(); props != nullptr)
@@ -1160,9 +1191,10 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     }
 
     std::shared_ptr<Object>
-    on_set_expression(const SetExpression& x) override
+    on_setproperty_expression(const SetPropertyExpression& x) override
     {
         auto object = evaluate(x.object);
+        auto value = evaluate(x.value);
 
         WithProperties* props = object->get_properties_or_null();
         if(props == nullptr)
@@ -1171,7 +1203,6 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
             throw RuntimeError{};
         }
 
-        auto value = evaluate(x.value);
         try
         {
             const auto was_set = props->set_property_or_false(x.name, value);
@@ -1220,6 +1251,142 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
                         invalidarg_to_string(invalid_arg_error)
                     ),
                     object
+                );
+            }
+            throw RuntimeError{};
+        }
+
+        return value;
+    }
+
+    std::shared_ptr<Object>
+    on_getindex_expression(const GetIndexExpression& x) override
+    {
+        auto object = evaluate(x.object);
+        auto index = evaluate(x.index);
+        
+        if(object->has_index())
+        {
+            try
+            {
+                auto r = object->get_index_or_null(index);
+
+                if(r == nullptr)
+                {
+                    report_error_object
+                    (
+                        error_handler, x.offset, object,
+                        " doesn't have a index for ",
+                        index
+                    );
+                    throw RuntimeError{};
+                }
+
+                return r;
+            }
+            catch(const NativeError& err)
+            {
+                error_handler->on_error(x.offset, err.message);
+                report_note_object
+                (
+                    error_handler, x.object->offset, "object evaluated to ", object
+                );
+                report_note_object
+                (
+                    error_handler, x.index->offset, "index evaluated to ", index
+                );
+
+                throw RuntimeError{};
+            }
+        }
+
+        report_error_no_indexer(x.offset, error_handler, object);
+        throw RuntimeError{};
+    }
+
+    std::shared_ptr<Object>
+    on_setindex_expression(const SetIndexExpression& x) override
+    {
+        auto object = evaluate(x.object);
+        auto index = evaluate(x.index);
+        auto value = evaluate(x.value);
+
+        if(object->has_index() == false)
+        {
+            report_error_no_indexer(x.offset, error_handler, object);
+            throw RuntimeError{};
+        }
+
+        
+        try
+        {
+            const auto was_set = object->set_index_or_false(index, value);
+
+            if(was_set == false)
+            {
+                // todo(Gustav): edit distance + custom error message?
+                report_error_object
+                (
+                    error_handler, x.offset, object,
+                    " doesn't have a index for ", index
+                );
+                throw RuntimeError{};
+            }
+        }
+        catch(const NativeError& err)
+        {
+            error_handler->on_error(x.offset, err.message);
+            report_note_object
+            (
+                error_handler, x.object->offset, "object evaluated to ", object
+            );
+            report_note_object
+            (
+                error_handler, x.index->offset, "index evaluated to ", index
+            );
+            report_note_object
+            (
+                error_handler, x.value->offset, "value evaluated to ", value
+            );
+
+            throw RuntimeError{};
+        }
+        catch(const InvalidArgumentType& invalid_arg_error)
+        {
+            // special case for nil, no need to write the value of nil
+            const auto actual_type = value->get_type();
+            if(actual_type == ObjectType::nil)
+            {
+                report_error_object
+                (
+                    error_handler, x.offset,
+                    "expected {} but got nil for index "_format
+                    (
+                        invalidarg_to_string(invalid_arg_error)
+                    ),
+                    index
+                );
+                report_note_object
+                (
+                    error_handler, x.offset, "object evaluated to", object
+                );
+            }
+            else
+            {
+                report_error_object
+                (
+                    error_handler, x.offset,
+                    value,
+                    " ({}), expected {}, is not accepted for index "_format
+                    (
+                        smart_object_to_type_string(value),
+                        invalidarg_to_string(invalid_arg_error)
+                    ),
+                    index
+                );
+                report_note_object
+                (
+                    error_handler, x.offset, "object evaluated to", object
                 );
             }
             throw RuntimeError{};

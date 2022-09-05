@@ -73,7 +73,12 @@ struct Object : std::enable_shared_from_this<Object>
     virtual std::vector<std::string> to_string() const = 0;
     virtual bool is_callable() const = 0;
     
+    // todo(Gustav): merge with WithProperties and make this a bool call
     virtual WithProperties* get_properties_or_null();
+    
+    virtual bool has_index() const;
+    virtual std::shared_ptr<Object> get_index_or_null(std::shared_ptr<Object> index);
+    virtual bool set_index_or_false(std::shared_ptr<Object> index, std::shared_ptr<Object> value);
 };
 
 

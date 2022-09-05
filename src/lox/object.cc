@@ -107,6 +107,47 @@ struct Array : public Object, WithProperties
     WithProperties* get_properties_or_null() override { return this; }
     std::shared_ptr<Object> get_property_or_null(const std::string& name) override;
     bool set_property_or_false(const std::string& name, std::shared_ptr<Object> value) override;
+
+
+    static std::size_t as_array_index(std::shared_ptr<Object> o)
+    {
+        const std::optional<Ti> index = as_int(o);
+        if(index.has_value() == false)
+        {
+            // todo(Gustav): allow multiple rows to include object to_string
+            throw NativeError{ "array index needs to be a int, was {}"_format( objecttype_to_string(o->get_type()) ) };
+        }
+
+        if(*index < 0)
+        {
+            throw NativeError{ "array index needs to be positive, was {}"_format(*index) };
+        }
+
+        return static_cast<std::size_t>(*index);
+    }
+
+    bool has_index() const override { return true; }
+    std::shared_ptr<Object> get_index_or_null(std::shared_ptr<Object> index_object) override
+    {
+        const auto index = as_array_index(index_object);
+        if(index >= values.size())
+        {
+            throw NativeError{ "array index {} out of range, needs to be lower than {}"_format(index, values.size()) };
+        }
+
+        return values[index];
+    }
+    bool set_index_or_false(std::shared_ptr<Object> index_object, std::shared_ptr<Object> new_value) override
+    {
+        const auto index = as_array_index(index_object);
+        if(index >= values.size())
+        {
+            throw NativeError{ "array index {} is out of range, needs to be lower than {}"_format(index, values.size()) };
+        }
+
+        values[index] = new_value;
+        return true;
+    }
 };
 
 
@@ -470,6 +511,26 @@ WithProperties*
 Object::get_properties_or_null()
 {
     return nullptr;
+}
+
+bool
+Object::has_index() const
+{
+    return false;
+}
+
+
+std::shared_ptr<Object>
+Object::get_index_or_null(std::shared_ptr<Object>)
+{
+    return nullptr;
+}
+
+
+bool
+Object::set_index_or_false(std::shared_ptr<Object>, std::shared_ptr<Object>)
+{
+    return false;
 }
 
 
