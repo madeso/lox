@@ -54,13 +54,6 @@ struct NativeError
 struct Object;
 struct NativeFunction;
 
-struct WithProperties
-{
-    virtual ~WithProperties() = default;
-    virtual std::shared_ptr<Object> get_property_or_null(const std::string& name) = 0;
-    virtual bool set_property_or_false(const std::string& name, std::shared_ptr<Object> value) = 0;
-};
-
 
 struct Object : std::enable_shared_from_this<Object>
 {
@@ -73,8 +66,9 @@ struct Object : std::enable_shared_from_this<Object>
     virtual std::vector<std::string> to_string() const = 0;
     virtual bool is_callable() const = 0;
     
-    // todo(Gustav): merge with WithProperties and make this a bool call
-    virtual WithProperties* get_properties_or_null();
+    virtual bool has_properties();
+    virtual std::shared_ptr<Object> get_property_or_null(const std::string& name);
+    virtual bool set_property_or_false(const std::string& name, std::shared_ptr<Object> value);
     
     virtual bool has_index() const;
     virtual std::shared_ptr<Object> get_index_or_null(std::shared_ptr<Object> index);
@@ -114,7 +108,7 @@ struct BoundCallable : Callable
 
 // ----------------------------------------------------------------------------
 
-struct Klass : Object, WithProperties
+struct Klass : Object
 {
     std::string klass_name;
     std::shared_ptr<Klass> superklass;
@@ -135,7 +129,7 @@ struct Klass : Object, WithProperties
     std::shared_ptr<Callable> find_method_or_null(const std::string& name);
 
     bool add_static_method_or_false(const std::string& name, std::shared_ptr<Callable> method);
-    WithProperties* get_properties_or_null() override;
+    bool has_properties() override;
     std::shared_ptr<Object> get_property_or_null(const std::string& name) override;
     bool set_property_or_false(const std::string& name, std::shared_ptr<Object> value) override;
 };
@@ -143,13 +137,13 @@ struct Klass : Object, WithProperties
 // ----------------------------------------------------------------------------
 
 
-struct Instance : Object, WithProperties
+struct Instance : Object
 {
     std::shared_ptr<Klass> klass;
 
     explicit Instance(std::shared_ptr<Klass> o);
     bool is_callable() const override;
-    WithProperties* get_properties_or_null() override;
+    bool has_properties() override;
     std::shared_ptr<Object> get_property_or_null(const std::string& name) override;
     bool set_property_or_false(const std::string& name, std::shared_ptr<Object> value) override;
 

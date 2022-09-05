@@ -90,7 +90,7 @@ struct Bool : public Object
 };
 
 
-struct Array : public Object, WithProperties
+struct Array : public Object
 {
     ObjectIntegrationImpl* integration;
     std::vector<std::shared_ptr<Object>> values;
@@ -104,7 +104,7 @@ struct Array : public Object, WithProperties
 
     std::optional<std::string> to_flat_string_representation() const;
 
-    WithProperties* get_properties_or_null() override { return this; }
+    bool has_properties() override { return true; }
     std::shared_ptr<Object> get_property_or_null(const std::string& name) override;
     bool set_property_or_false(const std::string& name, std::shared_ptr<Object> value) override;
 
@@ -507,10 +507,22 @@ Object::to_flat_string() const
 }
 
 
-WithProperties*
-Object::get_properties_or_null()
+bool
+Object::has_properties()
+{
+    return false;
+}
+
+std::shared_ptr<Object>
+Object::get_property_or_null(const std::string&)
 {
     return nullptr;
+}
+
+bool
+Object::set_property_or_false(const std::string&, std::shared_ptr<Object>)
+{
+    return false;
 }
 
 bool
@@ -668,10 +680,10 @@ Klass::add_static_method_or_false(const std::string& name, std::shared_ptr<Calla
 }
 
 
-WithProperties*
-Klass::get_properties_or_null()
+bool
+Klass::has_properties()
 {
-    return this;
+    return true;
 }
 
 
@@ -709,9 +721,10 @@ Instance::is_callable() const
     return false;
 }
 
-WithProperties* Instance::get_properties_or_null()
+bool
+Instance::has_properties()
 {
-    return this;
+    return true;
 }
 
 std::shared_ptr<Object> Instance::get_property_or_null(const std::string& name)
@@ -1127,7 +1140,7 @@ struct NativeKlassImpl : NativeKlass
 };
 
 
-struct NativePackage : Object, WithProperties, Scope
+struct NativePackage : Object, Scope
 {
     std::string package_name;
     std::unordered_map<std::string, std::shared_ptr<Object>> members;
@@ -1156,10 +1169,10 @@ struct NativePackage : Object, WithProperties, Scope
         return false;
     }
     
-    WithProperties*
-    get_properties_or_null() override
+    bool
+    has_properties() override
     {
-        return this;
+        return true;
     }
 
     std::shared_ptr<Object>

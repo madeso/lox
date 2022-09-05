@@ -1165,9 +1165,9 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     on_getproperty_expression(const GetPropertyExpression& x) override
     {
         auto object = evaluate(x.object);
-        if(WithProperties* props = object->get_properties_or_null(); props != nullptr)
+        if(object->has_properties())
         {
-            auto r = props->get_property_or_null(x.name);
+            auto r = object->get_property_or_null(x.name);
 
             if(r == nullptr)
             {
@@ -1196,8 +1196,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
         auto object = evaluate(x.object);
         auto value = evaluate(x.value);
 
-        WithProperties* props = object->get_properties_or_null();
-        if(props == nullptr)
+        if(object->has_properties() == false)
         {
             report_error_no_properties(x.offset, error_handler, object);
             throw RuntimeError{};
@@ -1205,7 +1204,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
 
         try
         {
-            const auto was_set = props->set_property_or_false(x.name, value);
+            const auto was_set = object->set_property_or_false(x.name, value);
 
             if(was_set == false)
             {
