@@ -12,6 +12,32 @@ namespace lox { namespace
 
 // ----------------------------------------------------------------------------
 
+std::string quote_string(const std::string& str)
+{
+    std::ostringstream ss;
+    ss << '\"';
+    for(const auto c: str)
+    {
+        switch(c)
+        {
+        case '\r':
+            ss << "\\r";
+        case '\t':
+            ss << "\\t";
+        case '\n':
+            ss << "\\n";
+        case '"':
+            ss << "\\\"";
+        default:
+            ss << c;
+        }
+    }
+    ss << '\"';
+    return ss.str();
+}
+
+// ----------------------------------------------------------------------------
+
 
 struct ObjectIntegrationImpl : ObjectIntegration
 {
@@ -268,9 +294,16 @@ String::get_type() const
 }
 
 std::vector<std::string>
-String::to_string(const ToStringOptions&) const
+String::to_string(const ToStringOptions& tso) const
 {
-    return {value};
+    if(tso.quote_string)
+    {
+        return {quote_string(value)};
+    }
+    else
+    {
+        return {value};
+    }
 }
 
 

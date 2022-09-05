@@ -242,7 +242,7 @@ TEST_CASE("interpret fail", "[interpret]")
         CHECK_FALSE(run_ok);
         CHECK(StringEq(console_out,{}));
         CHECK(ErrorEq(error_list, {
-            {error, 87, 90, {"string is not capable of having any properties, has value cats"}},
+            {error, 87, 90, {"string is not capable of having any properties, has value \"cats\""}},
         }));
     }
     
@@ -378,7 +378,7 @@ TEST_CASE("interpret fail", "[interpret]")
         CHECK(ErrorEq(error_list, {
             {error, 40, 52, {"array index needs to be a int, was string"}},
             {note, 39, 40, {"object evaluated to [42]"}},
-            {note, 41, 46, {"index evaluated to dog"}},
+            {note, 41, 46, {"index evaluated to \"dog\""}},
             {note, 50, 52, {"value evaluated to 24"}},
         }));
     }
@@ -429,7 +429,7 @@ TEST_CASE("interpret fail", "[interpret]")
         CHECK(ErrorEq(error_list, {
             {error, 46, 53, {"array index needs to be a int, was string"}},
             {note, 45, 46, {"object evaluated to [42]"}},
-            {note, 47, 52, {"index evaluated to dog"}},
+            {note, 47, 52, {"index evaluated to \"dog\""}},
         }));
     }
 

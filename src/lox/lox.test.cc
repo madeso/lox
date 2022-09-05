@@ -69,8 +69,8 @@ TEST_CASE("lox binding fail" "[lox]")
             CHECK(ErrorEq(error_list, {
                 {error, 20, 38, {"Expected 1 arguments but got 2"}},
                 {note, 17, 20, {"called with 2 arguments"}},
-                {note, 21, 28, {"argument 1 evaluated to string: hello"}},
-                {note, 30, 37, {"argument 2 evaluated to string: world"}},
+                {note, 21, 28, {"argument 1 evaluated to string: \"hello\""}},
+                {note, 30, 37, {"argument 2 evaluated to string: \"world\""}},
             }));
             CHECK(StringEq(console_out,{}));
         }
