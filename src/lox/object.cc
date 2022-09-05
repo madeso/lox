@@ -370,8 +370,9 @@ Array::to_flat_string_representation(const ToStringOptions& tso) const
 
 
 std::vector<std::string>
-Array::to_string(const ToStringOptions& tso) const
+Array::to_string(const ToStringOptions& tsoa) const
 {
+    const auto tso = tsoa.with_quote_string(true);
     if(auto flat = to_flat_string_representation(tso); flat && flat->length() < tso.max_length)
     {
         return {*flat};

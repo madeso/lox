@@ -60,7 +60,7 @@ struct ToStringOptions
     constexpr ToStringOptions() = default;
 
     std::string_view indent = "    ";
-    constexpr ToStringOptions with_indent(std::string_view new_value)
+    constexpr ToStringOptions with_indent(std::string_view new_value) const
     {
         ToStringOptions r = *this;
         r.indent = new_value;
@@ -68,7 +68,7 @@ struct ToStringOptions
     }
 
     std::size_t max_length = 40;
-    constexpr ToStringOptions with_max_length(std::size_t new_value)
+    constexpr ToStringOptions with_max_length(std::size_t new_value) const
     {
         ToStringOptions r = *this;
         r.max_length = new_value;
@@ -76,7 +76,7 @@ struct ToStringOptions
     }
 
     bool quote_string = true;
-    constexpr ToStringOptions with_quote_string(bool new_value)
+    constexpr ToStringOptions with_quote_string(bool new_value) const
     {
         ToStringOptions r = *this;
         r.quote_string = new_value;
