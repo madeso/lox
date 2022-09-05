@@ -1121,46 +1121,6 @@ ArgumentHelper::impl_require_native_instance(std::size_t klass)
 
 // ----------------------------------------------------------------------------
 
-
-
-// std::string_view indent = "    ";
-// std::size_t max_length = 40;
-// bool quote_string;
-
-ToStringOptions ToStringOptions::for_error()
-{
-    return
-    {
-        "    ",
-        40,
-        true
-    };
-}
-
-ToStringOptions ToStringOptions::for_print()
-{
-    return
-    {
-        "    ",
-        40,
-        false
-    };
-}
-
-ToStringOptions ToStringOptions::for_debug()
-{
-    return
-    {
-        "    ",
-        40,
-        true
-    };
-}
-
-
-
-// ----------------------------------------------------------------------------
-
 namespace detail
 {
     std::size_t create_type_id()

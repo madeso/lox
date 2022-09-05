@@ -57,13 +57,44 @@ struct NativeFunction;
 
 struct ToStringOptions
 {
-    std::string_view indent = "    ";
-    std::size_t max_length = 40;
-    bool quote_string;
+    constexpr ToStringOptions() = default;
 
-    static ToStringOptions for_error();
-    static ToStringOptions for_print();
-    static ToStringOptions for_debug();
+    std::string_view indent = "    ";
+    constexpr ToStringOptions with_indent(std::string_view new_value)
+    {
+        ToStringOptions r = *this;
+        r.indent = new_value;
+        return r;
+    }
+
+    std::size_t max_length = 40;
+    constexpr ToStringOptions with_max_length(std::size_t new_value)
+    {
+        ToStringOptions r = *this;
+        r.max_length = new_value;
+        return r;
+    }
+
+    bool quote_string = true;
+    constexpr ToStringOptions with_quote_string(bool new_value)
+    {
+        ToStringOptions r = *this;
+        r.quote_string = new_value;
+        return r;
+    }
+
+    constexpr static ToStringOptions for_error()
+    {
+        return {};
+    }
+    constexpr static ToStringOptions for_print()
+    {
+        return ToStringOptions{}.with_quote_string(false);
+    }
+    constexpr static ToStringOptions for_debug()
+    {
+        return {};
+    }
 };
 
 struct Object : std::enable_shared_from_this<Object>
