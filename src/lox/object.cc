@@ -1151,7 +1151,10 @@ ArgumentHelper::impl_require_native_instance(std::size_t klass)
 
 // ----------------------------------------------------------------------------
 
-
+void raise_error(const std::string& message)
+{
+    throw NativeError { message };
+}
 
 // ----------------------------------------------------------------------------
 

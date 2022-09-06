@@ -49,6 +49,8 @@ struct NativeError
     std::string message;
 };
 
+void raise_error(const std::string& message);
+
 // ----------------------------------------------------------------------------
 
 struct Object;
