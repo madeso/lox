@@ -785,6 +785,18 @@ bool Instance::set_property_or_false(const std::string& name, std::shared_ptr<Ob
 }
 
 
+// use this to call member functions on instance
+std::shared_ptr<Callable>
+Instance::get_bound_method_or_null(const std::string& name)
+{
+    auto prop = get_property_or_null(name);
+    if(prop == nullptr) { return nullptr;}
+
+    if(prop->is_callable() == false) { return nullptr; }
+    return std::static_pointer_cast<Callable>(prop);
+}
+
+
 // ----------------------------------------------------------------------------
 
 
@@ -971,6 +983,14 @@ as_callable(std::shared_ptr<Object> o)
     return std::static_pointer_cast<Callable>(o);
 }
 
+std::shared_ptr<Instance>
+as_instance(std::shared_ptr<Object> o)
+{
+    assert(o != nullptr);
+    if(o->get_type() != ObjectType::instance) { return nullptr; }
+    return std::static_pointer_cast<Instance>(o);
+}
+
 std::shared_ptr<Klass>
 as_klass(std::shared_ptr<Object> o)
 {
@@ -1063,6 +1083,14 @@ ArgumentHelper::complete()
     assert(has_read_all_arguments==false && "complete() called twice!");
     has_read_all_arguments = true;
     verify_number_of_arguments(args, next_argument);
+}
+
+std::shared_ptr<Instance>
+ArgumentHelper::require_instance()
+{
+    const auto argument_index = next_argument++;
+    if(args.arguments.size() <= argument_index) { return nullptr; }
+    return get_instance_from_arg(args, argument_index);
 }
 
 std::shared_ptr<Object>

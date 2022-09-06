@@ -186,9 +186,15 @@ struct Instance : Object
     explicit Instance(std::shared_ptr<Klass> o);
     bool is_callable() const override;
     bool has_properties() override;
+
+    //property = method or member variable
     std::shared_ptr<Object> get_property_or_null(const std::string& name) override;
     bool set_property_or_false(const std::string& name, std::shared_ptr<Object> value) override;
 
+    // use this to call member functions on instance
+    std::shared_ptr<Callable> get_bound_method_or_null(const std::string& name);
+
+    // member variable only
     virtual std::shared_ptr<Object> get_field_or_null(const std::string& name) = 0;
     virtual bool set_field_or_false(const std::string& name, std::shared_ptr<Object> value) = 0;
 };
@@ -261,6 +267,7 @@ std::optional<bool>         as_bool        (std::shared_ptr<Object> o);
 std::optional<Ti>           as_int  (std::shared_ptr<Object> o);
 std::optional<Tf>           as_float(std::shared_ptr<Object> o);
 std::shared_ptr<Callable>   as_callable    (std::shared_ptr<Object> o);
+std::shared_ptr<Instance>   as_instance    (std::shared_ptr<Object> o);
 std::shared_ptr<Klass>      as_klass       (std::shared_ptr<Object> o);
 std::shared_ptr<NativeInstance> as_native_instance_of_type(std::shared_ptr<Object> o, std::size_t type);
 
@@ -450,6 +457,7 @@ struct ArgumentHelper
 
     // todo(Gustav): add some match/switch helper to handle overloads
 
+    std::shared_ptr<Instance>   require_instance ();
     std::shared_ptr<Object>     require_object   ();
     std::string                 require_string   ();
     bool                        require_bool     ();

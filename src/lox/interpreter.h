@@ -50,6 +50,7 @@ verify_number_of_arguments(const Arguments& args, u64 arity);
 
 
 std::shared_ptr<Object>   get_object_from_arg    (const Arguments& args, u64 argument_index);
+std::shared_ptr<Instance> get_instance_from_arg  (const Arguments& args, u64 argument_index);
 std::string               get_string_from_arg    (const Arguments& args, u64 argument_index);
 bool                      get_bool_from_arg      (const Arguments& args, u64 argument_index);
 Ti                        get_int_from_arg       (const Arguments& args, u64 argument_index);

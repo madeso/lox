@@ -539,6 +539,52 @@ TEST_CASE("lox binding" "[lox]")
     }
 
 
+    SECTION("take instance and call member function")
+    {
+        std::shared_ptr<lox::Instance> object;
+        lox.in_global_scope()->define_native_function
+        (
+            "set_foo", [&object](lox::Callable*, lox::ArgumentHelper& ah)
+            {
+                auto initial = ah.require_instance();
+                ah.complete();
+                object = initial;
+                return lox::make_nil();
+            }
+        );
+        const auto run_ok = lox.run_string
+        (R"lox(
+            class Bar
+            {
+                public var greeting;
+                public fun init(g)
+                {
+                    this.greeting = g;
+                }
+                public fun hello(name)
+                {
+                    return this.greeting + name;
+                }
+            }
+
+            set_foo(new Bar("hello "));
+        )lox");
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{}));
+        REQUIRE(object != nullptr);
+
+        auto callable = object->get_bound_method_or_null("hello");
+        REQUIRE(callable != nullptr);
+        
+        auto res = callable->call({{lox::make_string("world")} });
+        auto str = lox::as_string(res);
+        
+        REQUIRE(str);
+        REQUIRE(*str == "hello world");
+    }
+
+
     SECTION("single package: argument helper: numbers")
     {
         lox.in_package("pkg")->define_native_function

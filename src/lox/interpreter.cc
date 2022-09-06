@@ -1715,6 +1715,19 @@ get_object_from_arg(const Arguments& args, u64 argument_index)
 }
 
 
+std::shared_ptr<Instance>
+get_instance_from_arg(const Arguments& args, u64 argument_index)
+{
+    assert(argument_index < args.arguments.size());
+    auto value = as_instance(args.arguments[argument_index]);
+    if(value == nullptr)
+    {
+        throw InvalidArgumentType(argument_index, ObjectType::instance);
+    }
+    return value;
+}
+
+
 
 std::string
 get_string_from_arg(const Arguments& args, u64 argument_index)
