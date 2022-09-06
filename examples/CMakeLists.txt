@@ -8,8 +8,8 @@ target_link_libraries(
     PUBLIC
         liblox
     PRIVATE
-        project_options
-        project_warnings
+        lox_project_options
+        lox_project_warnings
         external::exit_codes
 )
 source_group("" FILES ${src})

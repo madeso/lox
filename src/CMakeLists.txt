@@ -6,7 +6,7 @@ set(gen_src
 add_executable(generate_ast ${gen_src})
 target_link_libraries(generate_ast
     PUBLIC fmt::fmt
-    PRIVATE project_options project_warnings external::exit_codes
+    PRIVATE lox_project_options lox_project_warnings external::exit_codes
 )
 source_group("" FILES ${gen_src})
 
