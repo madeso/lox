@@ -1772,12 +1772,19 @@ Tf
 get_float_from_arg(const Arguments& args, u64 argument_index)
 {
     assert(argument_index < args.arguments.size());
-    auto value = as_float(args.arguments[argument_index]);
-    if(value.has_value() == false)
+    auto float_value = as_float(args.arguments[argument_index]);
+    if(float_value.has_value())
     {
-        throw InvalidArgumentType(argument_index, ObjectType::number_float);
+        return *float_value;
     }
-    return *value;
+
+    auto int_value = as_int(args.arguments[argument_index]);
+    if(int_value.has_value())
+    {
+        return static_cast<Tf>(*int_value);
+    }
+
+    throw InvalidArgumentType(argument_index, ObjectType::number_float);
 }
 
 
