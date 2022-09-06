@@ -50,7 +50,7 @@ set(lox_src
 add_library(liblox STATIC ${lox_src} ${EXPR_SOURCE} ${EXPR_HEADER})
 target_link_libraries(liblox
     PUBLIC fmt::fmt
-    PRIVATE project_options project_warnings
+    PRIVATE lox_project_options lox_project_warnings
 )
 target_include_directories(liblox
     PUBLIC
@@ -63,7 +63,7 @@ target_precompile_headers(liblox
 )
 source_group("" FILES ${lox_src})
 source_group("generated" FILES ${EXPR_SOURCE} ${EXPR_HEADER})
-
+add_library(lox::liblox ALIAS liblox)
 
 
 # -----------------------------------------------------------------------------
@@ -79,5 +79,5 @@ set(src_test
 add_executable(test ${src_test})
 target_link_libraries(test
     PUBLIC catch catchy liblox
-    PRIVATE project_options project_warnings
+    PRIVATE lox_project_options lox_project_warnings
 )
