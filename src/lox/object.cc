@@ -860,8 +860,7 @@ NativeInstance::set_field_or_false(const std::string& name, std::shared_ptr<Obje
     if(auto found = nk->properties.find(name); found != nk->properties.end())
     {
         // todo(Gustav): what happens if the value is a not-supported type... error how?
-        found->second->set_value(this, value);
-        return true;
+        return found->second->set_value(this, value);
     }
     else
     {

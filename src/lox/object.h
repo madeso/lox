@@ -210,7 +210,7 @@ struct Property
     virtual ~Property() = default;
 
     virtual std::shared_ptr<Object> get_value(NativeInstance* instance) = 0;
-    virtual void set_value(NativeInstance* instance, std::shared_ptr<Object> value) = 0;
+    virtual bool set_value(NativeInstance* instance, std::shared_ptr<Object> value) = 0;
 };
 
 struct NativeKlass : Klass
@@ -353,11 +353,38 @@ namespace detail
             return make_object<P>(getter(in.data));
         }
 
-        void set_value(NativeInstance* instance, std::shared_ptr<Object> value) override
+        bool set_value(NativeInstance* instance, std::shared_ptr<Object> value) override
         {
             assert(static_cast<NativeKlass*>(instance->klass.get())->native_id == get_unique_id<T>());
             auto& in = static_cast<NativeInstanceT<T>&>(*instance);
             setter(in.data, get_from_obj_or_error<P>(value));
+            return true;
+        }
+    };
+
+    template<typename T, typename P>
+    struct PropertyGetT : Property
+    {
+        std::function<P(T&)> getter;
+
+        PropertyGetT
+        (
+            std::function<P(T&)>&& g
+        )
+            : getter(g)
+        {
+        }
+
+        std::shared_ptr<Object> get_value(NativeInstance* instance) override
+        {
+            assert(static_cast<NativeKlass*>(instance->klass.get())->native_id == get_unique_id<T>());
+            auto& in = static_cast<NativeInstanceT<T>&>(*instance);
+            return make_object<P>(getter(in.data));
+        }
+
+        bool set_value(NativeInstance*, std::shared_ptr<Object>) override
+        {
+            return false;
         }
 
     };
@@ -404,6 +431,15 @@ struct ClassAdder
     add_property(const std::string& name, std::function<P(T&)> getter, std::function<void (T&, P)> setter)
     {
         auto prop = std::make_unique<detail::PropertyT<T, P>>(std::move(getter), std::move(setter));
+        native_klass->add_property(name, std::move(prop));
+        return *this;
+    }
+
+    template<typename P>
+    ClassAdder<T>&
+    add_getter(const std::string& name, std::function<P(T&)> getter)
+    {
+        auto prop = std::make_unique<detail::PropertyGetT<T, P>>(std::move(getter));
         native_klass->add_property(name, std::move(prop));
         return *this;
     }
