@@ -3,6 +3,7 @@
 #include <streambuf>
 #include <memory>
 #include <functional>
+#include <sstream>
 
 #include "exit_codes/exit_codes.h"
 
@@ -139,6 +140,28 @@ std::shared_ptr<CodeRunner> make_parser_gv()
 std::shared_ptr<CodeRunner> make_interpreter()
 {
     return std::make_shared<InterpreterRunner>();
+}
+
+std::string read_to_string(std::istream& handle)
+{
+    #if 0
+        // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring/2602258
+        // gcc: possible null pointer deref
+        return std::string
+        {
+            std::istreambuf_iterator<char>(handle),
+            std::istreambuf_iterator<char>()
+        };
+    #else
+        // gcc: ok
+        std::string line;
+        std::ostringstream ss;
+        while(std::getline(handle, line))
+        {
+            ss << line << '\n';
+        }
+        return ss.str();
+    #endif
 }
 
 
@@ -307,12 +330,7 @@ struct Lox
     run_stream_get_exitcode(CodeRunner* runner, std::istream& handle)
     {
         // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring/2602258
-        std::string str
-        (
-            (std::istreambuf_iterator<char>(handle)),
-            std::istreambuf_iterator<char>()
-        );
-
+        const auto str = read_to_string(handle);
         return run_code_get_exitcode(runner, str);
     }
     
