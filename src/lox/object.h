@@ -462,7 +462,7 @@ struct NativeRef
     {
     }
 
-    T* get_ptr()
+    T* get_ptr() const
     {
         if(instance == nullptr) { return nullptr; }
         return &std::static_pointer_cast<detail::NativeInstanceT<T>>(instance)->data;
@@ -476,6 +476,16 @@ struct NativeRef
     operator bool()
     {
         return instance != nullptr;
+    }
+
+    bool operator==(T* rhs) const
+    {
+        return get_ptr() == rhs;
+    }
+
+    bool operator!=(T* rhs) const
+    {
+        return get_ptr() != rhs;
     }
 };
 
