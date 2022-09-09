@@ -1367,6 +1367,98 @@ TEST_CASE("interpret ok", "[interpret]")
             "24"
         }));
     }
+
+    SECTION("op equal: += int var")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            var life = 40;
+            life += 2;
+            print life;
+        )lox");
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
+            "42"
+        }));
+    }
+    
+    SECTION("op equal: -= int var")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            var life = 24;
+            life -= 2;
+            print life;
+        )lox");
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
+            "22"
+        }));
+    }
+
+    SECTION("op equal: *= int var")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            var life = 24;
+            life *= 10;
+            print life;
+        )lox");
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
+            "240"
+        }));
+    }
+
+    SECTION("op equal: /= var")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            var life = 24;
+            life /= 2;
+            print life;
+        )lox");
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
+            "12"
+        }));
+    }
+
+    SECTION("op equal: += string class property")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            class Classy{ public var animals; }
+            var instance = new Classy();
+            instance.animals = "I love";
+            instance.animals += " cats!";
+            print instance.animals;
+        )lox");
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
+            "I love cats!"
+        }));
+    }
+
+    SECTION("op equal: += int array")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            var arr = [10];
+            arr[0] += 2;
+            print arr[0];
+        )lox");
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
+            "12"
+        }));
+    }
 }
 
 

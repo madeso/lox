@@ -161,9 +161,7 @@ struct Scanner
         case ']': add_token(TokenType::RIGHT_BRACKET); break;
         case ',': add_token(TokenType::COMMA);         break;
         case '.': add_token(TokenType::DOT);           break;
-        case '+': add_token(TokenType::PLUS);          break;
         case ';': add_token(TokenType::SEMICOLON);     break;
-        case '*': add_token(TokenType::STAR);          break;
         case ':': add_token(TokenType::COLON);         break;
 
         // 1 or 2 character tokens
@@ -172,20 +170,20 @@ struct Scanner
         case '<': add_token(match('=') ? TokenType::LESS_EQUAL    : TokenType::LESS);    break;
         case '>': add_token(match('=') ? TokenType::GREATER_EQUAL : TokenType::GREATER); break;
         
-        case '-': add_token(match('>') ? TokenType::ARROW         : TokenType::MINUS); break;
+        case '+': add_token(match('=') ? TokenType::PLUSEQ : TokenType::PLUS); break;
+        case '*': add_token(match('=') ? TokenType::STAREQ : TokenType::STAR); break;
+        case '-':
+            if      (match('>')) { add_token(TokenType::ARROW); }
+            else if (match('=')) { add_token(TokenType::MINUSEQ);}
+            else                 { add_token(TokenType::MINUS); }
+            break;
 
         // division or comment?
         case '/':
             // todo(Gustav): add c-style /*  */ multi-line comments
-            if (match('/'))
-            {
-                // A comment goes until the end of the line.
-                eat_line();
-            }
-            else
-            {
-                add_token(TokenType::SLASH);
-            }
+            if      (match('/')) { eat_line(); }
+            else if (match('=')) { add_token(TokenType::SLASHEQ); }
+            else                 { add_token(TokenType::SLASH); }
             break;
 
         // Ignore whitespace.

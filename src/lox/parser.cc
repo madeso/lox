@@ -480,6 +480,56 @@ struct Parser
 
             error(offset_for_error(equals), "Invalid assignment target.");
         }
+        else if(match({TokenType::PLUSEQ, TokenType::MINUSEQ, TokenType::STAREQ, TokenType::SLASHEQ}))
+        {
+            auto& op = previous();
+            auto rhs = parse_assignment();
+
+            const TokenType bin_op = [op]() {
+                switch(op.type)
+                {
+                case TokenType::PLUSEQ:  return TokenType::PLUS;
+                case TokenType::MINUSEQ: return TokenType::MINUS;
+                case TokenType::STAREQ:  return TokenType::STAR;
+                case TokenType::SLASHEQ: return TokenType::SLASH;
+                default: assert(false && "unhandled eq"); return TokenType::PLUS;
+                }
+            } ();
+
+            const auto full_offset = offset_start_end(expr->offset, rhs->offset);
+            auto exprc = expr;
+            rhs = std::make_shared<BinaryExpression>(full_offset, new_expr(), std::move(exprc), bin_op, op.offset, std::move(rhs));
+
+            if(expr->get_type() == ExpressionType::variable_expression)
+            {
+                const auto name = static_cast<VariableExpression*>(expr.get())->name;
+                return std::make_shared<AssignExpression>
+                (
+                    full_offset, new_expr(),
+                    name, expr->offset, std::move(rhs)
+                );
+            }
+            else if(expr->get_type() == ExpressionType::getproperty_expression)
+            {
+                auto* set = static_cast<GetPropertyExpression*>(expr.get());
+                return std::make_shared<SetPropertyExpression>
+                (
+                    full_offset, new_expr(), 
+                    std::move(set->object), set->name, std::move(rhs)
+                );
+            }
+            else if(expr->get_type() == ExpressionType::getindex_expression)
+            {
+                auto* set = static_cast<GetIndexExpression*>(expr.get());
+                return std::make_shared<SetIndexExpression>
+                (
+                    full_offset, new_expr(), 
+                    std::move(set->object), std::move(set->index), std::move(rhs)
+                );
+            }
+
+            error(offset_for_error(op), "Invalid assignment target.");
+        }
 
         return expr;
     }
