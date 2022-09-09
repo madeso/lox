@@ -386,7 +386,32 @@ namespace detail
         {
             return false;
         }
+    };
 
+    template<typename T, typename P>
+    struct PropertyNativeGetT : Property
+    {
+        std::function<std::shared_ptr<Object>(T&)> getter;
+
+        PropertyNativeGetT
+        (
+            std::function<std::shared_ptr<Object>(T&)>&& g
+        )
+            : getter(g)
+        {
+        }
+
+        std::shared_ptr<Object> get_value(NativeInstance* instance) override
+        {
+            assert(static_cast<NativeKlass*>(instance->klass.get())->native_id == get_unique_id<T>());
+            auto& in = static_cast<NativeInstanceT<T>&>(*instance);
+            return getter(in.data);
+        }
+
+        bool set_value(NativeInstance*, std::shared_ptr<Object>) override
+        {
+            return false;
+        }
     };
 }
 
@@ -440,6 +465,16 @@ struct ClassAdder
     add_getter(const std::string& name, std::function<P(T&)> getter)
     {
         auto prop = std::make_unique<detail::PropertyGetT<T, P>>(std::move(getter));
+        native_klass->add_property(name, std::move(prop));
+        return *this;
+    }
+
+    
+    template<typename P>
+    ClassAdder<T>&
+    add_native_getter(const std::string& name, std::function<std::shared_ptr<Object>(T&)> getter)
+    {
+        auto prop = std::make_unique<detail::PropertyNativeGetT<T, P>>(std::move(getter));
         native_klass->add_property(name, std::move(prop));
         return *this;
     }
