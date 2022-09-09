@@ -191,8 +191,26 @@ struct MainResolver : ExpressionVoidVisitor, StatementVoidVisitor
             define_var("super");
         }
 
+        struct NamedOffset {std::string name; Offset offset;};
+        using NamedOffsetList = std::vector<NamedOffset>;
+        std::unordered_map<std::string, NamedOffsetList> defined_properties;
+
+        auto add_property = [&defined_properties](const std::string& name, const std::string& type, Offset offset)
+        {
+            if(auto found = defined_properties.find(name); found != defined_properties.end())
+            {
+                found->second.emplace_back(NamedOffset{type, offset});
+            }
+            else
+            {
+                defined_properties.insert({name, {NamedOffset{type, offset}}});
+            }
+            
+        };
+
         for(auto& mem: x.members)
         {
+            add_property(mem->name, "var", mem->offset);
             if(mem->initializer != nullptr)
             {
                 resolve(mem->initializer);
@@ -205,6 +223,7 @@ struct MainResolver : ExpressionVoidVisitor, StatementVoidVisitor
 
         for(auto& method: x.methods)
         {
+            add_property(method->name, "fun", method->offset);
             const auto function_type = method->name == "init"
                 ? FunctionType::initializer
                 : FunctionType::method
@@ -217,6 +236,24 @@ struct MainResolver : ExpressionVoidVisitor, StatementVoidVisitor
         if(x.parent != nullptr)
         {
             end_scope();
+        }
+
+        for(auto& entry: defined_properties)
+        {
+            const auto name = entry.first;
+            NamedOffsetList& offsets = entry.second;
+            if(offsets.size() <= 1) { continue; }
+            std::sort(offsets.begin(), offsets.end(), [](const NamedOffset& lhs, const NamedOffset& rhs)
+            {
+                return lhs.offset.start < rhs.offset.start;
+            });
+
+            error_handler->on_error(offsets.rbegin()->offset, "'{}' declared multiple times"_format(name));
+            for(const auto& o: offsets)
+            {
+                error_handler->on_note(o.offset, "as {} {} here"_format(o.name, name));
+            }
+            has_errors = true;
         }
 
         current_class = enclosing_class;

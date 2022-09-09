@@ -200,6 +200,65 @@ TEST_CASE("interpret fail", "[interpret]")
         }));
     }
 
+    SECTION("can't declare 2 members with the same same")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            class Foo
+            {
+                public var foo;
+                public var foo;
+            }
+        )lox");
+        CHECK_FALSE(run_ok);
+        CHECK(StringEq(console_out,{}));
+        CHECK(ErrorEq(error_list, {
+            {error, 92, 100, {"'foo' declared multiple times"}},
+            {note, 60, 68, {"as var foo here"}},
+            {note, 92, 100, {"as var foo here"}},
+        }));
+    }
+
+    SECTION("can't have a method and var with the same name")
+    {
+        SECTION("var fun")
+        {
+            const auto run_ok = run_string
+            (lx, R"lox(
+                class Foo
+                {
+                    public var foo;
+                    public fun foo() {}
+                }
+            )lox");
+            CHECK_FALSE(run_ok);
+            CHECK(StringEq(console_out,{}));
+            CHECK(ErrorEq(error_list, {
+                {error, 112, 120, {"'foo' declared multiple times"}},
+                {note, 72, 80, {"as var foo here"}},
+                {note, 112, 120, {"as fun foo here"}},
+            }));
+        }
+        SECTION("fun var")
+        {
+            const auto run_ok = run_string
+            (lx, R"lox(
+                class Foo
+                {
+                    public fun foo() {}
+                    public var foo;
+                }
+            )lox");
+            CHECK_FALSE(run_ok);
+            CHECK(StringEq(console_out,{}));
+            CHECK(ErrorEq(error_list, {
+                {error, 112, 120, {"'foo' declared multiple times"}},
+                {note, 76, 84, {"as fun foo here"}},
+                {note, 112, 120, {"as var foo here"}},
+            }));
+        }
+    }
+
     SECTION("must use new on class")
     {
         const auto run_ok = run_string
@@ -492,38 +551,6 @@ TEST_CASE("interpret fail", "[interpret]")
         CHECK(StringEq(console_out,{}));
         CHECK(ErrorEq(error_list, {
             {error, 356, 378, {"<instance Person> doesn't have a property named sayName"}},
-        }));
-    }
-
-    SECTION("now invalid headscratcher: can't call nil")
-    {
-        const auto run_ok = run_string
-        (lx, R"lox(
-            class Person
-            {
-                public var name;
-                public var sayName;
-
-                public fun sayName()
-                {
-                    print this.name;
-                }
-            }
-
-            var jane = new Person();
-            jane.name = "Jane";
-
-            var bill = new Person();
-            bill.name = "Bill";
-
-            bill.sayName = jane.sayName;
-            bill.sayName();
-        )lox");
-        CHECK_FALSE(run_ok);
-        CHECK(StringEq(console_out,{}));
-        CHECK(ErrorEq(error_list, {
-            {error, 433, 440, {"nil is not a callable, evaluates to nil"}},
-            {note, 440, 442, {"call occured here"}},
         }));
     }
 }
