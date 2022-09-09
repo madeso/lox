@@ -469,6 +469,27 @@ ObjectIntegrationImpl::register_functions()
 
         return make_nil();
     });
+
+    add_array_method("remove_front", [](Callable* callable, ArgumentHelper& arguments) -> std::shared_ptr<Object>
+    {
+        // todo(Gustav): move to a more clean place?
+        assert(callable->is_bound());
+        BoundCallable* bound = static_cast<BoundCallable*>(callable);
+        assert(bound->bound != nullptr);
+        assert(bound->bound->get_type() == ObjectType::array);
+        std::shared_ptr<Array> array = std::static_pointer_cast<Array>(bound->bound);
+        assert(array != nullptr);
+
+        arguments.complete();
+
+        if(array->values.empty())
+        {
+            throw NativeError{{"Can't remove item from empty array"}};
+        }
+        array->values.erase(array->values.begin());
+
+        return make_nil();
+    });
 }
 
 
