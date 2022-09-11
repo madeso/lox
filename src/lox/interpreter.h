@@ -56,6 +56,7 @@ bool                      get_bool_from_arg      (const Arguments& args, u64 arg
 Ti                        get_int_from_arg       (const Arguments& args, u64 argument_index);
 Tf                        get_float_from_arg     (const Arguments& args, u64 argument_index);
 std::shared_ptr<Callable> get_callable_from_arg  (const Arguments& args, u64 argument_index);
+std::shared_ptr<Array>    get_array_from_arg     (const Arguments& args, u64 argument_index);
 std::shared_ptr<NativeInstance> get_native_instance_from_arg(const Arguments& args, u64 argument_index, std::size_t klass);
 
 std::string               get_string_from_obj_or_error    (std::shared_ptr<Object> obj);

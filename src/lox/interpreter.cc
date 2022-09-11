@@ -1800,6 +1800,19 @@ get_callable_from_arg(const Arguments& args, u64 argument_index)
     return value;
 }
 
+
+std::shared_ptr<Array>
+get_array_from_arg(const Arguments& args, u64 argument_index)
+{
+    assert(argument_index < args.arguments.size());
+    auto value = as_array(args.arguments[argument_index]);
+    if(value == nullptr)
+    {
+        throw InvalidArgumentType(argument_index, ObjectType::array);
+    }
+    return value;
+}
+
 std::shared_ptr<NativeInstance>
 get_native_instance_from_arg(const Arguments& args, u64 argument_index, std::size_t klass)
 {

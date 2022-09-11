@@ -1011,6 +1011,14 @@ as_callable(std::shared_ptr<Object> o)
     return std::static_pointer_cast<Callable>(o);
 }
 
+std::shared_ptr<Array>
+as_array(std::shared_ptr<Object> o)
+{
+    assert(o != nullptr);
+    if(o->get_type() != ObjectType::array) { return nullptr; }
+    return std::static_pointer_cast<Array>(o);
+}
+
 std::shared_ptr<Instance>
 as_instance(std::shared_ptr<Object> o)
 {
@@ -1167,6 +1175,14 @@ ArgumentHelper::require_callable()
     const auto argument_index = next_argument++;
     if(args.arguments.size() <= argument_index) { return nullptr; }
     return get_callable_from_arg(args, argument_index);
+}
+
+std::shared_ptr<Array>
+ArgumentHelper::require_array()
+{
+    const auto argument_index = next_argument++;
+    if(args.arguments.size() <= argument_index) { return nullptr; }
+    return get_array_from_arg(args, argument_index);
 }
 
 std::shared_ptr<NativeInstance>

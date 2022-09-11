@@ -294,9 +294,10 @@ std::unique_ptr<ObjectIntegration> make_object_integration();
 bool                        is_nil         (std::shared_ptr<Object> o);
 std::optional<std::string>  as_string      (std::shared_ptr<Object> o);
 std::optional<bool>         as_bool        (std::shared_ptr<Object> o);
-std::optional<Ti>           as_int  (std::shared_ptr<Object> o);
-std::optional<Tf>           as_float(std::shared_ptr<Object> o);
+std::optional<Ti>           as_int         (std::shared_ptr<Object> o);
+std::optional<Tf>           as_float       (std::shared_ptr<Object> o);
 std::shared_ptr<Callable>   as_callable    (std::shared_ptr<Object> o);
+std::shared_ptr<Array>      as_array       (std::shared_ptr<Object> o);
 std::shared_ptr<Instance>   as_instance    (std::shared_ptr<Object> o);
 std::shared_ptr<Klass>      as_klass       (std::shared_ptr<Object> o);
 std::shared_ptr<NativeInstance> as_native_instance_of_type(std::shared_ptr<Object> o, std::size_t type);
@@ -575,6 +576,7 @@ struct ArgumentHelper
     Ti                          require_int      ();
     Tf                          require_float    ();
     std::shared_ptr<Callable>   require_callable ();
+    std::shared_ptr<Array>      require_array    ();
 
     std::shared_ptr<NativeInstance> impl_require_native_instance(std::size_t klass);
 
