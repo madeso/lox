@@ -302,6 +302,8 @@ std::shared_ptr<Instance>   as_instance    (std::shared_ptr<Object> o);
 std::shared_ptr<Klass>      as_klass       (std::shared_ptr<Object> o);
 std::shared_ptr<NativeInstance> as_native_instance_of_type(std::shared_ptr<Object> o, std::size_t type);
 
+
+
 // ----------------------------------------------------------------------------
 
 
@@ -553,7 +555,11 @@ struct NativeRef
     }
 };
 
-
+template<typename T>
+NativeRef<T> as_native(std::shared_ptr<Object> obj)
+{
+    return NativeRef<T>{as_native_instance_of_type(obj, detail::get_unique_id<T>())};
+}
 
 // ----------------------------------------------------------------------------
 
