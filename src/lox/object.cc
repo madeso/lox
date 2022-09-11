@@ -6,42 +6,8 @@
 #include "lox/scanner.h"
 
 
-namespace lox { namespace
+namespace lox
 {
-
-
-// ----------------------------------------------------------------------------
-
-std::string quote_string(const std::string& str)
-{
-    std::ostringstream ss;
-    ss << '\"';
-    for(const auto c: str)
-    {
-        switch(c)
-        {
-        case '\r':
-            ss << "\\r";
-            break;
-        case '\t':
-            ss << "\\t";
-            break;
-        case '\n':
-            ss << "\\n";
-            break;
-        case '"':
-            ss << "\\\"";
-            break;
-        default:
-            ss << c;
-            break;
-        }
-    }
-    ss << '\"';
-    return ss.str();
-}
-
-// ----------------------------------------------------------------------------
 
 
 struct ObjectIntegrationImpl : ObjectIntegration
@@ -82,6 +48,45 @@ struct ObjectIntegrationImpl : ObjectIntegration
 };
 
 
+}
+
+
+namespace lox { namespace
+{
+
+
+// ----------------------------------------------------------------------------
+
+std::string quote_string(const std::string& str)
+{
+    std::ostringstream ss;
+    ss << '\"';
+    for(const auto c: str)
+    {
+        switch(c)
+        {
+        case '\r':
+            ss << "\\r";
+            break;
+        case '\t':
+            ss << "\\t";
+            break;
+        case '\n':
+            ss << "\\n";
+            break;
+        case '"':
+            ss << "\\\"";
+            break;
+        default:
+            ss << c;
+            break;
+        }
+    }
+    ss << '\"';
+    return ss.str();
+}
+
+
 // ----------------------------------------------------------------------------
 
 struct Nil : public Object
@@ -120,66 +125,6 @@ struct Bool : public Object
     bool is_callable() const override { return false; }
 };
 
-
-struct Array : public Object
-{
-    ObjectIntegrationImpl* integration;
-    std::vector<std::shared_ptr<Object>> values;
-    
-    Array(ObjectIntegrationImpl* i, std::vector<std::shared_ptr<Object>>&& b);
-    virtual ~Array() = default;
-
-    ObjectType get_type() const override;
-    std::vector<std::string> to_string(const ToStringOptions&) const override;
-    bool is_callable() const override { return false; }
-
-    std::optional<std::string> to_flat_string_representation(const ToStringOptions&) const;
-
-    bool has_properties() override { return true; }
-    std::shared_ptr<Object> get_property_or_null(const std::string& name) override;
-    bool set_property_or_false(const std::string& name, std::shared_ptr<Object> value) override;
-
-
-    static std::size_t as_array_index(std::shared_ptr<Object> o)
-    {
-        const std::optional<Ti> index = as_int(o);
-        if(index.has_value() == false)
-        {
-            // todo(Gustav): allow multiple rows to include object to_string
-            throw NativeError{ "array index needs to be a int, was {}"_format( objecttype_to_string(o->get_type()) ) };
-        }
-
-        if(*index < 0)
-        {
-            throw NativeError{ "array index needs to be positive, was {}"_format(*index) };
-        }
-
-        return static_cast<std::size_t>(*index);
-    }
-
-    bool has_index() const override { return true; }
-    std::shared_ptr<Object> get_index_or_null(std::shared_ptr<Object> index_object) override
-    {
-        const auto index = as_array_index(index_object);
-        if(index >= values.size())
-        {
-            throw NativeError{ "array index {} out of range, needs to be lower than {}"_format(index, values.size()) };
-        }
-
-        return values[index];
-    }
-    bool set_index_or_false(std::shared_ptr<Object> index_object, std::shared_ptr<Object> new_value) override
-    {
-        const auto index = as_array_index(index_object);
-        if(index >= values.size())
-        {
-            throw NativeError{ "array index {} is out of range, needs to be lower than {}"_format(index, values.size()) };
-        }
-
-        values[index] = new_value;
-        return true;
-    }
-};
 
 
 struct NumberInt : public Object
@@ -888,6 +833,69 @@ NativeInstance::set_field_or_false(const std::string& name, std::shared_ptr<Obje
         return false;
     }
 }
+
+
+// ----------------------------------------------------------------------------
+
+
+
+bool Array::is_callable() const
+{
+    return false;
+}
+
+bool Array::has_properties()
+{
+    return true;
+}
+
+
+std::size_t Array::as_array_index(std::shared_ptr<Object> o)
+{
+    const std::optional<Ti> index = as_int(o);
+    if(index.has_value() == false)
+    {
+        // todo(Gustav): allow multiple rows to include object to_string
+        throw NativeError{ "array index needs to be a int, was {}"_format( objecttype_to_string(o->get_type()) ) };
+    }
+
+    if(*index < 0)
+    {
+        throw NativeError{ "array index needs to be positive, was {}"_format(*index) };
+    }
+
+    return static_cast<std::size_t>(*index);
+}
+
+bool Array::has_index() const
+{
+    return true;
+}
+
+std::shared_ptr<Object> Array::get_index_or_null(std::shared_ptr<Object> index_object)
+{
+    const auto index = as_array_index(index_object);
+    if(index >= values.size())
+    {
+        throw NativeError{ "array index {} out of range, needs to be lower than {}"_format(index, values.size()) };
+    }
+
+    return values[index];
+}
+
+bool Array::set_index_or_false(std::shared_ptr<Object> index_object, std::shared_ptr<Object> new_value)
+{
+    const auto index = as_array_index(index_object);
+    if(index >= values.size())
+    {
+        throw NativeError{ "array index {} is out of range, needs to be lower than {}"_format(index, values.size()) };
+    }
+
+    values[index] = new_value;
+    return true;
+}
+
+
 
 
 // ----------------------------------------------------------------------------

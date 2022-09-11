@@ -236,6 +236,34 @@ struct NativeInstance : Instance
     bool set_field_or_false(const std::string& name, std::shared_ptr<Object> value) override;
 };
 
+
+struct ObjectIntegrationImpl;
+
+struct Array : public Object
+{
+    ObjectIntegrationImpl* integration;
+    std::vector<std::shared_ptr<Object>> values;
+    
+    Array(ObjectIntegrationImpl* i, std::vector<std::shared_ptr<Object>>&& b);
+    ~Array() = default;
+
+    ObjectType get_type() const override;
+    std::vector<std::string> to_string(const ToStringOptions&) const override;
+    bool is_callable() const override;
+
+    std::optional<std::string> to_flat_string_representation(const ToStringOptions&) const;
+
+    bool has_properties() override;
+    std::shared_ptr<Object> get_property_or_null(const std::string& name) override;
+    bool set_property_or_false(const std::string& name, std::shared_ptr<Object> value) override;
+
+    static std::size_t as_array_index(std::shared_ptr<Object> o);
+
+    bool has_index() const override;
+    std::shared_ptr<Object> get_index_or_null(std::shared_ptr<Object> index_object) override;
+    bool set_index_or_false(std::shared_ptr<Object> index_object, std::shared_ptr<Object> new_value) override;
+};
+
 // ----------------------------------------------------------------------------
 
 
