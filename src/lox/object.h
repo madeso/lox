@@ -536,7 +536,14 @@ struct NativeRef
 
     T* operator->()
     {
+        assert(instance != nullptr);
         return get_ptr();
+    }
+
+    T& operator*()
+    {
+        assert(instance != nullptr);
+        return *get_ptr();
     }
 
     operator bool()
