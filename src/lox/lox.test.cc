@@ -754,4 +754,68 @@ TEST_CASE("lox binding" "[lox]")
             CHECK(StringEq(console_out, {"cats"}));
         }
     }
+
+    SECTION("native class -> scipt class")
+    {
+        struct Base
+        {
+            std::string movement;
+            void move(const std::string& delta)
+            {
+                movement += delta;
+            }
+        };
+        lox.in_global_scope()->define_native_class<Base>("Base")
+            .add_function
+            (
+                "move", [](Base& b, lox::ArgumentHelper& arguments)
+                {
+                    const auto delta = arguments.require_string();
+                    arguments.complete();
+
+                    b.move(delta);
+
+                    return lox::make_nil();
+                }
+            )
+            .add_function
+            (
+                "get", [](Base& b, lox::ArgumentHelper& arguments)
+                {
+                    arguments.complete();
+
+                    return lox::make_string(b.movement);
+                }
+            )
+            ;
+
+        SECTION("binding works")
+        {
+            const auto run_ok = lox.run_string
+            (R"lox(
+                var a = new Base();
+                a.move("dog");
+                print a.get();
+            )lox");
+            CHECK(run_ok);
+            REQUIRE(StringEq(error_list, {}));
+            CHECK(StringEq(console_out, {"dog"}));
+        }
+
+        SECTION("derive from base")
+        {
+            const auto run_ok = lox.run_string
+            (R"lox(
+                class Derived : Base
+                {
+                }
+                var a = new Derived();
+                a.move("dog");
+                print a.get();
+            )lox");
+            CHECK(run_ok);
+            REQUIRE(StringEq(error_list, {}));
+            CHECK(StringEq(console_out, {"dog"}));
+        }
+    }
 }
