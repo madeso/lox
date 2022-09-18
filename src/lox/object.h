@@ -20,6 +20,7 @@ enum class ObjectType
 struct Environment;
 struct ArgumentHelper;
 struct Interpreter;
+struct Instance;
 
 
 constexpr std::string_view objecttype_to_string(ObjectType ot)
@@ -167,7 +168,7 @@ struct Klass : Object
 
     bool is_callable() const override;
 
-    virtual std::shared_ptr<Object> constructor(const Arguments& arguments) = 0;
+    virtual std::shared_ptr<Instance> constructor(const Arguments& arguments) = 0;
 
     bool add_method_or_false(const std::string& name, std::shared_ptr<Callable> method);
     std::shared_ptr<Callable> find_method_or_null(const std::string& name);
@@ -183,6 +184,7 @@ struct Klass : Object
 
 struct Instance : Object
 {
+    std::shared_ptr<Instance> parent;
     std::shared_ptr<Klass> klass;
 
     explicit Instance(std::shared_ptr<Klass> o);
@@ -629,7 +631,7 @@ struct Scope
     (
         const std::string& name,
         std::size_t id,
-        std::function<std::shared_ptr<Object> (std::shared_ptr<NativeKlass>, ArgumentHelper& ah)>&& c
+        std::function<std::shared_ptr<Instance> (std::shared_ptr<NativeKlass>, ArgumentHelper& ah)>&& c
     );
 
     virtual void

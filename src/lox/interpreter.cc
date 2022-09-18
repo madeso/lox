@@ -372,7 +372,7 @@ struct ScriptKlass : Klass
         return {"<class {}>"_format(klass_name)};
     }
 
-    std::shared_ptr<Object>
+    std::shared_ptr<Instance>
     constructor(const Arguments& arguments) override
     {
         auto self = shared_from_this();
@@ -395,6 +395,12 @@ struct ScriptKlass : Klass
             verify_number_of_arguments(arguments, 0);
         }
 
+        // call parent constructor
+        // todo(Gustav): call superklass constructor "before" we call self constructor
+        if(superklass != nullptr && instance->parent == nullptr)
+        {
+            instance->parent = superklass->constructor({{}});
+        }
         return instance;
     }
 };

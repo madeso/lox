@@ -1288,6 +1288,39 @@ TEST_CASE("interpret ok", "[interpret]")
         }));
     }
 
+    SECTION("inheritance: change property in base")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            class A
+            {
+                public var foo = 42;
+
+                public fun say()
+                {
+                    print this.foo;
+                }
+            }
+
+            class B : A
+            {
+                public fun test()
+                {
+                    print this.foo;
+                    this.foo = "cats <3";
+                    this.say();
+                }
+            }
+
+            new B().test();
+        )lox");
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
+            "42", "cats <3"
+        }));
+    }
+
     SECTION("static method")
     {
         const auto run_ok = run_string

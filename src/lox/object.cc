@@ -656,11 +656,6 @@ Klass::find_method_or_null(const std::string& method_name)
         return found->second;
     }
 
-    if(superklass != nullptr)
-    {
-        return superklass->find_method_or_null(method_name);
-    }
-
     return nullptr;
 }
 
@@ -742,12 +737,22 @@ std::shared_ptr<Object> Instance::get_property_or_null(const std::string& name)
         return method->bind(self);
     }
 
-    return nullptr;
+    if(parent == nullptr)
+    {
+        return nullptr;
+    }
+
+    return parent->get_property_or_null(name);
 }
 
 bool Instance::set_property_or_false(const std::string& name, std::shared_ptr<Object> value)
 {
-    return set_field_or_false(name, value);
+    auto was_set = set_field_or_false(name, value);
+    if(was_set == false && parent != nullptr)
+    {
+        return parent->set_field_or_false(name, value);
+    }
+    return was_set;
 }
 
 
@@ -1226,20 +1231,20 @@ namespace detail
 
 struct NativeKlassImpl : NativeKlass
 {
-    std::function<std::shared_ptr<Object> (std::shared_ptr<NativeKlass>, ArgumentHelper& ah)> constr;
+    std::function<std::shared_ptr<Instance> (std::shared_ptr<NativeKlass>, ArgumentHelper& ah)> constr;
 
     NativeKlassImpl
     (
         const std::string& name,
         std::size_t id,
-        std::function<std::shared_ptr<Object> (std::shared_ptr<NativeKlass>, ArgumentHelper& ah)>&& c    
+        std::function<std::shared_ptr<Instance> (std::shared_ptr<NativeKlass>, ArgumentHelper& ah)>&& c    
     )
-    : NativeKlass(name, id, nullptr)
-    , constr(std::move(c))
+        : NativeKlass(name, id, nullptr)
+        , constr(std::move(c))
     {
     }
 
-    std::shared_ptr<Object> constructor(const Arguments& arguments) override
+    std::shared_ptr<Instance> constructor(const Arguments& arguments) override
     {
         auto obj = shared_from_this();
         assert(obj.get() == this);
@@ -1333,7 +1338,7 @@ Scope::register_native_klass_impl
 (
     const std::string& name,
     std::size_t id,
-    std::function<std::shared_ptr<Object> (std::shared_ptr<NativeKlass>, ArgumentHelper& ah)>&& c
+    std::function<std::shared_ptr<Instance> (std::shared_ptr<NativeKlass>, ArgumentHelper& ah)>&& c
 )
 {
     auto new_klass = std::make_shared<NativeKlassImpl>(name, id, std::move(c));
