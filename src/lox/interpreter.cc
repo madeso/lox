@@ -1407,32 +1407,16 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
         assert(op_distance);
         auto distance = *op_distance;
         assert(distance > 0);
-        
-        auto base_super = current_environment->get_at_or_null(distance, "super");
-        assert(base_super != nullptr);
-        assert(base_super->get_type() == ObjectType::klass);
-        auto superklass = std::static_pointer_cast<Klass>(base_super);
 
-        auto object = current_environment->get_at_or_null(distance-1, "this");
+        auto base_object = current_environment->get_at_or_null(distance-1, "this");
+        assert(base_object != nullptr);
+        assert(base_object->get_type() == ObjectType::instance);
+
+        auto base_instance = std::static_pointer_cast<Instance>(base_object);
+        auto object = base_instance->parent;
         assert(object != nullptr);
-        assert(object->get_type() == ObjectType::instance);
 
-        auto method = superklass->find_method_or_null(x.property);
-
-        if(method == nullptr)
-        {
-            report_error_object
-            (
-                error_handler, x.offset, superklass,
-                " doesn't have a property named {}"_format
-                (
-                    x.property
-                )
-            );
-            throw RuntimeError{};
-        }
-
-        return method->bind(object);
+        return object->get_property_or_null(x.property);
     }
     
     std::shared_ptr<Object>

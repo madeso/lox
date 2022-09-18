@@ -802,7 +802,7 @@ TEST_CASE("lox binding" "[lox]")
             CHECK(StringEq(console_out, {"dog"}));
         }
 
-        SECTION("derive from base")
+        SECTION("basic derive from base")
         {
             const auto run_ok = lox.run_string
             (R"lox(
@@ -816,6 +816,26 @@ TEST_CASE("lox binding" "[lox]")
             CHECK(run_ok);
             REQUIRE(StringEq(error_list, {}));
             CHECK(StringEq(console_out, {"dog"}));
+        }
+
+        SECTION("derive from base with super call")
+        {
+            const auto run_ok = lox.run_string
+            (R"lox(
+                class Derived : Base
+                {
+                    public fun move(what)
+                    {
+                        super.move(what + what);
+                    }
+                }
+                var a = new Derived();
+                a.move("dog");
+                print a.get();
+            )lox");
+            CHECK(run_ok);
+            REQUIRE(StringEq(error_list, {}));
+            CHECK(StringEq(console_out, {"dogdog"}));
         }
     }
 }
