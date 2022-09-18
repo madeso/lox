@@ -553,6 +553,36 @@ TEST_CASE("interpret fail", "[interpret]")
             {error, 356, 378, {"<instance Person> doesn't have a property named sayName"}},
         }));
     }
+
+    SECTION("now invalid: base access can access derived value")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            class Base
+            {
+                public fun say()
+                {
+                    print this.val;
+                }
+            }
+            
+            class Derived : Base
+            {
+                public var val;
+                public fun init(v)
+                {
+                    this.val = v;
+                }
+            }
+            new Derived("hello").say();
+        )lox");
+        CHECK_FALSE(run_ok);
+        CHECK(StringEq(console_out,{}));
+        CHECK(ErrorEq(error_list, {
+            {error, 120, 123, {"<instance Base> doesn't have a property named val"}},
+            {note, 404, 406, {"called from here"}}
+        }));
+    }
 }
 
 
@@ -1521,42 +1551,3 @@ TEST_CASE("interpret ok", "[interpret]")
     }
 }
 
-
-// things that are currently allowed in the language but we should probably
-// dissalow, detect and error out as soon as possible
-TEST_CASE("interpret currently allowed", "[interpret]")
-{
-    std::vector<std::string> console_out;
-    std::vector<std::string> error_list;
-    auto printer = AddStringErrors{&error_list};
-    auto lx = lox::make_interpreter(&printer, [&](const std::string& s){ console_out.emplace_back(s); });
-
-    SECTION("base access can access derived value")
-    {
-        const auto run_ok = run_string
-        (lx, R"lox(
-            class Base
-            {
-                public fun say()
-                {
-                    print this.val;
-                }
-            }
-            
-            class Derived : Base
-            {
-                public var val;
-                public fun init(v)
-                {
-                    this.val = v;
-                }
-            }
-            new Derived("hello").say();
-        )lox");
-        CHECK(run_ok);
-        REQUIRE(StringEq(error_list, {}));
-        CHECK(StringEq(console_out,{
-            "hello"
-        }));
-    }
-}
