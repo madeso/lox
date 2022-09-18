@@ -837,5 +837,25 @@ TEST_CASE("lox binding" "[lox]")
             REQUIRE(StringEq(error_list, {}));
             CHECK(StringEq(console_out, {"dogdog"}));
         }
+
+        SECTION("derive from base call super with this")
+        {
+            const auto run_ok = lox.run_string
+            (R"lox(
+                class Derived : Base
+                {
+                    public fun pet()
+                    {
+                        this.move("cats");
+                    }
+                }
+                var a = new Derived();
+                a.pet();
+                print a.get();
+            )lox");
+            CHECK(run_ok);
+            REQUIRE(StringEq(error_list, {}));
+            CHECK(StringEq(console_out, {"cats"}));
+        }
     }
 }
