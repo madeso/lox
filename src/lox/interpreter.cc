@@ -399,7 +399,15 @@ struct ScriptKlass : Klass
         // todo(Gustav): call superklass constructor "before" we call self constructor
         if(superklass != nullptr && instance->parent == nullptr)
         {
-            instance->parent = superklass->constructor({{}});
+            try
+            {
+                instance->parent = superklass->constructor({{}});
+            }
+            catch(CallError& c)
+            {
+                c.error += " while implicitly calling constructor for superclass {}"_format(superklass->klass_name);
+                throw c;
+            }
         }
         return instance;
     }
@@ -1074,6 +1082,35 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
 
 
     std::shared_ptr<Object>
+    on_superconstructorcall_expression(const SuperConstructorCallExpression& x) override
+    {
+        auto op_distance = lookup_distance_for_var(x);
+        assert(op_distance);
+        auto distance = *op_distance;
+        assert(distance > 0);
+
+        auto base_super = current_environment->get_at_or_null(distance, "super");
+        assert(base_super != nullptr);
+        assert(base_super->get_type() == ObjectType::klass);
+        auto superklass = std::static_pointer_cast<Klass>(base_super);
+
+        auto base_object = current_environment->get_at_or_null(distance-1, "this");
+        assert(base_object != nullptr);
+        assert(base_object->get_type() == ObjectType::instance);
+
+        auto base_instance = std::static_pointer_cast<Instance>(base_object);
+
+        std::vector<std::shared_ptr<Object>> arguments;
+        for(auto& argument : x.arguments)
+        { 
+            arguments.emplace_back(evaluate(argument));
+        }
+        
+        base_instance->parent = superklass->constructor({arguments});
+        return base_instance->parent;
+    }
+
+    std::shared_ptr<Object>
     on_constructor_expression(const ConstructorExpression& x) override
     {
         auto klass_object = evaluate(x.klass);
@@ -1414,7 +1451,15 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
 
         auto base_instance = std::static_pointer_cast<Instance>(base_object);
         auto object = base_instance->parent;
-        assert(object != nullptr);
+        if(object == nullptr)
+        {
+            error_handler->on_error
+            (
+                x.offset,
+                "Superclass is not initialized. It need to be manually initialized in init with a call to super() for super to work"
+            );
+            throw RuntimeError{};
+        }
 
         return object->get_property_or_null(x.property);
     }

@@ -384,6 +384,18 @@ struct MainResolver : ExpressionVoidVisitor, StatementVoidVisitor
             resolve(a);
         }
     }
+    
+    void on_superconstructorcall_expression(const SuperConstructorCallExpression& x) override
+    {
+        // todo(Gustav): allow calling super ctor in member functions or should this be blocked too?
+        error_for_incorrect_super_usage(x.offset);
+
+        resolve_local(x, "super");
+        for(const auto& a: x.arguments)
+        {
+            resolve(a);
+        }
+    }
 
     void on_getproperty_expression(const GetPropertyExpression& x) override
     {
@@ -409,11 +421,11 @@ struct MainResolver : ExpressionVoidVisitor, StatementVoidVisitor
         resolve(x.object);
     }
 
-    void on_super_expression(const SuperExpression& x) override
+    void error_for_incorrect_super_usage(const Offset& off)
     {
         if(inside_static_method)
         {
-            error_handler->on_error(x.offset, "Can't use 'super' in a static method");
+            error_handler->on_error(off, "Can't use 'super' in a static method");
             has_errors = true;
         }
         else
@@ -421,12 +433,12 @@ struct MainResolver : ExpressionVoidVisitor, StatementVoidVisitor
             switch(current_class)
             {
             case ClassType::none:
-                error_handler->on_error(x.offset, "Can't use 'super' outside of class");
+                error_handler->on_error(off, "Can't use 'super' outside of class");
                 has_errors = true;
                 break;
 
             case ClassType::klass:
-                error_handler->on_error(x.offset, "Can't use 'super' in class with no superclass");
+                error_handler->on_error(off, "Can't use 'super' in class with no superclass");
                 has_errors = true;
                 break;
 
@@ -436,7 +448,11 @@ struct MainResolver : ExpressionVoidVisitor, StatementVoidVisitor
             default: assert(false && "unhandled case"); break;
             }
         }
+    }
 
+    void on_super_expression(const SuperExpression& x) override
+    {
+        error_for_incorrect_super_usage(x.offset);
         resolve_local(x, "super");
     }
 

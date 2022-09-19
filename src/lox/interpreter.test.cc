@@ -583,6 +583,100 @@ TEST_CASE("interpret fail", "[interpret]")
             {note, 404, 406, {"called from here"}}
         }));
     }
+
+    SECTION("call base ctor without base")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            class Derived
+            {
+                public fun init()
+                {
+                    super("dog");
+                }
+            }
+            new Derived();
+        )lox");
+        CHECK_FALSE(run_ok);
+        CHECK(StringEq(console_out,{}));
+        CHECK(ErrorEq(error_list, {
+            {error, 113, 125, {"Can't use 'super' in class with no superclass"}},
+        }));
+    }
+
+    SECTION("access super before initialized")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            class Base
+            {
+                public var data;
+
+                public fun init(d)
+                {
+                    this.data = d;
+                }
+
+                public fun say()
+                {
+                    print this.data;
+                }
+            }
+
+            class Derived : Base
+            {
+                public fun init()
+                {
+                    print super.data;
+                }
+            }
+
+            new Derived().say();
+        )lox");
+        CHECK_FALSE(run_ok);
+        CHECK(StringEq(console_out,{}));
+        CHECK(ErrorEq(error_list, {
+            {error, 425, 435, {"Superclass is not initialized. It need to be manually initialized in init with a call to super() for super to work"}},
+            {note, 493, 495, {"called from here"}},
+        }));
+    }
+
+    SECTION("don't call required ctor in init")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            class Base
+            {
+                public var data;
+
+                public fun init(d)
+                {
+                    this.data = d;
+                }
+
+                public fun say()
+                {
+                    print this.data;
+                }
+            }
+
+            class Derived : Base
+            {
+                public fun init()
+                {
+                    print "in Derived::init";
+                }
+            }
+
+            new Derived().say();
+        )lox");
+        CHECK_FALSE(run_ok);
+        CHECK(StringEq(console_out,{"in Derived::init"}));
+        CHECK(ErrorEq(error_list, {
+            {error, 501, 503, {"Expected 1 arguments but got 0 while implicitly calling constructor for superclass Base"}},
+            {note, 494, 501, {"called with 0 arguments"}},
+        }));
+    }
 }
 
 
@@ -1547,6 +1641,42 @@ TEST_CASE("interpret ok", "[interpret]")
         REQUIRE(StringEq(error_list, {}));
         CHECK(StringEq(console_out,{
             "12"
+        }));
+    }
+
+    SECTION("call class ctor")
+    {
+        const auto run_ok = run_string
+        (lx, R"lox(
+            class Base
+            {
+                public var data;
+
+                public fun init(d)
+                {
+                    this.data = d;
+                }
+
+                public fun say()
+                {
+                    print this.data;
+                }
+            }
+
+            class Derived : Base
+            {
+                public fun init()
+                {
+                    super("dog");
+                }
+            }
+
+            new Derived().say();
+        )lox");
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
+            "dog"
         }));
     }
 }

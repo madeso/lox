@@ -755,7 +755,7 @@ TEST_CASE("lox binding" "[lox]")
         }
     }
 
-    SECTION("native class -> scipt class")
+    SECTION("native class (default ctor) -> scipt class")
     {
         struct Base
         {
@@ -844,6 +844,137 @@ TEST_CASE("lox binding" "[lox]")
             (R"lox(
                 class Derived : Base
                 {
+                    public fun pet()
+                    {
+                        this.move("cats");
+                    }
+                }
+                var a = new Derived();
+                a.pet();
+                print a.get();
+            )lox");
+            CHECK(run_ok);
+            REQUIRE(StringEq(error_list, {}));
+            CHECK(StringEq(console_out, {"cats"}));
+        }
+    }
+
+
+    SECTION("native class (custom ctor) -> scipt class")
+    {
+        struct Base
+        {
+            std::string movement;
+
+            explicit Base(const std::string& s)
+                 : movement(s)
+            {
+            }
+
+            void move(const std::string& delta)
+            {
+                movement += delta;
+            }
+        };
+        lox.in_global_scope()->define_native_class<Base>
+            (
+                "Base", [](lox::ArgumentHelper& ah) -> Base
+                {
+                    const auto start = ah.require_string();
+                    ah.complete();
+                    return Base{start};
+                }
+            )
+            .add_function
+            (
+                "move", [](Base& b, lox::ArgumentHelper& arguments)
+                {
+                    const auto delta = arguments.require_string();
+                    arguments.complete();
+
+                    b.move(delta);
+
+                    return lox::make_nil();
+                }
+            )
+            .add_function
+            (
+                "get", [](Base& b, lox::ArgumentHelper& arguments)
+                {
+                    arguments.complete();
+
+                    return lox::make_string(b.movement);
+                }
+            )
+            ;
+
+        SECTION("binding works")
+        {
+            const auto run_ok = lox.run_string
+            (R"lox(
+                var a = new Base("cat and ");
+                a.move("dog");
+                print a.get();
+            )lox");
+            CHECK(run_ok);
+            REQUIRE(StringEq(error_list, {}));
+            CHECK(StringEq(console_out, {"cat and dog"}));
+        }
+
+        SECTION("basic derive from base")
+        {
+            const auto run_ok = lox.run_string
+            (R"lox(
+                class Derived : Base
+                {
+                    public fun init()
+                    {
+                        super("doggy ");
+                    }
+                }
+                var a = new Derived();
+                a.move("dog");
+                print a.get();
+            )lox");
+            CHECK(run_ok);
+            REQUIRE(StringEq(error_list, {}));
+            CHECK(StringEq(console_out, {"doggy dog"}));
+        }
+
+        SECTION("derive from base with super call")
+        {
+            const auto run_ok = lox.run_string
+            (R"lox(
+                class Derived : Base
+                {
+                    public fun init(x)
+                    {
+                        super(x);
+                    }
+                    public fun move(what)
+                    {
+                        super.move(what + what);
+                    }
+                }
+                var a = new Derived("doggy ");
+                a.move("dog");
+                print a.get();
+            )lox");
+            CHECK(run_ok);
+            REQUIRE(StringEq(error_list, {}));
+            CHECK(StringEq(console_out, {"doggy dogdog"}));
+        }
+
+        SECTION("derive from base call super with this")
+        {
+            const auto run_ok = lox.run_string
+            (R"lox(
+                class Derived : Base
+                {
+                    public fun init()
+                    {
+                        super("");
+                    }
                     public fun pet()
                     {
                         this.move("cats");

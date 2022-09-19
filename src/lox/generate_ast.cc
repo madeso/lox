@@ -299,6 +299,12 @@ write_code
                 }
             },
             {
+                "SuperConstructorCall",
+                {
+                    {"std::vector<std::shared_ptr<Expression>>", "arguments"}
+                }
+            },
+            {
                 "GetProperty",
                 {
                     {"Expression", "object"},

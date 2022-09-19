@@ -721,10 +721,9 @@ struct Parser
         return expr;
     }
 
-    std::shared_ptr<Expression>
-    finish_parsing_of_call(std::shared_ptr<Expression>&& callee)
+    std::vector<std::shared_ptr<Expression>>
+    parse_arguments()
     {
-        const auto start = previous_offset();
         std::vector<std::shared_ptr<Expression>> arguments;
         if (check(TokenType::RIGHT_PAREN) == false)
         {
@@ -733,16 +732,32 @@ struct Parser
                 arguments.emplace_back(parse_expression());
             } while(match({TokenType::COMMA}));
         }
+        consume(TokenType::RIGHT_PAREN, "Expect ')' after arguments");
 
-        const auto end = consume(TokenType::RIGHT_PAREN, "Expect ')' after arguments").offset;
+        return arguments;
+    }
+
+    void
+    validate_argument_size(std::size_t count, const Offset& off)
+    {
+        if(count > max_number_of_arguments)
+        {
+            error_count += 1;
+            error_handler->on_error(off, "More than {} number of arguments, passed {}"_format(max_number_of_arguments, count));
+        }
+    }
+
+    std::shared_ptr<Expression>
+    finish_parsing_of_call(std::shared_ptr<Expression>&& callee)
+    {
+        const auto start = previous_offset();
+        
+        auto arguments = parse_arguments();
+        const auto end = previous_offset();
 
         const auto off = offset_start_end(start, end);
 
-        if(arguments.size() > max_number_of_arguments)
-        {
-            error_count += 1;
-            error_handler->on_error(off, "More than {} number of arguments, passed {}"_format(max_number_of_arguments, arguments.size()));
-        }
+        validate_argument_size(arguments.size(), off);
 
         return std::make_shared<CallExpression>(off, new_expr(), std::move(callee), std::move(arguments));
     }
@@ -768,6 +783,17 @@ struct Parser
         if(match({TokenType::SUPER}))
         {
             const auto start = previous_offset();
+
+            if(match({TokenType::LEFT_PAREN}))
+            {
+                auto arguments = parse_arguments();
+                const auto end = previous_offset();
+                const auto off = offset_start_end(start, end);
+                validate_argument_size(arguments.size(), off);
+
+                return std::make_shared<SuperConstructorCallExpression>(off, new_expr(), std::move(arguments));
+            }
+
             consume(TokenType::DOT, "Expected '.' after 'super' keyword");
             auto name = consume(TokenType::IDENTIFIER, "Expected superclass property").lexeme;
             const auto end = previous_offset();

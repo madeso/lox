@@ -207,6 +207,17 @@ struct AstPrinter : ExpressionStringVisitor, StatementStringVisitor
     }
 
     std::string
+    on_superconstructorcall_expression(const SuperConstructorCallExpression& x) override
+    {
+        std::vector<std::string> args {};
+        for(const auto& a: x.arguments)
+        {
+            args.emplace_back(a->accept(this));
+        }
+        return parenthesize("super_constructor_call", args);
+    }
+
+    std::string
     on_getproperty_expression(const GetPropertyExpression& x) override
     {
         return parenthesize("get_prop", {x.name, x.object->accept(this)});
@@ -533,6 +544,23 @@ struct GraphvizPrinter : ExpressionStringVisitor, StatementStringVisitor
     {
         const auto n = new_node("constructor");
         link(n, x.klass->accept(this));
+
+        if(x.arguments.empty() == false)
+        {
+            const auto args = new_node("args");
+            link(n, args);
+            for(const auto& a: x.arguments)
+            {
+                link(args, a->accept(this));
+            }
+        }
+        return n;
+    }
+
+    std::string
+    on_superconstructorcall_expression(const SuperConstructorCallExpression& x) override
+    {
+        const auto n = new_node("super_constructor_call");
 
         if(x.arguments.empty() == false)
         {
