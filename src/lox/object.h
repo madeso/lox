@@ -120,7 +120,7 @@ struct Object : std::enable_shared_from_this<Object>
     virtual bool set_index_or_false(std::shared_ptr<Object> index, std::shared_ptr<Object> value);
 };
 
-
+using ObjectGenerator = std::function<std::shared_ptr<Object>()>;
 
 struct Arguments
 {
@@ -446,6 +446,19 @@ namespace detail
             return false;
         }
     };
+
+    struct PropertyGet : Property
+    {
+        std::function<std::shared_ptr<Object>()> getter;
+
+        PropertyGet
+        (
+            std::function<std::shared_ptr<Object>()>&& g
+        );
+
+        std::shared_ptr<Object> get_value(NativeInstance*) override;
+        bool set_value(NativeInstance*, std::shared_ptr<Object>) override;
+    };
 }
 
 
@@ -637,6 +650,9 @@ struct Scope
     virtual void
     set_property(const std::string& name, std::shared_ptr<Object> value) = 0;
 
+    virtual void
+    add_property(const std::string& name, ObjectGenerator&& value) = 0;
+
     template<typename T>
     ClassAdder<T>
     define_native_class(const std::string& name)
@@ -669,6 +685,9 @@ struct Scope
         );
         return ClassAdder<T>{native_klass};
     }
+
+    Scope&
+    add_native_getter(const std::string& name, ObjectGenerator&& getter);
 };
 
 

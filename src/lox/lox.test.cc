@@ -989,4 +989,23 @@ TEST_CASE("lox binding" "[lox]")
             CHECK(StringEq(console_out, {"cats"}));
         }
     }
+
+    SECTION("package - constants")
+    {
+        lox.in_package("defs.ints")
+            ->add_native_getter("one", []() { return lox::make_number_int(1); })
+            .add_native_getter("life", []() { return lox::make_number_int(42); })
+        ;
+
+        const auto run_ok = lox.run_string
+        (R"lox(
+            print defs.ints.one;
+            print defs.ints.life;
+        )lox");
+        CHECK(run_ok);
+        REQUIRE(StringEq(error_list, {}));
+        CHECK(StringEq(console_out,{
+            "1", "42"
+        }));
+    }
 }

@@ -1224,6 +1224,25 @@ namespace detail
     template<> std::shared_ptr<Object> make_object<bool>(bool b) { return lox::make_bool(b); }
     template<> std::shared_ptr<Object> make_object<Tf>(Tf n) { return lox::make_number_float(n); }
     template<> std::shared_ptr<Object> make_object<Ti>(Ti n) { return lox::make_number_int(n); }
+
+    
+    PropertyGet::PropertyGet
+    (
+        std::function<std::shared_ptr<Object>()>&& g
+    )
+        : getter(g)
+    {
+    }
+
+    std::shared_ptr<Object> PropertyGet::get_value(NativeInstance*)
+    {
+        return getter();
+    }
+
+    bool PropertyGet::set_value(NativeInstance*, std::shared_ptr<Object>)
+    {
+        return false;
+    }
 }
 
 // ----------------------------------------------------------------------------
@@ -1259,6 +1278,7 @@ struct NativePackage : Object, Scope
 {
     std::string package_name;
     std::unordered_map<std::string, std::shared_ptr<Object>> members;
+    std::unordered_map<std::string, ObjectGenerator> properties;
 
     NativePackage(Interpreter* inter, const std::string& name)
         : Scope(inter)
@@ -1293,9 +1313,13 @@ struct NativePackage : Object, Scope
     std::shared_ptr<Object>
     get_property_or_null(const std::string& name) override
     {
-        if(auto found = members.find(name); found != members.end())
+        if(auto found_member = members.find(name); found_member != members.end())
         {
-            return found->second;
+            return found_member->second;
+        }
+        else if(auto found_property = properties.find(name); found_property != properties.end())
+        {
+            return found_property->second();
         }
         else
         {
@@ -1312,8 +1336,17 @@ struct NativePackage : Object, Scope
     void
     set_property(const std::string& name, std::shared_ptr<Object> value) override
     {
-        assert(members.find(name) == members.end() && "error: member already added");
+        assert(members.find(name) == members.end() && "error: member already added (member)");
+        assert(properties.find(name) == properties.end() && "error: member already added (property)");
         members.insert({name, value});
+    }
+
+    void
+    add_property(const std::string& name, ObjectGenerator&& value) override
+    {
+        assert(members.find(name) == members.end() && "error: member already added (member)");
+        assert(properties.find(name) == properties.end() && "error: member already added (property)");
+        properties.insert({name, std::move(value)});
     }
 };
 
@@ -1347,6 +1380,13 @@ Scope::register_native_klass_impl
     return new_klass;
 }
 
+Scope&
+Scope::add_native_getter(const std::string& name, ObjectGenerator&& getter)
+{
+    add_property(name, std::move(getter));
+    return *this;
+}
+
 struct GlobalScope : Scope
 {
     Environment& global;
@@ -1361,6 +1401,12 @@ struct GlobalScope : Scope
     set_property(const std::string& name, std::shared_ptr<Object> value) override
     {
         global.define(name, value);
+    }
+
+    void
+    add_property(const std::string&, ObjectGenerator&&) override
+    {
+        assert(false && "global scope doesn't support properties");
     }
 };
 
