@@ -907,22 +907,37 @@ TEST_CASE("lox binding" "[lox]")
                 }
             )
             ;
+        lox::NativeRef<Base> base;
+        lox.in_global_scope()->define_native_function("cpp", [&](lox::Callable*, lox::ArgumentHelper& ah) -> std::shared_ptr<lox::Object>
+        {
+            auto inst = ah.require_instance();
+            auto passed_base = lox::get_derived<Base>(ah, inst);
+            ah.complete();
+
+            base = passed_base;
+            return lox::make_nil();
+        });
 
         SECTION("binding works")
         {
+            CHECK(base == nullptr);
             const auto run_ok = lox.run_string
             (R"lox(
                 var a = new Base("cat and ");
                 a.move("dog");
                 print a.get();
+                cpp(a);
             )lox");
             CHECK(run_ok);
             REQUIRE(StringEq(error_list, {}));
             CHECK(StringEq(console_out, {"cat and dog"}));
+            REQUIRE(base != nullptr);
+            CHECK(base->movement == "cat and dog");
         }
 
         SECTION("basic derive from base")
         {
+            CHECK(base == nullptr);
             const auto run_ok = lox.run_string
             (R"lox(
                 class Derived : Base
@@ -935,14 +950,18 @@ TEST_CASE("lox binding" "[lox]")
                 var a = new Derived();
                 a.move("dog");
                 print a.get();
+                cpp(a);
             )lox");
             CHECK(run_ok);
             REQUIRE(StringEq(error_list, {}));
             CHECK(StringEq(console_out, {"doggy dog"}));
+            REQUIRE(base != nullptr);
+            CHECK(base->movement == "doggy dog");
         }
 
         SECTION("derive from base with super call")
         {
+            CHECK(base == nullptr);
             const auto run_ok = lox.run_string
             (R"lox(
                 class Derived : Base
@@ -959,14 +978,18 @@ TEST_CASE("lox binding" "[lox]")
                 var a = new Derived("doggy ");
                 a.move("dog");
                 print a.get();
+                cpp(a);
             )lox");
             CHECK(run_ok);
             REQUIRE(StringEq(error_list, {}));
             CHECK(StringEq(console_out, {"doggy dogdog"}));
+            REQUIRE(base != nullptr);
+            CHECK(base->movement == "doggy dogdog");
         }
 
         SECTION("derive from base call super with this")
         {
+            CHECK(base == nullptr);
             const auto run_ok = lox.run_string
             (R"lox(
                 class Derived : Base
@@ -983,10 +1006,13 @@ TEST_CASE("lox binding" "[lox]")
                 var a = new Derived();
                 a.pet();
                 print a.get();
+                cpp(a);
             )lox");
             CHECK(run_ok);
             REQUIRE(StringEq(error_list, {}));
             CHECK(StringEq(console_out, {"cats"}));
+            REQUIRE(base != nullptr);
+            CHECK(base->movement == "cats");
         }
     }
 

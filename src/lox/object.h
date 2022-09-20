@@ -538,6 +538,12 @@ struct NativeRef
 {
     std::shared_ptr<NativeInstance> instance;
 
+
+    NativeRef()
+        : instance(nullptr)
+    {
+    }
+
     explicit NativeRef(std::shared_ptr<NativeInstance>&& in)
         : instance(std::move(in))
     {
@@ -622,6 +628,26 @@ struct ArgumentHelper
     void operator=(const ArgumentHelper&) = delete;
 };
 
+
+// ----------------------------------------------------------------------------
+
+template<typename T>
+NativeRef<T> get_derived(const ArgumentHelper&, std::shared_ptr<Instance> instance)
+{
+    std::shared_ptr<Instance> in = instance;
+    while(in != nullptr)
+    {
+        auto native = as_native<T>(in);
+        if(native != nullptr)
+        {
+            return native;
+        }
+        in = in->parent;
+    }
+
+    // todo(Gustav): report error
+    return {};
+}
 
 // ----------------------------------------------------------------------------
 

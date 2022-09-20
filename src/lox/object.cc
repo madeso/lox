@@ -1028,7 +1028,8 @@ std::shared_ptr<Instance>
 as_instance(std::shared_ptr<Object> o)
 {
     assert(o != nullptr);
-    if(o->get_type() != ObjectType::instance) { return nullptr; }
+    const auto t = o->get_type();
+    if(t != ObjectType::instance && t != ObjectType::native_instance) { return nullptr; }
     return std::static_pointer_cast<Instance>(o);
 }
 
