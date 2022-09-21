@@ -632,7 +632,7 @@ struct ArgumentHelper
 // ----------------------------------------------------------------------------
 
 template<typename T>
-NativeRef<T> get_derived(const ArgumentHelper&, std::shared_ptr<Instance> instance)
+NativeRef<T> get_derived(std::shared_ptr<Instance> instance)
 {
     std::shared_ptr<Instance> in = instance;
     while(in != nullptr)

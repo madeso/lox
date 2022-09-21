@@ -911,7 +911,7 @@ TEST_CASE("lox binding" "[lox]")
         lox.in_global_scope()->define_native_function("cpp", [&](lox::Callable*, lox::ArgumentHelper& ah) -> std::shared_ptr<lox::Object>
         {
             auto inst = ah.require_instance();
-            auto passed_base = lox::get_derived<Base>(ah, inst);
+            auto passed_base = lox::get_derived<Base>(inst);
             ah.complete();
 
             base = passed_base;
