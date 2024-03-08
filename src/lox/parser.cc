@@ -160,8 +160,6 @@ struct Parser
         std::vector<std::shared_ptr<VarStatement>> members;
         while(check(TokenType::RIGHT_BRACE) == false && is_at_end() == false)
         {
-            consume(TokenType::PUBLIC, "missing visibility specifier");
-
             const auto is_static = match({TokenType::STATIC});
 
             if(match({TokenType::FUN}))

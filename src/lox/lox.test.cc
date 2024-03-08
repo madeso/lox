@@ -556,12 +556,12 @@ TEST_CASE("lox binding" "[lox]")
         (R"lox(
             class Bar
             {
-                public var greeting;
-                public fun init(g)
+                var greeting;
+                fun init(g)
                 {
                     this.greeting = g;
                 }
-                public fun hello(name)
+                fun hello(name)
                 {
                     return this.greeting + name;
                 }
@@ -824,7 +824,7 @@ TEST_CASE("lox binding" "[lox]")
             (R"lox(
                 class Derived : Base
                 {
-                    public fun move(what)
+                    fun move(what)
                     {
                         super.move(what + what);
                     }
@@ -844,7 +844,7 @@ TEST_CASE("lox binding" "[lox]")
             (R"lox(
                 class Derived : Base
                 {
-                    public fun pet()
+                    fun pet()
                     {
                         this.move("cats");
                     }
@@ -942,7 +942,7 @@ TEST_CASE("lox binding" "[lox]")
             (R"lox(
                 class Derived : Base
                 {
-                    public fun init()
+                    fun init()
                     {
                         super("doggy ");
                     }
@@ -966,11 +966,11 @@ TEST_CASE("lox binding" "[lox]")
             (R"lox(
                 class Derived : Base
                 {
-                    public fun init(x)
+                    fun init(x)
                     {
                         super(x);
                     }
-                    public fun move(what)
+                    fun move(what)
                     {
                         super.move(what + what);
                     }
@@ -994,11 +994,11 @@ TEST_CASE("lox binding" "[lox]")
             (R"lox(
                 class Derived : Base
                 {
-                    public fun init()
+                    fun init()
                     {
                         super("");
                     }
-                    public fun pet()
+                    fun pet()
                     {
                         this.move("cats");
                     }

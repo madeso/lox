@@ -131,7 +131,7 @@ TEST_CASE("interpret fail", "[interpret]")
         const auto run_ok = run_string
         (lx, R"lox(
             class Foo {
-                public fun init()
+                fun init()
                 {
                     return "something else";
                 }
@@ -206,8 +206,8 @@ TEST_CASE("interpret fail", "[interpret]")
         (lx, R"lox(
             class Foo
             {
-                public var foo;
-                public var foo;
+                var foo;
+                var foo;
             }
         )lox");
         CHECK_FALSE(run_ok);
@@ -227,8 +227,8 @@ TEST_CASE("interpret fail", "[interpret]")
             (lx, R"lox(
                 class Foo
                 {
-                    public var foo;
-                    public fun foo() {}
+                    var foo;
+                    fun foo() {}
                 }
             )lox");
             CHECK_FALSE(run_ok);
@@ -245,8 +245,8 @@ TEST_CASE("interpret fail", "[interpret]")
             (lx, R"lox(
                 class Foo
                 {
-                    public fun foo() {}
-                    public var foo;
+                    fun foo() {}
+                    var foo;
                 }
             )lox");
             CHECK_FALSE(run_ok);
@@ -364,7 +364,7 @@ TEST_CASE("interpret fail", "[interpret]")
         (lx, R"lox(
             class Base
             {
-                public fun say()
+                fun say()
                 {
                     super.say();
                     print "Oh no";
@@ -384,7 +384,7 @@ TEST_CASE("interpret fail", "[interpret]")
         (lx, R"lox(
             class Base
             {
-                public fun say()
+                fun say()
                 {
                     print "hello";
                 }
@@ -392,7 +392,7 @@ TEST_CASE("interpret fail", "[interpret]")
 
             class Derived
             {
-                public static fun fail()
+                static fun fail()
                 {
                     super.say();
                 }
@@ -411,8 +411,8 @@ TEST_CASE("interpret fail", "[interpret]")
         (lx, R"lox(
             class Base
             {
-                public var member;
-                public static fun say()
+                var member;
+                static fun say()
                 {
                     this.member = "fail";
                 }
@@ -530,9 +530,9 @@ TEST_CASE("interpret fail", "[interpret]")
         (lx, R"lox(
             class Person
             {
-                public var name;
+                var name;
 
-                public fun sayName()
+                fun sayName()
                 {
                     print this.name;
                 }
@@ -560,7 +560,7 @@ TEST_CASE("interpret fail", "[interpret]")
         (lx, R"lox(
             class Base
             {
-                public fun say()
+                fun say()
                 {
                     print this.val;
                 }
@@ -568,8 +568,8 @@ TEST_CASE("interpret fail", "[interpret]")
             
             class Derived : Base
             {
-                public var val;
-                public fun init(v)
+                var val;
+                fun init(v)
                 {
                     this.val = v;
                 }
@@ -590,7 +590,7 @@ TEST_CASE("interpret fail", "[interpret]")
         (lx, R"lox(
             class Derived
             {
-                public fun init()
+                fun init()
                 {
                     super("dog");
                 }
@@ -610,14 +610,14 @@ TEST_CASE("interpret fail", "[interpret]")
         (lx, R"lox(
             class Base
             {
-                public var data;
+                var data;
 
-                public fun init(d)
+                fun init(d)
                 {
                     this.data = d;
                 }
 
-                public fun say()
+                fun say()
                 {
                     print this.data;
                 }
@@ -625,7 +625,7 @@ TEST_CASE("interpret fail", "[interpret]")
 
             class Derived : Base
             {
-                public fun init()
+                fun init()
                 {
                     print super.data;
                 }
@@ -647,14 +647,14 @@ TEST_CASE("interpret fail", "[interpret]")
         (lx, R"lox(
             class Base
             {
-                public var data;
+                var data;
 
-                public fun init(d)
+                fun init(d)
                 {
                     this.data = d;
                 }
 
-                public fun say()
+                fun say()
                 {
                     print this.data;
                 }
@@ -662,7 +662,7 @@ TEST_CASE("interpret fail", "[interpret]")
 
             class Derived : Base
             {
-                public fun init()
+                fun init()
                 {
                     print "in Derived::init";
                 }
@@ -1064,7 +1064,7 @@ TEST_CASE("interpret ok", "[interpret]")
         (lx, R"lox(
             class HelloWorlder
             {
-                public fun get_string()
+                fun get_string()
                 {
                     return "Hello, world!";
                 }
@@ -1088,7 +1088,7 @@ TEST_CASE("interpret ok", "[interpret]")
     {
         const auto run_ok = run_string
         (lx, R"lox(
-            class Classy{ public var animals; }
+            class Classy{ var animals; }
             var instance = new Classy();
             instance.animals = "I love cats!";
             print instance.animals;
@@ -1105,7 +1105,7 @@ TEST_CASE("interpret ok", "[interpret]")
     {
         const auto run_ok = run_string
         (lx, R"lox(
-            class Box { public var function; }
+            class Box { var function; }
 
             fun notMethod(argument)
             {
@@ -1129,19 +1129,19 @@ TEST_CASE("interpret ok", "[interpret]")
         (lx, R"lox(
             class Adder
             {
-                public var string;
+                var string;
 
-                public fun init(start)
+                fun init(start)
                 {
                     this.string = start;
                 }
 
-                public fun add(more)
+                fun add(more)
                 {
                     this.string = this.string + more;
                 }
 
-                public fun get()
+                fun get()
                 {
                     return this.string;
                 }
@@ -1166,7 +1166,7 @@ TEST_CASE("interpret ok", "[interpret]")
         (lx, R"lox(
             class Foo
             {
-                public fun init()
+                fun init()
                 {
                     print this;
                 }
@@ -1191,7 +1191,7 @@ TEST_CASE("interpret ok", "[interpret]")
         (lx, R"lox(
             class Foo
             {
-                public fun nop1() {}
+                fun nop1() {}
             }
 
             fun nop2() {}
@@ -1217,9 +1217,9 @@ TEST_CASE("interpret ok", "[interpret]")
         (lx, R"lox(
             class Animal
             {
-                public var val;
+                var val;
 
-                public fun init(val)
+                fun init(val)
                 {
                     this.val = val;
                     return; // "early" return, weird here but legal
@@ -1248,9 +1248,9 @@ TEST_CASE("interpret ok", "[interpret]")
         (lx, R"lox(
             class Person
             {
-                public var name;
+                var name;
 
-                public fun sayName()
+                fun sayName()
                 {
                     print this.name;
                 }
@@ -1275,7 +1275,7 @@ TEST_CASE("interpret ok", "[interpret]")
         (lx, R"lox(
             class Thing
             {
-                public fun getCallback()
+                fun getCallback()
                 {
                     fun localFunction()
                     {
@@ -1302,7 +1302,7 @@ TEST_CASE("interpret ok", "[interpret]")
         (lx, R"lox(
             class Base
             {
-                public fun say()
+                fun say()
                 {
                     print "Hello, world!";
                 }
@@ -1324,7 +1324,7 @@ TEST_CASE("interpret ok", "[interpret]")
         (lx, R"lox(
             class Base
             {
-                public fun say()
+                fun say()
                 {
                     print "base";
                 }
@@ -1332,7 +1332,7 @@ TEST_CASE("interpret ok", "[interpret]")
 
             class Derived : Base
             {
-                public fun say()
+                fun say()
                 {
                     print "derived";
                 }
@@ -1352,7 +1352,7 @@ TEST_CASE("interpret ok", "[interpret]")
         (lx, R"lox(
             class Base
             {
-                public fun say()
+                fun say()
                 {
                     print "base";
                 }
@@ -1360,7 +1360,7 @@ TEST_CASE("interpret ok", "[interpret]")
 
             class Derived : Base
             {
-                public fun say()
+                fun say()
                 {
                     super.say();
                     print "derived";
@@ -1382,7 +1382,7 @@ TEST_CASE("interpret ok", "[interpret]")
         (lx, R"lox(
             class A
             {
-                public fun method()
+                fun method()
                 {
                     print "A method";
                 }
@@ -1390,12 +1390,12 @@ TEST_CASE("interpret ok", "[interpret]")
 
             class B : A
             {
-                public fun method()
+                fun method()
                 {
                     print "B method";
                 }
 
-                public fun test()
+                fun test()
                 {
                     super.method();
                 }
@@ -1418,9 +1418,9 @@ TEST_CASE("interpret ok", "[interpret]")
         (lx, R"lox(
             class A
             {
-                public var foo = 42;
+                var foo = 42;
 
-                public fun say()
+                fun say()
                 {
                     print this.foo;
                 }
@@ -1428,7 +1428,7 @@ TEST_CASE("interpret ok", "[interpret]")
 
             class B : A
             {
-                public fun test()
+                fun test()
                 {
                     print this.foo;
                     this.foo = "cats <3";
@@ -1451,7 +1451,7 @@ TEST_CASE("interpret ok", "[interpret]")
         (lx, R"lox(
             class A
             {
-                public static fun method()
+                static fun method()
                 {
                     print "Hello, world!";
                 }
@@ -1472,12 +1472,12 @@ TEST_CASE("interpret ok", "[interpret]")
         (lx, R"lox(
             class A
             {
-                public static fun method()
+                static fun method()
                 {
                     print "Hello, world!";
                 }
 
-                public fun say()
+                fun say()
                 {
                     A.method();
                 }
@@ -1616,7 +1616,7 @@ TEST_CASE("interpret ok", "[interpret]")
     {
         const auto run_ok = run_string
         (lx, R"lox(
-            class Classy{ public var animals; }
+            class Classy{ var animals; }
             var instance = new Classy();
             instance.animals = "I love";
             instance.animals += " cats!";
@@ -1650,14 +1650,14 @@ TEST_CASE("interpret ok", "[interpret]")
         (lx, R"lox(
             class Base
             {
-                public var data;
+                var data;
 
-                public fun init(d)
+                fun init(d)
                 {
                     this.data = d;
                 }
 
-                public fun say()
+                fun say()
                 {
                     print this.data;
                 }
@@ -1665,7 +1665,7 @@ TEST_CASE("interpret ok", "[interpret]")
 
             class Derived : Base
             {
-                public fun init()
+                fun init()
                 {
                     super("dog");
                 }

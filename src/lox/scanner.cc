@@ -97,8 +97,6 @@ find_keyword_or_null(std::string_view str)
         kw["new"] = TokenType::NEW;
         kw["static"] = TokenType::STATIC;
         kw["const"] = TokenType::CONST;
-        kw["public"] = TokenType::PUBLIC;
-        kw["private"] = TokenType::PRIVATE;
 
         return kw;
     }();

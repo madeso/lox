@@ -38,7 +38,7 @@ namespace lox
         AND, CLASS, ELSE, FALSE, FUN, FOR, IF, NIL, OR,
         PRINT, RETURN, SUPER, THIS, TRUE, VAR, WHILE,
 
-        NEW, STATIC, CONST, PUBLIC, PRIVATE,
+        NEW, STATIC, CONST,
 
         EOF
     };
@@ -97,8 +97,6 @@ namespace lox
         case TokenType::NEW:            return "new";
         case TokenType::STATIC:         return "static";
         case TokenType::CONST:          return "const";
-        case TokenType::PUBLIC:         return "public";
-        case TokenType::PRIVATE:        return "private";
         case TokenType::EOF:            return "eof";
         default:                        assert(false); return "???";
         }
@@ -158,8 +156,6 @@ namespace lox
         case TokenType::NEW:            return "new";
         case TokenType::STATIC:         return "static";
         case TokenType::CONST:          return "const";
-        case TokenType::PUBLIC:         return "public";
-        case TokenType::PRIVATE:        return "private";
         case TokenType::EOF:            return "eof";
         default:                        assert(false); return "???";
         }

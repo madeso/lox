@@ -1,7 +1,7 @@
 program        -> declaration* EOF ;
 declaration    -> classDecl | funDecl | varDecl | statement ;
 classDecl      -> "class" IDENTIFIER ( ":" IDENTIFIER )? "{" member* "}" ;
-member         -> "public" (("fun" function) | varDecl);
+member         -> (("fun" function) | varDecl);
 funDecl        -> "fun" function ;
 function       -> IDENTIFIER "(" parameters? ")" block ;
 parameters     -> IDENTIFIER ( "," IDENTIFIER )* ;
