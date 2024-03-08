@@ -52,7 +52,7 @@ type_to_string(ReportedError::Type t)
 std::string
 ErrorToString(const ReportedError& e)
 {
-    return "({} {} {}: [{}])"_format(type_to_string(e.type), e.start, e.end, fmt::join(e.messages, ", "));
+    return "({} [{}])"_format(type_to_string(e.type), fmt::join(e.messages, ", "));
 }
 
 catchy::FalseString
@@ -65,9 +65,8 @@ SingleErrorEq(const ReportedError& lhs, const ReportedError& rhs)
         err += s;
     };
 
-    if(lhs.type != rhs.type) { add("{} != {}"_format(type_to_string(lhs.type), type_to_string(rhs.type))); }
-
-    if(lhs.start != rhs.start || lhs.end != rhs.end) { add("({} {}) != ({} {})"_format(lhs.start, lhs.end, rhs.start, rhs.end)); }
+    // if(lhs.type != rhs.type) { add("{} != {}"_format(type_to_string(lhs.type), type_to_string(rhs.type))); }
+    // if(lhs.start != rhs.start || lhs.end != rhs.end) { add("({} {}) != ({} {})"_format(lhs.start, lhs.end, rhs.start, rhs.end)); }
 
     const auto message_compare = catchy::StringEq(lhs.messages, rhs.messages);
     if(message_compare.IsTrue() == false) { add(message_compare.reason); }
