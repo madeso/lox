@@ -168,11 +168,13 @@ struct MainResolver : ExpressionVoidVisitor, StatementVoidVisitor
         declare_var(x.name, x.offset);
         define_var(x.name);
 
-        if(x.parent != nullptr && x.parent->name == x.name)
-        {
-            error_handler->on_error(x.parent->offset, "A class can't inherit from itself");
-            has_errors = true;
-        }
+        // todo(Gustav): this only means that the error in class Test : Test {} is a undefined variable
+        // obviously not good but also not terrible
+        // if(x.parent != nullptr && x.parent->name == x.name)
+        // {
+        //     error_handler->on_error(x.parent->offset, "A class can't inherit from itself");
+        //     has_errors = true;
+        // }
 
         inside_static_method = true;
         for(auto& method: x.static_methods)

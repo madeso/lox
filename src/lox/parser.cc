@@ -142,14 +142,20 @@ struct Parser
     std::shared_ptr<Statement>
     parse_class_declaration()
     {
-        const auto name = consume(TokenType::IDENTIFIER, "Expected class name").lexeme;
+        const auto className = consume(TokenType::IDENTIFIER, "Expected class name").lexeme;
         const auto start = previous_offset();
 
-        std::shared_ptr<VariableExpression> superclass;
+        std::shared_ptr<Expression> superclass;
         if(match({TokenType::COLON}))
         {
-            auto& id = consume(TokenType::IDENTIFIER, "Expected superclass name");
+            auto& id = consume(TokenType::IDENTIFIER, "Expected namespace or superclass name");
             superclass = std::make_shared<VariableExpression>(id.offset, new_expr(), std::string(id.lexeme));
+
+            while(match({TokenType::DOT}))
+            {
+                const auto& getName = consume(TokenType::IDENTIFIER, "Expected super class or namespace name after '.'");
+                superclass = std::make_shared<GetPropertyExpression>(getName.offset, new_expr(), std::move(superclass), std::string(getName.lexeme));
+            }
         }
 
         consume(TokenType::LEFT_BRACE, "Expected { before class body");
@@ -194,7 +200,7 @@ struct Parser
         (
             offset_start_end(start, end),
             new_stmt(),
-            std::string(name),
+            std::string(className),
             std::move(superclass),
             std::move(members),
             std::move(methods),

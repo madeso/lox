@@ -401,7 +401,7 @@ write_code
                 "Class",
                 {
                     {"std::string", "name"},
-                    {"VariableExpression", "parent"},
+                    {"Expression", "parent"},
                     {"std::vector<std::shared_ptr<VarStatement>>", "members"},
                     {"std::vector<std::shared_ptr<FunctionStatement>>", "methods"},
                     {"std::vector<std::shared_ptr<FunctionStatement>>", "static_methods"}
