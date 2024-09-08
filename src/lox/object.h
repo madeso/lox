@@ -55,7 +55,7 @@ void raise_error(const std::string& message);
 // ----------------------------------------------------------------------------
 
 struct Object;
-struct NativeFunction;
+struct NativeFunctionObject;
 
 
 struct ToStringOptions
@@ -152,9 +152,9 @@ struct Callable : public Object
 struct BoundCallable : Callable
 {
     std::shared_ptr<Object> bound;
-    std::shared_ptr<NativeFunction> callable;
+    std::shared_ptr<NativeFunctionObject> callable;
 
-    BoundCallable(std::shared_ptr<Object> bound, std::shared_ptr<NativeFunction> callable);
+    BoundCallable(std::shared_ptr<Object> bound, std::shared_ptr<NativeFunctionObject> callable);
     ~BoundCallable();
     std::vector<std::string> to_string(const ToStringOptions&) const override;
     std::shared_ptr<Object> call(const Arguments& arguments) override;
@@ -280,17 +280,14 @@ struct Array : public Object
 
 // ----------------------------------------------------------------------------
 
+using NativeFunction = std::function<std::shared_ptr<Object>(Callable*, ArgumentHelper& arguments)>;
 
 std::shared_ptr<Object>     make_nil              ();
 std::shared_ptr<Object>     make_string           (const std::string& str);
 std::shared_ptr<Object>     make_bool             (bool b);
 std::shared_ptr<Object>     make_number_int       (Ti f);
 std::shared_ptr<Object>     make_number_float     (Tf f);
-std::shared_ptr<Callable>   make_native_function
-(
-    const std::string& name,
-    std::function<std::shared_ptr<Object>(Callable*, ArgumentHelper& arguments)>&& func
-);
+std::shared_ptr<Callable>   make_native_function  (const std::string& name, NativeFunction&& func);
 
 struct ObjectIntegration
 {
@@ -606,33 +603,37 @@ NativeRef<T> as_native(std::shared_ptr<Object> obj)
 
 struct ArgumentHelper
 {
-    const lox::Arguments& args;
+    const lox::Arguments* args;
     u64 next_argument;
     bool has_read_all_arguments;
 
-    explicit ArgumentHelper(const lox::Arguments& args);
+    // if args == nullptr, this will be filled, use to request what arguments are required
+    std::vector<std::string> arguments_requested;
+
+    explicit ArgumentHelper(const lox::Arguments* args);
     void verify_completion();
 
     // todo(Gustav): add some match/switch helper to handle overloads
 
-    std::shared_ptr<Instance>   require_instance ();
-    std::shared_ptr<Object>     require_object   ();
-    std::string                 require_string   ();
-    bool                        require_bool     ();
-    Ti                          require_int      ();
-    Tf                          require_float    ();
-    std::shared_ptr<Callable>   require_callable ();
-    std::shared_ptr<Array>      require_array    ();
+    std::shared_ptr<Instance>   require_instance (const std::string& name);
+    std::shared_ptr<Object>     require_object   (const std::string& name);
+    std::string                 require_string   (const std::string& name);
+    bool                        require_bool     (const std::string& name);
+    Ti                          require_int      (const std::string& name);
+    Tf                          require_float    (const std::string& name);
+    std::shared_ptr<Callable>   require_callable (const std::string& name);
+    std::shared_ptr<Array>      require_array    (const std::string& name);
 
-    std::shared_ptr<NativeInstance> impl_require_native_instance(std::size_t klass);
+    std::shared_ptr<NativeInstance> impl_require_native_instance(const std::string& name, std::size_t klass);
 
     template<typename T>
-    NativeRef<T> require_native()
+    NativeRef<T> require_native(const std::string& name)
     {
-        return NativeRef<T>{impl_require_native_instance(detail::get_unique_id<T>())};
+        return NativeRef<T>{impl_require_native_instance(name, detail::get_unique_id<T>())};
     }
 
-    void complete();
+    // if complete returns true, abort function by returning a nil
+    [[nodiscard]] bool complete();
 
     ArgumentHelper(ArgumentHelper&&) = delete;
     ArgumentHelper(const ArgumentHelper&) = delete;
@@ -674,7 +675,7 @@ struct Scope
     define_native_function
     (
         const std::string& name,
-        std::function<std::shared_ptr<Object>(Callable*, ArgumentHelper& arguments)>&& func
+        NativeFunction&& func
     );
 
     std::shared_ptr<NativeKlass>
@@ -699,9 +700,12 @@ struct Scope
         (
             name,
             detail::get_unique_id<T>(),
-            [](std::shared_ptr<NativeKlass> klass, ArgumentHelper& args)
+            [](std::shared_ptr<NativeKlass> klass, ArgumentHelper& args) -> std::shared_ptr<Instance>
             {
-                args.complete();
+                if(args.complete()) {
+                    return std::shared_ptr<Instance>{nullptr};
+                }
+                
                 return detail::make_native_instance<T>(klass, T{});
             }
         );

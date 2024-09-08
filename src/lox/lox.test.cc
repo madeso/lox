@@ -26,8 +26,8 @@ TEST_CASE("lox binding fail" "[lox]")
             "nat",
             [](lox::Callable*, lox::ArgumentHelper& helper)
             {
-                auto arg = helper.require_string();
-                helper.complete();
+                auto arg = helper.require_string("arg");
+                if(helper.complete()) return lox::make_nil();
                 return lox::make_string(arg);
             }
         );
@@ -117,8 +117,8 @@ TEST_CASE("lox binding fail" "[lox]")
             (
                 "add", [](lox::Callable*, lox::ArgumentHelper& ah)
                 {
-                    auto adder = ah.require_native<Subber>();
-                    ah.complete();
+                    auto adder = ah.require_native<Subber>("adder");
+                    if(ah.complete()) return lox::make_nil();
                     return lox::make_nil();
                 }
             );
@@ -155,7 +155,7 @@ TEST_CASE("lox binding" "[lox]")
             "nat",
             [](lox::Callable*, lox::ArgumentHelper& helper)
             {
-                helper.complete();
+                if(helper.complete()) return lox::make_nil();
                 return lox::make_string("hello world");
             }
         );
@@ -206,9 +206,9 @@ TEST_CASE("lox binding" "[lox]")
             "add",
             [](lox::Callable*, lox::ArgumentHelper& ah)
             {
-                auto lhs = ah.require_int();
-                auto rhs = ah.require_int();
-                ah.complete();
+                auto lhs = ah.require_int("lhs");
+                auto rhs = ah.require_int("rhs");
+                if(ah.complete()) return lox::make_nil();
                 return lox::make_number_int(lhs + rhs);
             }
         );
@@ -231,9 +231,9 @@ TEST_CASE("lox binding" "[lox]")
             "add",
             [](lox::Callable*, lox::ArgumentHelper& ah)
             {
-                auto lhs = ah.require_string();
-                auto rhs = ah.require_string();
-                ah.complete();
+                auto lhs = ah.require_string("lhs");
+                auto rhs = ah.require_string("rhs");
+                if(ah.complete()) return lox::make_nil();
                 return lox::make_bool(lhs < rhs);
             }
         );
@@ -257,8 +257,8 @@ TEST_CASE("lox binding" "[lox]")
             "add",
             [](lox::Callable*, lox::ArgumentHelper& ah)
             {
-                auto lhs = ah.require_bool();
-                ah.complete();
+                auto lhs = ah.require_bool("bool");
+                if(ah.complete()) return lox::make_nil();
                 if(lhs) return lox::make_string("yes!");
                 else    return lox::make_string("or no?");
             }
@@ -284,8 +284,8 @@ TEST_CASE("lox binding" "[lox]")
             "set_fun",
             [&callable](lox::Callable*, lox::ArgumentHelper& ah)
             {
-                callable = ah.require_callable();
-                ah.complete();
+                callable = ah.require_callable("callable");
+                if(ah.complete()) return lox::make_nil();
                 return lox::make_nil();
             }
         );
@@ -335,7 +335,7 @@ TEST_CASE("lox binding" "[lox]")
             (
                 "get", [](Adder& c, lox::ArgumentHelper& arguments)
                 {
-                    arguments.complete();
+                    if(arguments.complete()) return lox::make_nil();
                     return lox::make_string(c.value);
                 }
             )
@@ -343,8 +343,8 @@ TEST_CASE("lox binding" "[lox]")
             (
                 "add", [](Adder& c, lox::ArgumentHelper& arguments)
                 {
-                    const auto new_value = arguments.require_string();
-                    arguments.complete();
+                    const auto new_value = arguments.require_string("new_value");
+                    if(arguments.complete()) return lox::make_nil();
                     c.value += new_value;
                     return lox::make_nil();
                 }
@@ -395,8 +395,8 @@ TEST_CASE("lox binding" "[lox]")
                 "Adder",
                 [](lox::ArgumentHelper& args)
                 {
-                    const auto initial = args.require_string();
-                    args.complete();
+                    const auto initial = args.require_string("initial");
+                    if(args.complete()) return Adder{};
                     Adder a;
                     a.value = initial;
                     return a;
@@ -406,7 +406,7 @@ TEST_CASE("lox binding" "[lox]")
             (
                 "get", [](Adder& c, lox::ArgumentHelper& arguments)
                 {
-                    arguments.complete();
+                    if(arguments.complete()) return lox::make_nil();
                     return lox::make_string(c.value);
                 }
             )
@@ -414,8 +414,8 @@ TEST_CASE("lox binding" "[lox]")
             (
                 "add", [](Adder& c, lox::ArgumentHelper& arguments)
                 {
-                    const auto new_value = arguments.require_string();
-                    arguments.complete();
+                    const auto new_value = arguments.require_string("new_value");
+                    if(arguments.complete()) return lox::make_nil();
                     c.value += new_value;
                     return lox::make_nil();
                 }
@@ -476,8 +476,8 @@ TEST_CASE("lox binding" "[lox]")
                 "Adder",
                 [](lox::ArgumentHelper& args)
                 {
-                    const auto initial = args.require_string();
-                    args.complete();
+                    const auto initial = args.require_string("initial");
+                    if(args.complete()) return Adder{};
                     Adder a;
                     a.value = initial;
                     return a;
@@ -487,7 +487,7 @@ TEST_CASE("lox binding" "[lox]")
             (
                 "get", [](Adder& c, lox::ArgumentHelper& arguments)
                 {
-                    arguments.complete();
+                    if(arguments.complete()) return lox::make_nil();
                     return lox::make_string(c.value);
                 }
             );
@@ -498,8 +498,8 @@ TEST_CASE("lox binding" "[lox]")
             (
                 "test", [](lox::Callable*, lox::ArgumentHelper& ah)
                 {
-                    auto adder = ah.require_native<Adder>();
-                    ah.complete();
+                    auto adder = ah.require_native<Adder>("adder");
+                    if(ah.complete()) return lox::make_nil();
                     return lox::make_string(adder->value);
                 }
             );
@@ -520,8 +520,8 @@ TEST_CASE("lox binding" "[lox]")
             (
                 "test", [&lox](lox::Callable*, lox::ArgumentHelper& ah)
                 {
-                    auto initial = ah.require_string();
-                    ah.complete();
+                    auto initial = ah.require_string("initial");
+                    if(ah.complete()) return lox::make_nil();
                     Adder a;
                     a.value = initial;
                     return lox.make_native(a);
@@ -546,8 +546,8 @@ TEST_CASE("lox binding" "[lox]")
         (
             "set_foo", [&object](lox::Callable*, lox::ArgumentHelper& ah)
             {
-                auto initial = ah.require_instance();
-                ah.complete();
+                auto initial = ah.require_instance("initial");
+                if(ah.complete()) return lox::make_nil();
                 object = initial;
                 return lox::make_nil();
             }
@@ -592,9 +592,9 @@ TEST_CASE("lox binding" "[lox]")
             "add",
             [](lox::Callable*, lox::ArgumentHelper& ah)
             {
-                auto lhs = ah.require_int();
-                auto rhs = ah.require_int();
-                ah.complete();
+                auto lhs = ah.require_int("lhs");
+                auto rhs = ah.require_int("rhs");
+                if(ah.complete()) return lox::make_nil();
                 return lox::make_number_int(lhs + rhs);
             }
         );
@@ -617,9 +617,9 @@ TEST_CASE("lox binding" "[lox]")
             "add",
             [](lox::Callable*, lox::ArgumentHelper& ah)
             {
-                auto lhs = ah.require_int();
-                auto rhs = ah.require_int();
-                ah.complete();
+                auto lhs = ah.require_int("lhs");
+                auto rhs = ah.require_int("rhs");
+                if(ah.complete()) return lox::make_nil();
                 return lox::make_number_int(lhs + rhs);
             }
         );
@@ -646,7 +646,7 @@ TEST_CASE("lox binding" "[lox]")
             (
                 "get", [](Adder& c, lox::ArgumentHelper& arguments)
                 {
-                    arguments.complete();
+                    if(arguments.complete()) return lox::make_nil();
                     return lox::make_string(c.value);
                 }
             )
@@ -654,8 +654,8 @@ TEST_CASE("lox binding" "[lox]")
             (
                 "add", [](Adder& c, lox::ArgumentHelper& arguments)
                 {
-                    const auto new_value = arguments.require_string();
-                    arguments.complete();
+                    const auto new_value = arguments.require_string("new_value");
+                    if(arguments.complete()) return lox::make_nil();
                     c.value += new_value;
                     return lox::make_nil();
                 }
@@ -706,7 +706,7 @@ TEST_CASE("lox binding" "[lox]")
             (
                 "get", [](Adder& c, lox::ArgumentHelper& arguments)
                 {
-                    arguments.complete();
+                    if(arguments.complete()) return lox::make_nil();
                     return lox::make_string(c.value);
                 }
             )
@@ -714,8 +714,8 @@ TEST_CASE("lox binding" "[lox]")
             (
                 "add", [](Adder& c, lox::ArgumentHelper& arguments)
                 {
-                    const auto new_value = arguments.require_string();
-                    arguments.complete();
+                    const auto new_value = arguments.require_string("new_value");
+                    if(arguments.complete()) return lox::make_nil();
                     c.value += new_value;
                     return lox::make_nil();
                 }
@@ -770,8 +770,8 @@ TEST_CASE("lox binding" "[lox]")
             (
                 "move", [](Base& b, lox::ArgumentHelper& arguments)
                 {
-                    const auto delta = arguments.require_string();
-                    arguments.complete();
+                    const auto delta = arguments.require_string("delta");
+                    if(arguments.complete()) return lox::make_nil();
 
                     b.move(delta);
 
@@ -782,7 +782,7 @@ TEST_CASE("lox binding" "[lox]")
             (
                 "get", [](Base& b, lox::ArgumentHelper& arguments)
                 {
-                    arguments.complete();
+                    if(arguments.complete()) return lox::make_nil();
 
                     return lox::make_string(b.movement);
                 }
@@ -880,8 +880,8 @@ TEST_CASE("lox binding" "[lox]")
             (
                 "Base", [](lox::ArgumentHelper& ah) -> Base
                 {
-                    const auto start = ah.require_string();
-                    ah.complete();
+                    const auto start = ah.require_string("start");
+                    if(ah.complete()) return Base{""};
                     return Base{start};
                 }
             )
@@ -889,8 +889,8 @@ TEST_CASE("lox binding" "[lox]")
             (
                 "move", [](Base& b, lox::ArgumentHelper& arguments)
                 {
-                    const auto delta = arguments.require_string();
-                    arguments.complete();
+                    const auto delta = arguments.require_string("delta");
+                    if(arguments.complete()) return lox::make_nil();
 
                     b.move(delta);
 
@@ -901,7 +901,7 @@ TEST_CASE("lox binding" "[lox]")
             (
                 "get", [](Base& b, lox::ArgumentHelper& arguments)
                 {
-                    arguments.complete();
+                    if(arguments.complete()) return lox::make_nil();
 
                     return lox::make_string(b.movement);
                 }
@@ -910,9 +910,9 @@ TEST_CASE("lox binding" "[lox]")
         lox::NativeRef<Base> base;
         lox.in_global_scope()->define_native_function("cpp", [&](lox::Callable*, lox::ArgumentHelper& ah) -> std::shared_ptr<lox::Object>
         {
-            auto inst = ah.require_instance();
+            auto inst = ah.require_instance("instance");
             auto passed_base = lox::get_derived<Base>(inst);
-            ah.complete();
+            if(ah.complete()) return lox::make_nil();
 
             base = passed_base;
             return lox::make_nil();

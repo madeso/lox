@@ -22,7 +22,7 @@ struct ObjectIntegrationImpl : ObjectIntegration
     void add_array_method
     (
         const std::string& name,
-        std::function<std::shared_ptr<Object>(Callable*, ArgumentHelper& arguments)>&& func
+        NativeFunction&& func
     )
     {
         assert(array_methods.find(name) == array_methods.end());
@@ -165,15 +165,15 @@ namespace lox
 {
 
 
-struct NativeFunction : Callable
+struct NativeFunctionObject : Callable
 {
     std::string name;
-    std::function<std::shared_ptr<Object>(Callable*, ArgumentHelper& arguments)> func;
+    NativeFunction func;
 
-    NativeFunction
+    NativeFunctionObject
     (
         const std::string& n,
-        std::function<std::shared_ptr<Object>(Callable*, ArgumentHelper& arguments)> f
+        NativeFunction f
     )
         : name(n)
         , func(f)
@@ -189,7 +189,7 @@ struct NativeFunction : Callable
     std::shared_ptr<Object>
     perform_call(Callable* callable, const Arguments& arguments)
     {
-        ArgumentHelper helper{arguments};
+        ArgumentHelper helper{&arguments};
 
         auto ret = func(callable, helper);
         helper.verify_completion();
@@ -199,8 +199,9 @@ struct NativeFunction : Callable
 
     ArgInfo get_arg_info() const override
     {
-        // todo(Gustav): improve binding library to add type info
-        return {{}};
+        ArgumentHelper helper{nullptr};
+        auto ret = func(nullptr, helper);
+        return {helper.arguments_requested};
     }
 
     std::shared_ptr<Object>
@@ -212,7 +213,7 @@ struct NativeFunction : Callable
     std::shared_ptr<Callable>
     bind(std::shared_ptr<Object> bound) override
     {
-        auto self = std::static_pointer_cast<NativeFunction>(shared_from_this());
+        auto self = std::static_pointer_cast<NativeFunctionObject>(shared_from_this());
         return std::make_shared<BoundCallable>(bound, self);
     }
 };
@@ -392,7 +393,10 @@ ObjectIntegrationImpl::register_functions()
         std::shared_ptr<Array> array = std::static_pointer_cast<Array>(bound->bound);
         assert(array != nullptr);
 
-        arguments.complete();
+        if(arguments.complete())
+        {
+            return make_nil();
+        }
 
         const std::size_t length = array->values.size();
         if(static_cast<std::size_t>(std::numeric_limits<Ti>::max()) < length)
@@ -413,8 +417,11 @@ ObjectIntegrationImpl::register_functions()
         std::shared_ptr<Array> array = std::static_pointer_cast<Array>(bound->bound);
         assert(array != nullptr);
 
-        auto to_add = arguments.require_object();
-        arguments.complete();
+        auto to_add = arguments.require_object("to_add");
+        if(arguments.complete())
+        {
+            return make_nil();
+        }
 
         array->values.emplace_back(std::move(to_add));
 
@@ -431,7 +438,10 @@ ObjectIntegrationImpl::register_functions()
         std::shared_ptr<Array> array = std::static_pointer_cast<Array>(bound->bound);
         assert(array != nullptr);
 
-        arguments.complete();
+        if(arguments.complete())
+        {
+            return make_nil();
+        }
 
         if(array->values.empty())
         {
@@ -578,7 +588,7 @@ bool Callable::is_bound() const
 // ----------------------------------------------------------------------------
 
 
-BoundCallable::BoundCallable(std::shared_ptr<Object> b, std::shared_ptr<NativeFunction> c)
+BoundCallable::BoundCallable(std::shared_ptr<Object> b, std::shared_ptr<NativeFunctionObject> c)
     : bound(b)
     , callable(c)
 {
@@ -967,10 +977,10 @@ std::shared_ptr<Callable>
 make_native_function
 (
     const std::string& name,
-    std::function<std::shared_ptr<Object>(Callable*, ArgumentHelper& arguments)>&& func
+    NativeFunction&& func
 )
 {
-    return std::make_shared<NativeFunction>(name, func);
+    return std::make_shared<NativeFunctionObject>(name, func);
 }
 
 
@@ -1118,7 +1128,7 @@ is_truthy(std::shared_ptr<Object> o)
 // ----------------------------------------------------------------------------
 
 
-ArgumentHelper::ArgumentHelper(const lox::Arguments& aargs)
+ArgumentHelper::ArgumentHelper(const lox::Arguments* aargs)
     : args(aargs)
     , next_argument(0)
     , has_read_all_arguments(false)
@@ -1130,84 +1140,131 @@ void ArgumentHelper::verify_completion()
     assert(has_read_all_arguments && "complete() not called");
 }
 
-void
+bool
 ArgumentHelper::complete()
 {
+    if(args == nullptr) return true;
     assert(has_read_all_arguments==false && "complete() called twice!");
     has_read_all_arguments = true;
-    verify_number_of_arguments(args, next_argument);
+    verify_number_of_arguments(*args, next_argument);
+    return false;
 }
 
 std::shared_ptr<Instance>
-ArgumentHelper::require_instance()
+ArgumentHelper::require_instance(const std::string& name)
 {
+    if(args == nullptr)
+    {
+        arguments_requested.emplace_back(name);
+        return nullptr;
+    }
     const auto argument_index = next_argument++;
-    if(args.arguments.size() <= argument_index) { return nullptr; }
-    return get_instance_from_arg(args, argument_index);
+    if(args->arguments.size() <= argument_index) { return nullptr; }
+    return get_instance_from_arg(*args, argument_index);
 }
 
 std::shared_ptr<Object>
-ArgumentHelper::require_object()
+ArgumentHelper::require_object(const std::string& name)
 {
+    if(args == nullptr)
+    {
+        arguments_requested.emplace_back(name);
+        return nullptr;
+    }
     const auto argument_index = next_argument++;
-    if(args.arguments.size() <= argument_index) { return nullptr; }
-    return get_object_from_arg(args, argument_index);
+    if(args->arguments.size() <= argument_index) { return nullptr; }
+    return get_object_from_arg(*args, argument_index);
 }
 
 std::string
-ArgumentHelper::require_string()
+ArgumentHelper::require_string(const std::string& name)
 {
+    if(args == nullptr)
+    {
+        arguments_requested.emplace_back(name);
+        return "";
+    }
     const auto argument_index = next_argument++;
-    if(args.arguments.size() <= argument_index) { return ""; }
-    return get_string_from_arg(args, argument_index);
+    if(args->arguments.size() <= argument_index) { return ""; }
+    return get_string_from_arg(*args, argument_index);
 }
 
 bool
-ArgumentHelper::require_bool()
+ArgumentHelper::require_bool(const std::string& name)
 {
+    if(args == nullptr)
+    {
+        arguments_requested.emplace_back(name);
+        return false;
+    }
     const auto argument_index = next_argument++;
-    if(args.arguments.size() <= argument_index) { return false; }
-    return get_bool_from_arg(args, argument_index);
+    if(args->arguments.size() <= argument_index) { return false; }
+    return get_bool_from_arg(*args, argument_index);
 }
 
 Ti
-ArgumentHelper::require_int()
+ArgumentHelper::require_int(const std::string& name)
 {
+    if(args == nullptr)
+    {
+        arguments_requested.emplace_back(name);
+        return 0;
+    }
     const auto argument_index = next_argument++;
-    if(args.arguments.size() <= argument_index) { return 0; }
-    return get_int_from_arg(args, argument_index);
+    if(args->arguments.size() <= argument_index) { return 0; }
+    return get_int_from_arg(*args, argument_index);
 }
 
 Tf
-ArgumentHelper::require_float()
+ArgumentHelper::require_float(const std::string& name)
 {
+    if(args == nullptr)
+    {
+        arguments_requested.emplace_back(name);
+        return 0.0;
+    }
     const auto argument_index = next_argument++;
-    if(args.arguments.size() <= argument_index) { return 0.0; }
-    return get_float_from_arg(args, argument_index);
+    if(args->arguments.size() <= argument_index) { return 0.0; }
+    return get_float_from_arg(*args, argument_index);
 }
 
 std::shared_ptr<Callable>
-ArgumentHelper::require_callable()
+ArgumentHelper::require_callable(const std::string& name)
 {
+    if(args == nullptr)
+    {
+        arguments_requested.emplace_back(name);
+        return nullptr;
+    }
     const auto argument_index = next_argument++;
-    if(args.arguments.size() <= argument_index) { return nullptr; }
-    return get_callable_from_arg(args, argument_index);
+    if(args->arguments.size() <= argument_index) { return nullptr; }
+    return get_callable_from_arg(*args, argument_index);
 }
 
 std::shared_ptr<Array>
-ArgumentHelper::require_array()
+ArgumentHelper::require_array(const std::string& name)
 {
+    if(args == nullptr)
+    {
+        arguments_requested.emplace_back(name);
+        return nullptr;
+    }
     const auto argument_index = next_argument++;
-    if(args.arguments.size() <= argument_index) { return nullptr; }
-    return get_array_from_arg(args, argument_index);
+    if(args->arguments.size() <= argument_index) { return nullptr; }
+    return get_array_from_arg(*args, argument_index);
 }
 
 std::shared_ptr<NativeInstance>
-ArgumentHelper::impl_require_native_instance(std::size_t klass)
+ArgumentHelper::impl_require_native_instance(const std::string& name, std::size_t klass)
 {
+    if(args == nullptr)
+    {
+        arguments_requested.emplace_back(name);
+        return nullptr;
+    }
     const auto argument_index = next_argument++;
-    if(args.arguments.size() <= argument_index) { return nullptr; }
-    return get_native_instance_from_arg(args, argument_index, klass);
+    if(args->arguments.size() <= argument_index) { return nullptr; }
+    return get_native_instance_from_arg(*args, argument_index, klass);
 }
 
 // ----------------------------------------------------------------------------
@@ -1280,7 +1337,7 @@ struct NativeKlassImpl : NativeKlass
         auto obj = shared_from_this();
         assert(obj.get() == this);
         auto self = std::static_pointer_cast<NativeKlassImpl>(obj);
-        ArgumentHelper ah{arguments};
+        ArgumentHelper ah{&arguments};
         return constr(self, ah);
     }
 };
@@ -1372,7 +1429,7 @@ void
 Scope::define_native_function
 (
     const std::string& name,
-    std::function<std::shared_ptr<Object>(Callable*, ArgumentHelper& arguments)>&& func
+    NativeFunction&& func
 )
 {
     set_property(name, make_native_function(name, std::move(func)));
