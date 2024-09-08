@@ -122,9 +122,18 @@ struct Object : std::enable_shared_from_this<Object>
 
 using ObjectGenerator = std::function<std::shared_ptr<Object>()>;
 
+struct Type : public Object
+{
+};
+
 struct Arguments
 {
     std::vector<std::shared_ptr<Object>> arguments;
+};
+
+struct ArgInfo
+{
+    std::vector<std::string> arguments;
 };
 
 struct Callable : public Object
@@ -134,6 +143,8 @@ struct Callable : public Object
     bool is_callable() const override;
 
     virtual bool is_bound() const;
+
+    virtual ArgInfo get_arg_info() const = 0;
 
     virtual std::shared_ptr<Callable> bind(std::shared_ptr<Object> instance) = 0;
 };
@@ -149,11 +160,12 @@ struct BoundCallable : Callable
     std::shared_ptr<Object> call(const Arguments& arguments) override;
     std::shared_ptr<Callable> bind(std::shared_ptr<Object> instance) override;
     bool is_bound() const override;
+    ArgInfo get_arg_info() const override;
 };
 
 // ----------------------------------------------------------------------------
 
-struct Klass : Object
+struct Klass : Type
 {
     std::string klass_name;
     std::shared_ptr<Klass> superklass;

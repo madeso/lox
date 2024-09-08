@@ -92,6 +92,11 @@ struct ScriptFunction : Callable
     std::vector<std::shared_ptr<Statement>> body;
     bool is_initializer;
 
+    ArgInfo get_arg_info() const override
+    {
+        return {params};
+    }
+
     explicit ScriptFunction
     (
         MainInterpreter* i,

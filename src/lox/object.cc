@@ -197,6 +197,12 @@ struct NativeFunction : Callable
         return ret;
     }
 
+    ArgInfo get_arg_info() const override
+    {
+        // todo(Gustav): improve binding library to add type info
+        return {{}};
+    }
+
     std::shared_ptr<Object>
     call(const Arguments& arguments) override
     {
@@ -604,6 +610,11 @@ std::shared_ptr<Callable> BoundCallable::bind(std::shared_ptr<Object>)
 bool BoundCallable::is_bound() const
 {
     return true;
+}
+
+ArgInfo BoundCallable::get_arg_info() const
+{
+    return callable->get_arg_info();
 }
 
 
