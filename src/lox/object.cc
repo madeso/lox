@@ -183,7 +183,7 @@ struct NativeFunctionObject : Callable
     std::vector<std::string>
     to_string(const ToStringOptions&) const override
     {
-        return {"<native fun {}>"_format(name)};
+        return {fmt::format("<native fun {}>", name)};
     }
 
     std::shared_ptr<Object>
@@ -346,7 +346,7 @@ Array::to_string(const ToStringOptions& tsoa) const
         const auto ss = v->to_string(tso);
         for(const auto& s: ss)
         {
-            r.emplace_back("{}{}"_format(tso.indent, s));
+            r.emplace_back(fmt::format("{}{}", tso.indent, s));
         }
     }
     r.emplace_back("]");
@@ -473,7 +473,7 @@ NumberInt::get_type() const
 std::vector<std::string>
 NumberInt::to_string(const ToStringOptions&) const
 {
-    return {"{0}"_format(value)};
+    return {fmt::format("{0}", value)};
 }
 
 
@@ -495,7 +495,7 @@ NumberFloat::get_type() const
 std::vector<std::string>
 NumberFloat::to_string(const ToStringOptions&) const
 {
-    return {"{0}"_format(value)};
+    return {fmt::format("{0}", value)};
 }
 
 
@@ -601,7 +601,7 @@ BoundCallable::~BoundCallable() = default;
 std::vector<std::string>
 BoundCallable::to_string(const ToStringOptions&) const
 {
-    return {"<{} bound to {}>"_format(bound->to_flat_string(ToStringOptions::for_debug()), callable->to_flat_string(ToStringOptions::for_debug()))};
+    return {fmt::format("<{} bound to {}>", bound->to_flat_string(ToStringOptions::for_debug()), callable->to_flat_string(ToStringOptions::for_debug()))};
 }
 
 std::shared_ptr<Object>
@@ -801,7 +801,7 @@ NativeKlass::NativeKlass(const std::string& n, std::size_t id, std::shared_ptr<K
 std::vector<std::string>
 NativeKlass::to_string(const ToStringOptions&) const
 {
-    return {"<native class {}>"_format(klass_name)};
+    return {fmt::format("<native class {}>", klass_name)};
 }
 
 
@@ -827,7 +827,7 @@ NativeInstance::get_type() const
 std::vector<std::string>
 NativeInstance::to_string(const ToStringOptions&) const
 {
-    return {"<native instance {}>"_format(klass->klass_name)};
+    return {fmt::format("<native instance {}>", klass->klass_name)};
 }
 
 
@@ -882,12 +882,12 @@ std::size_t Array::as_array_index(std::shared_ptr<Object> o)
     if(index.has_value() == false)
     {
         // todo(Gustav): allow multiple rows to include object to_string
-        throw NativeError{ "array index needs to be a int, was {}"_format( objecttype_to_string(o->get_type()) ) };
+        throw NativeError{fmt::format("array index needs to be a int, was {}", objecttype_to_string(o->get_type()) ) };
     }
 
     if(*index < 0)
     {
-        throw NativeError{ "array index needs to be positive, was {}"_format(*index) };
+        throw NativeError{fmt::format("array index needs to be positive, was {}", *index) };
     }
 
     return static_cast<std::size_t>(*index);
@@ -903,7 +903,7 @@ std::shared_ptr<Object> Array::get_index_or_null(std::shared_ptr<Object> index_o
     const auto index = as_array_index(index_object);
     if(index >= values.size())
     {
-        throw NativeError{ "array index {} out of range, needs to be lower than {}"_format(index, values.size()) };
+        throw NativeError{fmt::format("array index {} out of range, needs to be lower than {}", index, values.size()) };
     }
 
     return values[index];
@@ -914,7 +914,7 @@ bool Array::set_index_or_false(std::shared_ptr<Object> index_object, std::shared
     const auto index = as_array_index(index_object);
     if(index >= values.size())
     {
-        throw NativeError{ "array index {} is out of range, needs to be lower than {}"_format(index, values.size()) };
+        throw NativeError{fmt::format("array index {} is out of range, needs to be lower than {}", index, values.size()) };
     }
 
     values[index] = new_value;
@@ -1364,7 +1364,7 @@ struct NativePackage : Object, Scope
     std::vector<std::string>
     to_string(const ToStringOptions&) const override
     {
-        return {"<native pkg {}>"_format(package_name)};
+        return {fmt::format("<native pkg {}>", package_name)};
     }
     
     bool

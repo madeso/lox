@@ -2,6 +2,7 @@
 #include <fstream>
 #include <string>
 #include <string_view>
+#include <algorithm>
 #include <vector>
 
 #include <fmt/format.h>
@@ -56,7 +57,7 @@ to_lower(std::string data)
 std::string
 get_fun_visit_name(const std::string& name, const std::string& base)
 {
-    return "on_{}_{}"_format(to_lower(name), to_lower(base));
+    return fmt::format("on_{}_{}", to_lower(name), to_lower(base));
 }
 
 void
@@ -89,7 +90,7 @@ define_type
         
         header << ",\n";
         source << ",\n";
-        const std::string type = is_value_type(m.type) ? m.type : "std::shared_ptr<{}>&&"_format(m.type);
+        const std::string type = is_value_type(m.type) ? m.type : fmt::format("std::shared_ptr<{}>&&", m.type);
         header << INDENT << INDENT << type << " " << m.name;
         source << INDENT << type << " " << "a" << m.name;
     } header << "\n"; source << "\n";
@@ -108,7 +109,7 @@ define_type
 
     for(const auto& m: sub.members)
     {
-        const std::string type = is_value_type(m.type) ? m.type : "std::shared_ptr<{}>"_format(m.type);
+        const std::string type = is_value_type(m.type) ? m.type : fmt::format("std::shared_ptr<{}>", m.type);
         header << INDENT << type << " " << m.name << ";\n";
     }
 

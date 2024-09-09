@@ -58,10 +58,7 @@ offset_for_range_error(const Offset& previous, const Token& token)
 std::string
 token_to_string(const Token& tok)
 {
-    return "{}"_format
-    (
-        tokentype_to_string(tok.type)
-    );
+    return fmt::format("{}", tokentype_to_string(tok.type));
 }
 
 
@@ -189,7 +186,7 @@ struct Parser
             else
             {
                 auto& next = peek();
-                throw error(next.offset, "Expected fun or var but found {}"_format(token_to_string(next)));
+                throw error(next.offset, fmt::format("Expected fun or var but found {}", token_to_string(next)));
             }
         }
 
@@ -211,10 +208,10 @@ struct Parser
     std::shared_ptr<FunctionStatement>
     parse_function_or_method(std::string_view kind)
     {
-        const auto name = consume(TokenType::IDENTIFIER, "Expected {} name"_format(kind)).lexeme;
+        const auto name = consume(TokenType::IDENTIFIER, fmt::format("Expected {} name", kind)).lexeme;
         const auto start = previous_offset();
 
-        consume(TokenType::LEFT_PAREN, "Expect '(' after {} name"_format(kind));
+        consume(TokenType::LEFT_PAREN, fmt::format("Expect '(' after {} name", kind));
         const auto params_start = previous_offset();
         std::vector<std::string> params;
         if(check(TokenType::RIGHT_PAREN) == false)
@@ -232,7 +229,7 @@ struct Parser
             error(offset_start_end(params_start, params_end), "Can't have more than 255 parameters.");
         }
 
-        consume(TokenType::LEFT_BRACE, "Expect '{{' before {} body"_format(kind));
+        consume(TokenType::LEFT_BRACE, fmt::format("Expect '{{' before {} body", kind));
         auto body = parse_block_to_statements();
         const auto end = previous_offset();
         return std::make_shared<FunctionStatement>(offset_start_end(start, end), new_stmt(), std::string(name), std::move(params), std::move(body));
@@ -747,7 +744,7 @@ struct Parser
         if(count > max_number_of_arguments)
         {
             error_count += 1;
-            error_handler->on_error(off, "More than {} number of arguments, passed {}"_format(max_number_of_arguments, count));
+            error_handler->on_error(off, fmt::format("More than {} number of arguments, passed {}", max_number_of_arguments, count));
         }
     }
 
@@ -928,7 +925,7 @@ struct Parser
         consume
         (
             TokenType::SEMICOLON,
-            "Missing ';' after {}"_format(after),
+            fmt::format("Missing ';' after {}", after),
             {previous_offset()}
         );
     }

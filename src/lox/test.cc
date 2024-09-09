@@ -52,7 +52,7 @@ type_to_string(ReportedError::Type t)
 std::string
 ErrorToString(const ReportedError& e)
 {
-    return "({} [{}])"_format(type_to_string(e.type), fmt::join(e.messages, ", "));
+    return fmt::format("({} [{}])", type_to_string(e.type), fmt::join(e.messages, ", "));
 }
 
 catchy::FalseString

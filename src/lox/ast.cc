@@ -347,7 +347,7 @@ struct GraphvizPrinter : ExpressionStringVisitor, StatementStringVisitor
 
     std::string new_node(std::string_view label)
     {
-        const auto self = "node_{}"_format(next_node_index++);
+        const auto self = fmt::format("node_{}", next_node_index++);
         nodes << self << "[label=\"" << label << "\"];\n";
         return self;
     }

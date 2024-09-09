@@ -3,6 +3,7 @@
 #include "lox/program.h"
 #include "lox/errorhandler.h"
 
+#include <algorithm>
 
 namespace lox { namespace
 {
@@ -250,10 +251,10 @@ struct MainResolver : ExpressionVoidVisitor, StatementVoidVisitor
                 return lhs.offset.start < rhs.offset.start;
             });
 
-            error_handler->on_error(offsets.rbegin()->offset, "'{}' declared multiple times"_format(name));
+            error_handler->on_error(offsets.rbegin()->offset, fmt::format("'{}' declared multiple times", name));
             for(const auto& o: offsets)
             {
-                error_handler->on_note(o.offset, "as {} {} here"_format(o.name, name));
+                error_handler->on_note(o.offset, fmt::format("as {} {} here", o.name, name));
             }
             has_errors = true;
         }

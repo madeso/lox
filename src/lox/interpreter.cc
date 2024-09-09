@@ -128,7 +128,7 @@ struct ScriptFunction : Callable
     std::vector<std::string>
     to_string(const ToStringOptions&) const override
     {
-        return {"<{}>"_format(to_str)};
+        return {fmt::format("<{}>", to_str)};
     }
 
     std::shared_ptr<Object>
@@ -190,7 +190,7 @@ check_single_number_operand
     if(is_number(type)) { return; }
 
     error_handler->on_error(op_offset, "operand must be a int or a float");
-    error_handler->on_error(object_offset, "This evaluated to {}"_format(objecttype_to_string(type)));
+    error_handler->on_error(object_offset, fmt::format("This evaluated to {}", objecttype_to_string(type)));
     throw RuntimeError();
 }
 
@@ -211,8 +211,8 @@ check_binary_number_operand
     if(is_number(lhs_type) && is_number(rhs_type)) { return; }
 
     error_handler->on_error(op_offset, "operands must be a numbers");
-    error_handler->on_note(lhs_offset, "left hand evaluated to {}"_format(objecttype_to_string(lhs_type)));
-    error_handler->on_note(rhs_offset, "right hand evaluated to {}"_format(objecttype_to_string(rhs_type)));
+    error_handler->on_note(lhs_offset, fmt::format("left hand evaluated to {}", objecttype_to_string(lhs_type)));
+    error_handler->on_note(rhs_offset, fmt::format("right hand evaluated to {}", objecttype_to_string(rhs_type)));
     throw RuntimeError();
 }
 
@@ -239,8 +239,8 @@ check_binary_number_or_string_operands
     { return; }
 
     error_handler->on_error(op_offset, "operands must be numbers or strings");
-    error_handler->on_note(lhs_offset, "left hand evaluated to {}"_format(objecttype_to_string(lhs_type)));
-    error_handler->on_note(rhs_offset, "right hand evaluated to {}"_format(objecttype_to_string(rhs_type)));
+    error_handler->on_note(lhs_offset, fmt::format("left hand evaluated to {}", objecttype_to_string(lhs_type)));
+    error_handler->on_note(rhs_offset, fmt::format("right hand evaluated to {}", objecttype_to_string(rhs_type)));
     throw RuntimeError();
 }
 
@@ -310,7 +310,7 @@ struct ScriptInstance : Instance
     std::vector<std::string>
     to_string(const ToStringOptions&) const override
     {
-        return {"<instance {}>"_format(klass->klass_name)};
+        return {fmt::format("<instance {}>", klass->klass_name)};
     }
 
     std::shared_ptr<Object> get_field_or_null(const std::string& name) override
@@ -374,7 +374,7 @@ struct ScriptKlass : Klass
     std::vector<std::string>
     to_string(const ToStringOptions&) const override
     {
-        return {"<class {}>"_format(klass_name)};
+        return {fmt::format("<class {}>", klass_name)};
     }
 
     std::shared_ptr<Instance>
@@ -410,7 +410,7 @@ struct ScriptKlass : Klass
             }
             catch(CallError& c)
             {
-                c.error += " while implicitly calling constructor for superclass {}"_format(superklass->klass_name);
+                c.error += fmt::format(" while implicitly calling constructor for superclass {}", superklass->klass_name);
                 throw c;
             }
         }
@@ -523,8 +523,8 @@ void report_error_no_properties(const Offset& offset, ErrorHandler* error_handle
     {
         error_handler->on_error
         (
-            offset, "{} is not capable of having any properties"_format
-            (
+            offset, fmt::format(
+                "{} is not capable of having any properties",
                 objecttype_to_string(type)
             )
         );
@@ -534,8 +534,8 @@ void report_error_no_properties(const Offset& offset, ErrorHandler* error_handle
         report_error_object
         (
             error_handler, offset,
-            "{} is not capable of having any properties, has value "_format
-            (
+            fmt::format(
+                "{} is not capable of having any properties, has value ",
                 objecttype_to_string(type)
             ),
             object
@@ -554,8 +554,8 @@ void report_error_no_indexer(const Offset& offset, ErrorHandler* error_handler, 
     {
         error_handler->on_error
         (
-            offset, "{} can't be indexed"_format
-            (
+            offset, fmt::format(
+                "{} can't be indexed",
                 objecttype_to_string(type)
             )
         );
@@ -565,8 +565,8 @@ void report_error_no_indexer(const Offset& offset, ErrorHandler* error_handler, 
         report_error_object
         (
             error_handler, offset,
-            "{} can't be indexed, has value "_format
-            (
+            fmt::format(
+                "{} can't be indexed, has value ",
                 objecttype_to_string(type)
             ),
             object
@@ -631,7 +631,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
         }
         else
         {
-            return "<unregistred native klass {}>"_format(klass_index);
+            return fmt::format("<unregistred native klass {}>", klass_index);
         }
     }
 
@@ -692,7 +692,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
             auto r = global_environment->get_or_null(name);
             if(r == nullptr)
             {
-                error_handler->on_error(x.offset, "Undefined variable {}"_format(name));
+                error_handler->on_error(x.offset, fmt::format("Undefined variable {}", name));
                 throw RuntimeError{};
             }
             return r;
@@ -730,11 +730,11 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
                 const bool is_in_global = global_environment.get() == current_environment.get();
                 if(is_in_global)
                 {
-                    error_handler->on_error(x.offset, "Global variable {} was never declared"_format(name));
+                    error_handler->on_error(x.offset, fmt::format("Global variable {} was never declared", name));
                 }
                 else
                 {
-                    error_handler->on_error(x.offset, "Variable {} was neither declared in global nor local scope"_format(name));
+                    error_handler->on_error(x.offset, fmt::format("Variable {} was neither declared in global nor local scope", name));
                 }
                 throw RuntimeError{};
             }
@@ -759,7 +759,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
         const bool was_set = environment.set_or_false(name, object);
         if(was_set == false)
         {
-            error_handler->on_error(off, "Undefined variable {}"_format(name));
+            error_handler->on_error(off, fmt::format("Undefined variable {}", name));
             throw RuntimeError{};
         }
     }
@@ -781,8 +781,8 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
                     error_handler->on_error
                     (
                         x.parent->offset,
-                        "Superclass must be a class, was {}"_format
-                        (
+                        fmt::format(
+                            "Superclass must be a class, was {}",
                             objecttype_to_string(parent->get_type())
                         )
                     );
@@ -805,7 +805,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
                 this,
                 current_environment,
                 current_state,
-                "static method {}"_format(method->name), method->params, method->body,
+                fmt::format("static method {}", method->name), method->params, method->body,
                 false
             );
 
@@ -834,7 +834,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
                 this,
                 current_environment,
                 current_state,
-                "mtd {}"_format(method->name), method->params, method->body,
+                fmt::format("mtd {}", method->name), method->params, method->body,
                 method->name == "init"
             );
 
@@ -908,7 +908,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
                 this,
                 current_environment,
                 current_state,
-                "fn {}"_format(x.name), x.params, x.body, false
+                fmt::format("fn {}", x.name), x.params, x.body, false
             )
         );
     }
@@ -998,7 +998,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
             report_error_object
             (
                 error_handler, x.callee->offset,
-                "{} is not a callable, evaluates to "_format(
+                fmt::format("{} is not a callable, evaluates to ",
                     objecttype_to_string(callee->get_type())
                 ),
                 callee
@@ -1031,8 +1031,8 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
             {
                 error_handler->on_error
                 (
-                    x.offset, "nil is not accepted for argument {}, expected {}"_format
-                    (
+                    x.offset, fmt::format(
+                        "nil is not accepted for argument {}, expected {}",
                         invalid_arg_error.argument_index+1,
                         invalidarg_to_string(invalid_arg_error)
                     )
@@ -1044,8 +1044,8 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
                 (
                     error_handler, x.offset,
                     invalid_arg_value,
-                    " ({}) is not accepted for argument {}, expected {}"_format
-                    (
+                    fmt::format(
+                        " ({}) is not accepted for argument {}, expected {}",
                         smart_object_to_type_string(invalid_arg_value),
                         invalid_arg_error.argument_index+1,
                         invalidarg_to_string(invalid_arg_error)
@@ -1057,15 +1057,15 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
         catch(const CallError& err)
         {
             error_handler->on_error(x.offset, err.error);
-            error_handler->on_note(x.callee->offset, "called with {} arguments"_format(x.arguments.size()));
+            error_handler->on_note(x.callee->offset, fmt::format("called with {} arguments", x.arguments.size()));
             for(std::size_t argument_index = 0; argument_index < x.arguments.size(); argument_index += 1)
             {
                 report_note_object
                 (
                     error_handler,
                     x.arguments[argument_index]->offset,
-                    "argument {} evaluated to {}: "_format
-                    (
+                    fmt::format(
+                        "argument {} evaluated to {}: ",
                         argument_index + 1,
                         objecttype_to_string(arguments[argument_index]->get_type())
                     ),
@@ -1126,8 +1126,8 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
             report_error_object
             (
                 error_handler, x.klass->offset,
-                "{} is not a klass, evaluates to "_format
-                (
+                fmt::format(
+                    "{} is not a klass, evaluates to ",
                     objecttype_to_string(klass_object->get_type())
                 ),
                 klass_object
@@ -1156,8 +1156,8 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
             {
                 error_handler->on_error
                 (
-                    x.offset, "nil is not accepted for constructor argument {}, expected {}"_format
-                    (
+                    x.offset, fmt::format(
+                        "nil is not accepted for constructor argument {}, expected {}",
                         invalid_arg_error.argument_index+1,
                         invalidarg_to_string(invalid_arg_error)
                     )
@@ -1169,8 +1169,8 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
                 (
                     error_handler, x.offset,
                     invalid_arg_value,
-                    " ({}) is not accepted for argument {}, expected {}"_format
-                    (
+                    fmt::format(
+                        " ({}) is not accepted for argument {}, expected {}",
                         smart_object_to_type_string(invalid_arg_value),
                         invalid_arg_error.argument_index+1,
                         invalidarg_to_string(invalid_arg_error)
@@ -1182,14 +1182,14 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
         catch(const CallError& err)
         {
             error_handler->on_error(x.offset, err.error);
-            error_handler->on_note(x.klass->offset, "called with {} arguments"_format(x.arguments.size()));
+            error_handler->on_note(x.klass->offset, fmt::format("called with {} arguments", x.arguments.size()));
             for(std::size_t argument_index = 0; argument_index < x.arguments.size(); argument_index += 1)
             {
                 report_note_object
                 (
                     error_handler, x.arguments[argument_index]->offset,
-                    "argument {} evaluated to {}: "_format
-                    (
+                    fmt::format(
+                        "argument {} evaluated to {}: ",
                         argument_index + 1,
                         objecttype_to_string(arguments[argument_index]->get_type())
                     ),
@@ -1223,8 +1223,8 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
                 report_error_object
                 (
                     error_handler, x.offset, object,
-                    " doesn't have a property named {}"_format
-                    (
+                    fmt::format(
+                        " doesn't have a property named {}",
                         x.name
                     )
                 );
@@ -1260,8 +1260,8 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
                 report_error_object
                 (
                     error_handler, x.offset, object,
-                    " doesn't have a property named {}"_format
-                    (
+                    fmt::format(
+                        " doesn't have a property named {}",
                         x.name
                     )
                 );
@@ -1277,8 +1277,8 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
                 report_error_object
                 (
                     error_handler, x.offset,
-                    "expected {} but got nil for property '{}' on "_format
-                    (
+                    fmt::format(
+                        "expected {} but got nil for property '{}' on ",
                         invalidarg_to_string(invalid_arg_error),
                         x.name
                     ),
@@ -1291,8 +1291,8 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
                 (
                     error_handler, x.offset,
                     value,
-                    " ({}) is not accepted for property '{}', expected {}, on "_format
-                    (
+                    fmt::format(
+                        " ({}) is not accepted for property '{}', expected {}, on ",
                         smart_object_to_type_string(value),
                         x.name,
                         invalidarg_to_string(invalid_arg_error)
@@ -1407,8 +1407,8 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
                 report_error_object
                 (
                     error_handler, x.offset,
-                    "expected {} but got nil for index "_format
-                    (
+                    fmt::format(
+                        "expected {} but got nil for index ",
                         invalidarg_to_string(invalid_arg_error)
                     ),
                     index
@@ -1423,9 +1423,8 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
                 report_error_object
                 (
                     error_handler, x.offset,
-                    value,
-                    " ({}), expected {}, is not accepted for index "_format
-                    (
+                    value, fmt::format(
+                        " ({}), expected {}, is not accepted for index ",
                         smart_object_to_type_string(value),
                         invalidarg_to_string(invalid_arg_error)
                     ),
@@ -1736,8 +1735,8 @@ verify_number_of_arguments(const Arguments& args, u64 arity)
     {
         throw CallError
         {
-            "Expected {} arguments but got {}"_format
-            (
+            fmt::format(
+                "Expected {} arguments but got {}",
                 arity,
                 args.arguments.size()
             )
