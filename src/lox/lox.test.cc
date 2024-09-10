@@ -192,7 +192,7 @@ TEST_CASE("lox binding" "[lox]")
         auto callable = lox::as_callable(function_object);
         REQUIRE(callable != nullptr);
         
-        auto res = callable->call({{lox::make_string("world")} });
+        auto res = callable->call(lox.get_interpreter(), {{lox::make_string("world")} });
         auto str = lox::as_string(res);
         
         REQUIRE(str);
@@ -311,8 +311,8 @@ TEST_CASE("lox binding" "[lox]")
         // script should have called `set_fun` and callable should now be set
         REQUIRE(callable != nullptr);
 
-        auto fir_val = callable->call({{}});
-        auto sec_val = callable->call({{}});
+        auto fir_val = callable->call(lox.get_interpreter(), {{}});
+        auto sec_val = callable->call(lox.get_interpreter(), {{}});
         
         auto fir = lox::as_int(fir_val);
         auto sec = lox::as_int(sec_val);
@@ -577,7 +577,7 @@ TEST_CASE("lox binding" "[lox]")
         auto callable = object->get_bound_method_or_null("hello");
         REQUIRE(callable != nullptr);
         
-        auto res = callable->call({{lox::make_string("world")} });
+        auto res = callable->call(lox.get_interpreter(), {{lox::make_string("world")} });
         auto str = lox::as_string(res);
         
         REQUIRE(str);

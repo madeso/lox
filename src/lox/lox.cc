@@ -80,5 +80,11 @@ Lox::get_native_klass_or_null(std::size_t id)
     return impl->interpreter->get_native_klass_or_null(id);
 }
 
+Interpreter*
+Lox::get_interpreter()
+{
+    return impl->interpreter.get();
+}
+
 }
 

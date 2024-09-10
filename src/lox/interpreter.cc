@@ -88,13 +88,19 @@ struct ScriptFunction : Callable
     std::shared_ptr<Environment> closure;
     std::shared_ptr<State> state;
     std::string to_str;
-    std::vector<std::string> params;
+    std::vector<std::string> params; // todo(Gustav): add types here
     std::vector<std::shared_ptr<Statement>> body;
     bool is_initializer;
 
-    ArgInfo get_arg_info() const override
+    ArgInfo get_arg_info() override
     {
-        return {params};
+        auto r = ArgInfo{};
+        r.arguments.reserve(params.size());
+        for(const auto& n: params)
+        {
+            r.arguments.emplace_back(SingleArg{n, nullptr});
+        }
+        return r;
     }
 
     explicit ScriptFunction
@@ -126,13 +132,13 @@ struct ScriptFunction : Callable
     }
 
     std::vector<std::string>
-    to_string(const ToStringOptions&) const override
+    to_string(const ToStringOptions&) override
     {
         return {fmt::format("<{}>", to_str)};
     }
 
     std::shared_ptr<Object>
-    call(const Arguments& arguments) override
+    call(Interpreter*, const Arguments& arguments) override
     {
         verify_number_of_arguments(arguments, params.size());
         
@@ -308,7 +314,7 @@ struct ScriptInstance : Instance
     }
 
     std::vector<std::string>
-    to_string(const ToStringOptions&) const override
+    to_string(const ToStringOptions&) override
     {
         return {fmt::format("<instance {}>", klass->klass_name)};
     }
@@ -355,7 +361,7 @@ struct ScriptInstance : Instance
 
 struct ScriptKlass : Klass
 {
-    MainInterpreter* inter;
+    MainInterpreter* inter; // todo(Gustav): rename to main_inter
     std::vector<std::shared_ptr<VarStatement>> members;
 
     ScriptKlass
@@ -372,13 +378,13 @@ struct ScriptKlass : Klass
     }
 
     std::vector<std::string>
-    to_string(const ToStringOptions&) const override
+    to_string(const ToStringOptions&) override
     {
         return {fmt::format("<class {}>", klass_name)};
     }
 
     std::shared_ptr<Instance>
-    constructor(const Arguments& arguments) override
+    constructor(Interpreter* arg_inter, const Arguments& arguments) override
     {
         auto self = shared_from_this();
         auto klass = std::static_pointer_cast<Klass>(self);
@@ -393,7 +399,7 @@ struct ScriptKlass : Klass
 
         if (auto initializer = klass->find_method_or_null("init"); initializer != nullptr)
         {
-            initializer->bind(instance)->call(arguments);
+            initializer->bind(instance)->call(arg_inter, arguments);
         }
         else
         {
@@ -406,7 +412,7 @@ struct ScriptKlass : Klass
         {
             try
             {
-                instance->parent = superklass->constructor({{}});
+                instance->parent = superklass->constructor(arg_inter, {{}});
             }
             catch(CallError& c)
             {
@@ -595,6 +601,7 @@ get_number_as_float(std::shared_ptr<Object> obj)
 
 struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
 {
+    Interpreter* interpreter;
     ErrorHandler* error_handler;
     std::shared_ptr<Environment> global_environment;
     std::shared_ptr<Environment> current_environment;
@@ -608,11 +615,13 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
 
     explicit MainInterpreter
     (
+        Interpreter* inter,
         std::shared_ptr<Environment> ge,
         ErrorHandler* eh,
         const std::function<void (std::string)>& ol
     )
-        : error_handler(eh)
+        : interpreter(inter)
+        , error_handler(eh)
         , global_environment(ge)
         , on_line(ol)
         , integration(make_object_integration())
@@ -834,7 +843,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
                 this,
                 current_environment,
                 current_state,
-                fmt::format("mtd {}", method->name), method->params, method->body,
+                fmt::format("mtd {} ({})", method->name,method->params), method->params, method->body,
                 method->name == "init"
             );
 
@@ -1019,7 +1028,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
 
         try
         {
-            auto return_value = function->call({arguments});
+            auto return_value = function->call(interpreter, {arguments});
             return return_value;
         }
         catch(const InvalidArgumentType& invalid_arg_error)
@@ -1111,7 +1120,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
             arguments.emplace_back(evaluate(argument));
         }
         
-        base_instance->parent = superklass->constructor({arguments});
+        base_instance->parent = superklass->constructor(interpreter, {arguments});
         return base_instance->parent;
     }
 
@@ -1144,7 +1153,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
 
         try
         {
-            auto return_value = klass->constructor({arguments});
+            auto return_value = klass->constructor(interpreter, {arguments});
             return return_value;
         }
         catch(const InvalidArgumentType& invalid_arg_error)
@@ -1646,6 +1655,25 @@ interpret_initial_value(MainInterpreter* inter, const VarStatement& v)
     return inter->create_value(v);
 }
 
+struct SimpleType : Type
+{
+    std::string name;
+
+    explicit SimpleType(const std::string& n) : name(n) {}
+
+    ObjectType get_type() const override
+    {
+        return ObjectType::type;
+    }
+    std::vector<std::string> to_string(const ToStringOptions&) override
+    {
+        return {fmt::format("<type {0}>", name)};
+    }
+    bool is_callable() const override
+    {
+        return false;
+    }
+};
 
 struct PublicInterpreter : Interpreter
 {
@@ -1653,10 +1681,38 @@ struct PublicInterpreter : Interpreter
     std::shared_ptr<Environment> global_environment;
     MainInterpreter interpreter;
 
+    std::shared_ptr<Type> type_instance = std::make_shared<SimpleType>("instance");
+    std::shared_ptr<Type> type_object = std::make_shared<SimpleType>("object");
+
+    std::shared_ptr<Type> type_string = std::make_shared<SimpleType>("string");
+    std::shared_ptr<Type> type_bool = std::make_shared<SimpleType>("bool");
+    std::shared_ptr<Type> type_int = std::make_shared<SimpleType>("int");
+    std::shared_ptr<Type> type_float = std::make_shared<SimpleType>("float");
+    std::shared_ptr<Type> type_callable = std::make_shared<SimpleType>("callable");
+    std::shared_ptr<Type> type_array = std::make_shared<SimpleType>("array");
+
+    std::shared_ptr<Type> get_native_instance_type(std::size_t id) override
+    {
+        auto klass = get_native_klass_or_null(id);
+        if(klass == nullptr) return std::make_shared<SimpleType>(fmt::format("Unknown native class {0}", id));
+
+        return klass;
+    }
+
+    std::shared_ptr<Type> get_instance_type() override { return type_instance; }
+    std::shared_ptr<Type> get_object_type() override { return type_object; }
+
+    std::shared_ptr<Type> get_string_type() override { return type_string; }
+    std::shared_ptr<Type> get_bool_type() override { return type_bool; }
+    std::shared_ptr<Type> get_int_type() override { return type_int; }
+    std::shared_ptr<Type> get_float_type() override { return type_float; }
+    std::shared_ptr<Type> get_callable_type() override { return type_callable; }
+    std::shared_ptr<Type> get_array_type() override { return type_array; }
+
     PublicInterpreter(ErrorHandler* eh, const std::function<void (std::string)>& on_line)
         : error_handler(eh)
         , global_environment(std::make_shared<Environment>(nullptr))
-        , interpreter(global_environment, error_handler, on_line)
+        , interpreter(this, global_environment, error_handler, on_line)
     {
     }
 

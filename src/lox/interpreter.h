@@ -34,6 +34,18 @@ struct Interpreter
 
     virtual std::shared_ptr<NativeKlass> get_native_klass_or_null(std::size_t id) = 0;
     virtual void register_native_klass(std::size_t id, std::shared_ptr<NativeKlass> klass) = 0;
+
+    // todo(Gustav): replace with smarter types
+    virtual std::shared_ptr<Type> get_instance_type() = 0;
+    virtual std::shared_ptr<Type> get_object_type() = 0;
+
+    virtual std::shared_ptr<Type> get_string_type() = 0;
+    virtual std::shared_ptr<Type> get_bool_type() = 0;
+    virtual std::shared_ptr<Type> get_int_type() = 0;
+    virtual std::shared_ptr<Type> get_float_type() = 0;
+    virtual std::shared_ptr<Type> get_callable_type() = 0;
+    virtual std::shared_ptr<Type> get_array_type() = 0;
+    virtual std::shared_ptr<Type> get_native_instance_type(std::size_t id) = 0;
 };
 
 

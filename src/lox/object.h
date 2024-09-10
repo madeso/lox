@@ -14,7 +14,7 @@ using Tf = double;
 
 enum class ObjectType
 {
-    nil, string, boolean, array, number_int, number_float, callable, klass, instance, native_instance, native_package
+    nil, string, boolean, array, number_int, number_float, callable, klass, instance, native_instance, native_package, type
 };
 
 
@@ -106,10 +106,10 @@ struct Object : std::enable_shared_from_this<Object>
     Object() = default;
     virtual ~Object() = default;
 
-    std::string to_flat_string(const ToStringOptions& tso) const;
+    std::string to_flat_string(const ToStringOptions& tso);
 
     virtual ObjectType get_type() const = 0;
-    virtual std::vector<std::string> to_string(const ToStringOptions&) const = 0;
+    virtual std::vector<std::string> to_string(const ToStringOptions&) = 0;
     virtual bool is_callable() const = 0;
     
     virtual bool has_properties();
@@ -132,20 +132,26 @@ struct Arguments
     std::vector<std::shared_ptr<Object>> arguments;
 };
 
+struct SingleArg
+{
+    std::string name;
+    std::shared_ptr<Type> type;
+};
+
 struct ArgInfo
 {
-    std::vector<std::string> arguments;
+    std::vector<SingleArg> arguments;
 };
 
 struct Callable : public Object
 {
-    virtual std::shared_ptr<Object> call(const Arguments& arguments) = 0;
+    virtual std::shared_ptr<Object> call(Interpreter* iner, const Arguments& arguments) = 0;
     ObjectType get_type() const override;
     bool is_callable() const override;
 
     virtual bool is_bound() const;
 
-    virtual ArgInfo get_arg_info() const = 0;
+    virtual ArgInfo get_arg_info() = 0;
 
     virtual std::shared_ptr<Callable> bind(std::shared_ptr<Object> instance) = 0;
 };
@@ -157,11 +163,11 @@ struct BoundCallable : Callable
 
     BoundCallable(std::shared_ptr<Object> bound, std::shared_ptr<NativeFunctionObject> callable);
     ~BoundCallable();
-    std::vector<std::string> to_string(const ToStringOptions&) const override;
-    std::shared_ptr<Object> call(const Arguments& arguments) override;
+    std::vector<std::string> to_string(const ToStringOptions&) override;
+    std::shared_ptr<Object> call(Interpreter* inter, const Arguments& arguments) override;
     std::shared_ptr<Callable> bind(std::shared_ptr<Object> instance) override;
     bool is_bound() const override;
-    ArgInfo get_arg_info() const override;
+    ArgInfo get_arg_info() override;
 };
 
 // ----------------------------------------------------------------------------
@@ -181,7 +187,7 @@ struct Klass : Type
 
     bool is_callable() const override;
 
-    virtual std::shared_ptr<Instance> constructor(const Arguments& arguments) = 0;
+    virtual std::shared_ptr<Instance> constructor(Interpreter* inter, const Arguments& arguments) = 0;
 
     bool add_method_or_false(const std::string& name, std::shared_ptr<Callable> method);
     std::shared_ptr<Callable> find_method_or_null(const std::string& name);
@@ -235,7 +241,7 @@ struct NativeKlass : Klass
 
     NativeKlass(const std::string& n, std::size_t id, std::shared_ptr<Klass> sk);
 
-    std::vector<std::string> to_string(const ToStringOptions&) const override;
+    std::vector<std::string> to_string(const ToStringOptions&) override;
 
     void add_property(const std::string& name, std::unique_ptr<Property> prop);
 };
@@ -245,7 +251,7 @@ struct NativeInstance : Instance
     NativeInstance(std::shared_ptr<NativeKlass> o);
 
     ObjectType get_type() const override;
-    std::vector<std::string> to_string(const ToStringOptions&) const override;
+    std::vector<std::string> to_string(const ToStringOptions&) override;
 
     std::shared_ptr<Object> get_field_or_null(const std::string& name) override;
     bool set_field_or_false(const std::string& name, std::shared_ptr<Object> value) override;
@@ -263,7 +269,7 @@ struct Array : public Object
     ~Array() = default;
 
     ObjectType get_type() const override;
-    std::vector<std::string> to_string(const ToStringOptions&) const override;
+    std::vector<std::string> to_string(const ToStringOptions&) override;
     bool is_callable() const override;
 
     std::optional<std::string> to_flat_string_representation(const ToStringOptions&) const;
@@ -604,14 +610,15 @@ NativeRef<T> as_native(std::shared_ptr<Object> obj)
 
 struct ArgumentHelper
 {
+    Interpreter* inter;
     const lox::Arguments* args;
     u64 next_argument;
     bool has_read_all_arguments;
 
     // if args == nullptr, this will be filled, use to request what arguments are required
-    std::vector<std::string> arguments_requested;
+    std::vector<SingleArg> arguments_requested;
 
-    explicit ArgumentHelper(const lox::Arguments* args);
+    explicit ArgumentHelper(Interpreter* inter, const lox::Arguments* args);
     void verify_completion();
 
     // todo(Gustav): add some match/switch helper to handle overloads
@@ -748,3 +755,9 @@ get_package_scope_from_known_path(Interpreter* interpreter, const std::string& p
 
 }
 
+
+template<>
+struct fmt::formatter<lox::SingleArg> : fmt::formatter<std::string_view>
+{
+    fmt::format_context::iterator format(const lox::SingleArg& c, fmt::format_context& ctx) const;
+};

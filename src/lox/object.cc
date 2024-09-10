@@ -5,6 +5,7 @@
 #include "lox/interpreter.h"
 #include "lox/scanner.h"
 
+#include <fmt/format.h>
 
 namespace lox
 {
@@ -95,7 +96,7 @@ struct Nil : public Object
     virtual ~Nil() = default;
 
     ObjectType get_type() const override;
-    std::vector<std::string> to_string(const ToStringOptions&) const override;
+    std::vector<std::string> to_string(const ToStringOptions&) override;
     bool is_callable() const override { return false; }
 };
 
@@ -108,7 +109,7 @@ struct String : public Object
     virtual ~String() = default;
 
     ObjectType get_type() const override;
-    std::vector<std::string> to_string(const ToStringOptions&) const override;
+    std::vector<std::string> to_string(const ToStringOptions&) override;
     bool is_callable() const override { return false; }
 };
 
@@ -121,7 +122,7 @@ struct Bool : public Object
     virtual ~Bool() = default;
 
     ObjectType get_type() const override;
-    std::vector<std::string> to_string(const ToStringOptions&) const override;
+    std::vector<std::string> to_string(const ToStringOptions&) override;
     bool is_callable() const override { return false; }
 };
 
@@ -135,7 +136,7 @@ struct NumberInt : public Object
     virtual ~NumberInt() = default;
 
     ObjectType get_type() const override;
-    std::vector<std::string> to_string(const ToStringOptions&) const override;
+    std::vector<std::string> to_string(const ToStringOptions&) override;
     bool is_callable() const override { return false; }
 };
 
@@ -147,7 +148,7 @@ struct NumberFloat : public Object
     virtual ~NumberFloat() = default;
 
     ObjectType get_type() const override;
-    std::vector<std::string> to_string(const ToStringOptions&) const override;
+    std::vector<std::string> to_string(const ToStringOptions&) override;
     bool is_callable() const override { return false; }
 };
 
@@ -181,15 +182,19 @@ struct NativeFunctionObject : Callable
     }
 
     std::vector<std::string>
-    to_string(const ToStringOptions&) const override
+    to_string(const ToStringOptions&) override
     {
         return {fmt::format("<native fun {}>", name)};
+
+        // todo(Gustav): make not crash...
+        // const auto args = get_arg_info();
+        // return {fmt::format("<native fun {} ({})>", name, args.arguments)};
     }
 
     std::shared_ptr<Object>
-    perform_call(Callable* callable, const Arguments& arguments)
+    perform_call(Interpreter* inter, Callable* callable, const Arguments& arguments)
     {
-        ArgumentHelper helper{&arguments};
+        ArgumentHelper helper{inter, &arguments};
 
         auto ret = func(callable, helper);
         helper.verify_completion();
@@ -197,17 +202,22 @@ struct NativeFunctionObject : Callable
         return ret;
     }
 
-    ArgInfo get_arg_info() const override
+    ArgInfo perform_get_arg_info(Callable* callable)
     {
-        ArgumentHelper helper{nullptr};
-        auto ret = func(nullptr, helper);
+        ArgumentHelper helper{nullptr, nullptr};
+        auto ret = func(callable, helper);
         return {helper.arguments_requested};
     }
 
-    std::shared_ptr<Object>
-    call(const Arguments& arguments) override
+    ArgInfo get_arg_info() override
     {
-        return perform_call(this, arguments);
+        return perform_get_arg_info(this);
+    }
+
+    std::shared_ptr<Object>
+    call(Interpreter* inter, const Arguments& arguments) override
+    {
+        return perform_call(inter, this, arguments);
     }
 
     std::shared_ptr<Callable>
@@ -229,7 +239,7 @@ Nil::get_type() const
 }
 
 std::vector<std::string>
-Nil::to_string(const ToStringOptions&) const
+Nil::to_string(const ToStringOptions&)
 {
     return {"nil"};
 }
@@ -251,7 +261,7 @@ String::get_type() const
 }
 
 std::vector<std::string>
-String::to_string(const ToStringOptions& tso) const
+String::to_string(const ToStringOptions& tso)
 {
     if(tso.quote_string)
     {
@@ -281,7 +291,7 @@ Bool::get_type() const
 }
 
 std::vector<std::string>
-Bool::to_string(const ToStringOptions&) const
+Bool::to_string(const ToStringOptions&)
 {
     if(value) { return {"true"}; }
     else { return {"false"}; }
@@ -327,7 +337,7 @@ Array::to_flat_string_representation(const ToStringOptions& tso) const
 
 
 std::vector<std::string>
-Array::to_string(const ToStringOptions& tsoa) const
+Array::to_string(const ToStringOptions& tsoa)
 {
     const auto tso = tsoa.with_quote_string(true);
     if(auto flat = to_flat_string_representation(tso); flat && flat->length() < tso.max_length)
@@ -471,7 +481,7 @@ NumberInt::get_type() const
 }
 
 std::vector<std::string>
-NumberInt::to_string(const ToStringOptions&) const
+NumberInt::to_string(const ToStringOptions&)
 {
     return {fmt::format("{0}", value)};
 }
@@ -493,7 +503,7 @@ NumberFloat::get_type() const
 }
 
 std::vector<std::string>
-NumberFloat::to_string(const ToStringOptions&) const
+NumberFloat::to_string(const ToStringOptions&)
 {
     return {fmt::format("{0}", value)};
 }
@@ -504,7 +514,7 @@ NumberFloat::to_string(const ToStringOptions&) const
 
 
 std::string
-Object::to_flat_string(const ToStringOptions& tso) const
+Object::to_flat_string(const ToStringOptions& tso)
 {
     std::ostringstream ss;
     const auto arr = to_string(tso);
@@ -599,15 +609,17 @@ BoundCallable::BoundCallable(std::shared_ptr<Object> b, std::shared_ptr<NativeFu
 BoundCallable::~BoundCallable() = default;
 
 std::vector<std::string>
-BoundCallable::to_string(const ToStringOptions&) const
+BoundCallable::to_string(const ToStringOptions&)
 {
-    return {fmt::format("<{} bound to {}>", bound->to_flat_string(ToStringOptions::for_debug()), callable->to_flat_string(ToStringOptions::for_debug()))};
+    const auto a = bound->to_flat_string(ToStringOptions::for_debug());
+    const auto b = callable->to_flat_string(ToStringOptions::for_debug());
+    return {fmt::format("<{} bound to {}>", a, b)};
 }
 
 std::shared_ptr<Object>
-BoundCallable::call(const Arguments& arguments)
+BoundCallable::call(Interpreter* inter, const Arguments& arguments)
 {
-    return callable->perform_call(this, arguments);
+    return callable->perform_call(inter, this, arguments);
 }
 
 std::shared_ptr<Callable> BoundCallable::bind(std::shared_ptr<Object>)
@@ -622,9 +634,9 @@ bool BoundCallable::is_bound() const
     return true;
 }
 
-ArgInfo BoundCallable::get_arg_info() const
+ArgInfo BoundCallable::get_arg_info()
 {
-    return callable->get_arg_info();
+    return callable->perform_get_arg_info(this);
 }
 
 
@@ -799,7 +811,7 @@ NativeKlass::NativeKlass(const std::string& n, std::size_t id, std::shared_ptr<K
 }
 
 std::vector<std::string>
-NativeKlass::to_string(const ToStringOptions&) const
+NativeKlass::to_string(const ToStringOptions&)
 {
     return {fmt::format("<native class {}>", klass_name)};
 }
@@ -825,7 +837,7 @@ NativeInstance::get_type() const
 }
 
 std::vector<std::string>
-NativeInstance::to_string(const ToStringOptions&) const
+NativeInstance::to_string(const ToStringOptions&)
 {
     return {fmt::format("<native instance {}>", klass->klass_name)};
 }
@@ -1128,8 +1140,9 @@ is_truthy(std::shared_ptr<Object> o)
 // ----------------------------------------------------------------------------
 
 
-ArgumentHelper::ArgumentHelper(const lox::Arguments* aargs)
-    : args(aargs)
+ArgumentHelper::ArgumentHelper(Interpreter* inter_arg, const lox::Arguments* aargs)
+    : inter(inter_arg)
+    , args(aargs)
     , next_argument(0)
     , has_read_all_arguments(false)
 {
@@ -1155,7 +1168,7 @@ ArgumentHelper::require_instance(const std::string& name)
 {
     if(args == nullptr)
     {
-        arguments_requested.emplace_back(name);
+        arguments_requested.emplace_back(SingleArg{name, inter->get_instance_type()});
         return nullptr;
     }
     const auto argument_index = next_argument++;
@@ -1168,7 +1181,7 @@ ArgumentHelper::require_object(const std::string& name)
 {
     if(args == nullptr)
     {
-        arguments_requested.emplace_back(name);
+        arguments_requested.emplace_back(SingleArg{name, inter->get_object_type()});
         return nullptr;
     }
     const auto argument_index = next_argument++;
@@ -1181,7 +1194,7 @@ ArgumentHelper::require_string(const std::string& name)
 {
     if(args == nullptr)
     {
-        arguments_requested.emplace_back(name);
+        arguments_requested.emplace_back(SingleArg{name, inter->get_string_type()});
         return "";
     }
     const auto argument_index = next_argument++;
@@ -1194,7 +1207,7 @@ ArgumentHelper::require_bool(const std::string& name)
 {
     if(args == nullptr)
     {
-        arguments_requested.emplace_back(name);
+        arguments_requested.emplace_back(SingleArg{name, inter->get_bool_type()});
         return false;
     }
     const auto argument_index = next_argument++;
@@ -1207,7 +1220,7 @@ ArgumentHelper::require_int(const std::string& name)
 {
     if(args == nullptr)
     {
-        arguments_requested.emplace_back(name);
+        arguments_requested.emplace_back(SingleArg{name, inter->get_int_type()});
         return 0;
     }
     const auto argument_index = next_argument++;
@@ -1220,7 +1233,7 @@ ArgumentHelper::require_float(const std::string& name)
 {
     if(args == nullptr)
     {
-        arguments_requested.emplace_back(name);
+        arguments_requested.emplace_back(SingleArg{name, inter->get_float_type()});
         return 0.0;
     }
     const auto argument_index = next_argument++;
@@ -1233,7 +1246,7 @@ ArgumentHelper::require_callable(const std::string& name)
 {
     if(args == nullptr)
     {
-        arguments_requested.emplace_back(name);
+        arguments_requested.emplace_back(SingleArg{name, inter->get_callable_type()});
         return nullptr;
     }
     const auto argument_index = next_argument++;
@@ -1246,7 +1259,7 @@ ArgumentHelper::require_array(const std::string& name)
 {
     if(args == nullptr)
     {
-        arguments_requested.emplace_back(name);
+        arguments_requested.emplace_back(SingleArg{name, inter->get_array_type()});
         return nullptr;
     }
     const auto argument_index = next_argument++;
@@ -1259,7 +1272,7 @@ ArgumentHelper::impl_require_native_instance(const std::string& name, std::size_
 {
     if(args == nullptr)
     {
-        arguments_requested.emplace_back(name);
+        arguments_requested.emplace_back(SingleArg{name, inter->get_native_instance_type(klass)});
         return nullptr;
     }
     const auto argument_index = next_argument++;
@@ -1332,12 +1345,12 @@ struct NativeKlassImpl : NativeKlass
     {
     }
 
-    std::shared_ptr<Instance> constructor(const Arguments& arguments) override
+    std::shared_ptr<Instance> constructor(Interpreter* inter, const Arguments& arguments) override
     {
         auto obj = shared_from_this();
         assert(obj.get() == this);
         auto self = std::static_pointer_cast<NativeKlassImpl>(obj);
-        ArgumentHelper ah{&arguments};
+        ArgumentHelper ah{inter, &arguments};
         return constr(self, ah);
     }
 };
@@ -1362,7 +1375,7 @@ struct NativePackage : Object, Scope
     }
 
     std::vector<std::string>
-    to_string(const ToStringOptions&) const override
+    to_string(const ToStringOptions&) override
     {
         return {fmt::format("<native pkg {}>", package_name)};
     }
@@ -1539,4 +1552,13 @@ get_package_scope_from_known_path(Interpreter* interpreter, const std::string& p
 // ----------------------------------------------------------------------------
 
 
+}
+
+fmt::format_context::iterator
+fmt::formatter<lox::SingleArg>::format(const lox::SingleArg& a, fmt::format_context& ctx) const
+{
+    // todo(Gustav): replace with a better intention?
+    const std::string s = a.type ? a.type->to_flat_string(lox::ToStringOptions::for_print()) : "<?>";
+    const std::string display = fmt::format("{0}: {1}", a.name, s);
+    return fmt::formatter<std::string_view>::format(display, ctx);
 }

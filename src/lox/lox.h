@@ -6,6 +6,7 @@ namespace lox
 {
 
 struct LoxImpl;
+struct Interpreter;
 
 struct Lox
 {
@@ -28,6 +29,8 @@ struct Lox
         assert(klass != nullptr && "klass not registered!");
         return std::make_shared<detail::NativeInstanceT<T>>(std::move(t), klass);
     }
+
+    Interpreter* get_interpreter();
 
     std::unique_ptr<LoxImpl> impl;
 };
