@@ -23,7 +23,7 @@ std::string Token::to_debug_string() const
 
     if(literal != nullptr)
     {
-        return fmt::format("{}({}) {} value=<{}>", tokentype_to_string(type), lexeme, of, literal->to_flat_string(ToStringOptions::for_debug()));
+        return fmt::format("{}({}) {} value=<{}>", tokentype_to_string(type), lexeme, of, literal->to_flat_string(nullptr, ToStringOptions::for_debug()));
     }
     else
     {

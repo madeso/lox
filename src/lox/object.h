@@ -22,6 +22,7 @@ struct Environment;
 struct ArgumentHelper;
 struct Interpreter;
 struct Instance;
+struct Callable;
 
 
 constexpr std::string_view objecttype_to_string(ObjectType ot)
@@ -106,10 +107,12 @@ struct Object : std::enable_shared_from_this<Object>
     Object() = default;
     virtual ~Object() = default;
 
-    std::string to_flat_string(const ToStringOptions& tso);
+    std::string to_flat_string(Callable* c, const ToStringOptions& tso);
 
     virtual ObjectType get_type() const = 0;
-    virtual std::vector<std::string> to_string(const ToStringOptions&) = 0;
+
+    // if callable is null, use best judgement...
+    virtual std::vector<std::string> to_string(Callable* c, const ToStringOptions&) = 0;
     virtual bool is_callable() const = 0;
     
     virtual bool has_properties();
@@ -151,7 +154,7 @@ struct Callable : public Object
 
     virtual bool is_bound() const;
 
-    virtual ArgInfo get_arg_info() = 0;
+    virtual ArgInfo get_arg_info(Callable* callable) = 0;
 
     virtual std::shared_ptr<Callable> bind(std::shared_ptr<Object> instance) = 0;
 };
@@ -163,11 +166,11 @@ struct BoundCallable : Callable
 
     BoundCallable(std::shared_ptr<Object> bound, std::shared_ptr<NativeFunctionObject> callable);
     ~BoundCallable();
-    std::vector<std::string> to_string(const ToStringOptions&) override;
+    std::vector<std::string> to_string(Callable* c, const ToStringOptions&) override;
     std::shared_ptr<Object> call(Interpreter* inter, const Arguments& arguments) override;
     std::shared_ptr<Callable> bind(std::shared_ptr<Object> instance) override;
     bool is_bound() const override;
-    ArgInfo get_arg_info() override;
+    ArgInfo get_arg_info(Callable*) override;
 };
 
 // ----------------------------------------------------------------------------
@@ -241,7 +244,7 @@ struct NativeKlass : Klass
 
     NativeKlass(const std::string& n, std::size_t id, std::shared_ptr<Klass> sk);
 
-    std::vector<std::string> to_string(const ToStringOptions&) override;
+    std::vector<std::string> to_string(Callable* c, const ToStringOptions&) override;
 
     void add_property(const std::string& name, std::unique_ptr<Property> prop);
 };
@@ -251,7 +254,7 @@ struct NativeInstance : Instance
     NativeInstance(std::shared_ptr<NativeKlass> o);
 
     ObjectType get_type() const override;
-    std::vector<std::string> to_string(const ToStringOptions&) override;
+    std::vector<std::string> to_string(Callable* c, const ToStringOptions&) override;
 
     std::shared_ptr<Object> get_field_or_null(const std::string& name) override;
     bool set_field_or_false(const std::string& name, std::shared_ptr<Object> value) override;
@@ -269,10 +272,10 @@ struct Array : public Object
     ~Array() = default;
 
     ObjectType get_type() const override;
-    std::vector<std::string> to_string(const ToStringOptions&) override;
+    std::vector<std::string> to_string(Callable* c, const ToStringOptions&) override;
     bool is_callable() const override;
 
-    std::optional<std::string> to_flat_string_representation(const ToStringOptions&) const;
+    std::optional<std::string> to_flat_string_representation(Callable* c, const ToStringOptions&) const;
 
     bool has_properties() override;
     std::shared_ptr<Object> get_property_or_null(const std::string& name) override;

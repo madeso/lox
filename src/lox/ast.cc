@@ -275,7 +275,7 @@ struct AstPrinter : ExpressionStringVisitor, StatementStringVisitor
     std::string
     on_literal_expression(const LiteralExpression& expr) override
     {
-        return expr.value->to_flat_string(ToStringOptions::for_debug());
+        return expr.value->to_flat_string(nullptr, ToStringOptions::for_debug());
     }
 
     std::string
@@ -649,7 +649,7 @@ struct GraphvizPrinter : ExpressionStringVisitor, StatementStringVisitor
     std::string
     on_literal_expression(const LiteralExpression& expr) override
     {
-        return new_node(expr.value->to_flat_string(ToStringOptions::for_debug()));
+    return new_node(expr.value->to_flat_string(nullptr, ToStringOptions::for_debug()));
     }
 
     std::string

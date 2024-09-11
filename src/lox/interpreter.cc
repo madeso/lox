@@ -92,7 +92,7 @@ struct ScriptFunction : Callable
     std::vector<std::shared_ptr<Statement>> body;
     bool is_initializer;
 
-    ArgInfo get_arg_info() override
+    ArgInfo get_arg_info(Callable*) override
     {
         auto r = ArgInfo{};
         r.arguments.reserve(params.size());
@@ -132,7 +132,7 @@ struct ScriptFunction : Callable
     }
 
     std::vector<std::string>
-    to_string(const ToStringOptions&) override
+    to_string(Callable*, const ToStringOptions&) override
     {
         return {fmt::format("<{}>", to_str)};
     }
@@ -314,7 +314,7 @@ struct ScriptInstance : Instance
     }
 
     std::vector<std::string>
-    to_string(const ToStringOptions&) override
+    to_string(Callable*, const ToStringOptions&) override
     {
         return {fmt::format("<instance {}>", klass->klass_name)};
     }
@@ -378,7 +378,7 @@ struct ScriptKlass : Klass
     }
 
     std::vector<std::string>
-    to_string(const ToStringOptions&) override
+    to_string(Callable*, const ToStringOptions&) override
     {
         return {fmt::format("<class {}>", klass_name)};
     }
@@ -433,7 +433,7 @@ void append(std::vector<T>* dst, const std::vector<T>& src)
 
 std::vector<std::string> flatten_message(const ToStringOptions& tso, const std::string& message, std::shared_ptr<Object> after)
 {
-    const auto end = after->to_string(tso);
+    const auto end = after->to_string(nullptr, tso);
     if(end.size() == 1)
     {
         return { message + end[0] };
@@ -450,7 +450,7 @@ std::vector<std::string> flatten_message(const ToStringOptions& tso, const std::
 
 std::vector<std::string> flatten_message(const ToStringOptions& tso, std::shared_ptr<Object> before, const std::string& message)
 {
-    const auto start = before->to_string(tso);
+    const auto start = before->to_string(nullptr, tso);
     if(start.size() == 1)
     {
         return { start[0] + message };
@@ -467,8 +467,8 @@ std::vector<std::string> flatten_message(const ToStringOptions& tso, std::shared
 
 std::vector<std::string> flatten_message(const ToStringOptions& tso, std::shared_ptr<Object> before, const std::string& message, std::shared_ptr<Object> after)
 {
-    const auto start = before->to_string(tso);
-    const auto end = after->to_string(tso);
+    const auto start = before->to_string(nullptr, tso);
+    const auto end = after->to_string(nullptr, tso);
     
     std::vector<std::string> r;
     r.reserve(start.size() + 1 + end.size());
@@ -968,7 +968,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     on_print_statement(const PrintStatement& x) override
     {
         auto value = evaluate(x.expression);
-        const auto to_print = value->to_string(ToStringOptions::for_print());
+        const auto to_print = value->to_string(nullptr, ToStringOptions::for_print());
         for(const auto& p: to_print)
         {
             on_line(p);
@@ -1665,7 +1665,7 @@ struct SimpleType : Type
     {
         return ObjectType::type;
     }
-    std::vector<std::string> to_string(const ToStringOptions&) override
+    std::vector<std::string> to_string(Callable*, const ToStringOptions&) override
     {
         return {fmt::format("<type {0}>", name)};
     }
