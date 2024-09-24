@@ -92,7 +92,7 @@ struct ScriptFunction : Callable
     std::vector<std::shared_ptr<Statement>> body;
     bool is_initializer;
 
-    ArgInfo get_arg_info(Callable*) override
+    ArgInfo get_arg_info(Interpreter*, Callable*) override
     {
         auto r = ArgInfo{};
         r.arguments.reserve(params.size());
@@ -132,7 +132,7 @@ struct ScriptFunction : Callable
     }
 
     std::vector<std::string>
-    to_string(Callable*, const ToStringOptions&) override
+    to_string(Interpreter*, Callable*, const ToStringOptions&) override
     {
         return {fmt::format("<{}>", to_str)};
     }
@@ -314,7 +314,7 @@ struct ScriptInstance : Instance
     }
 
     std::vector<std::string>
-    to_string(Callable*, const ToStringOptions&) override
+    to_string(Interpreter*, Callable*, const ToStringOptions&) override
     {
         return {fmt::format("<instance {}>", klass->klass_name)};
     }
@@ -378,7 +378,7 @@ struct ScriptKlass : Klass
     }
 
     std::vector<std::string>
-    to_string(Callable*, const ToStringOptions&) override
+    to_string(Interpreter*, Callable*, const ToStringOptions&) override
     {
         return {fmt::format("<class {}>", klass_name)};
     }
@@ -431,9 +431,9 @@ void append(std::vector<T>* dst, const std::vector<T>& src)
     dst->insert(dst->end(), src.begin(), src.end());
 }
 
-std::vector<std::string> flatten_message(const ToStringOptions& tso, const std::string& message, std::shared_ptr<Object> after)
+std::vector<std::string> flatten_message(Interpreter* inter, const ToStringOptions& tso, const std::string& message, std::shared_ptr<Object> after)
 {
-    const auto end = after->to_string(nullptr, tso);
+    const auto end = after->to_string(inter, nullptr, tso);
     if(end.size() == 1)
     {
         return { message + end[0] };
@@ -448,9 +448,9 @@ std::vector<std::string> flatten_message(const ToStringOptions& tso, const std::
     }
 }
 
-std::vector<std::string> flatten_message(const ToStringOptions& tso, std::shared_ptr<Object> before, const std::string& message)
+std::vector<std::string> flatten_message(Interpreter* inter, const ToStringOptions& tso, std::shared_ptr<Object> before, const std::string& message)
 {
-    const auto start = before->to_string(nullptr, tso);
+    const auto start = before->to_string(inter, nullptr, tso);
     if(start.size() == 1)
     {
         return { start[0] + message };
@@ -465,10 +465,10 @@ std::vector<std::string> flatten_message(const ToStringOptions& tso, std::shared
     }
 }
 
-std::vector<std::string> flatten_message(const ToStringOptions& tso, std::shared_ptr<Object> before, const std::string& message, std::shared_ptr<Object> after)
+std::vector<std::string> flatten_message(Interpreter* inter, const ToStringOptions& tso, std::shared_ptr<Object> before, const std::string& message, std::shared_ptr<Object> after)
 {
-    const auto start = before->to_string(nullptr, tso);
-    const auto end = after->to_string(nullptr, tso);
+    const auto start = before->to_string(inter, nullptr, tso);
+    const auto end = after->to_string(inter, nullptr, tso);
     
     std::vector<std::string> r;
     r.reserve(start.size() + 1 + end.size());
@@ -498,27 +498,27 @@ std::vector<std::string> flatten_message(const ToStringOptions& tso, std::shared
 }
 
 
-void report_error_object(ErrorHandler* error_handler, const Offset& offset, const std::string& message, std::shared_ptr<Object> after)
+void report_error_object(Interpreter* inter, ErrorHandler* error_handler, const Offset& offset, const std::string& message, std::shared_ptr<Object> after)
 {
-    error_handler->on_errors(offset, flatten_message(ToStringOptions::for_error(), message, after));
+    error_handler->on_errors(offset, flatten_message(inter, ToStringOptions::for_error(), message, after));
 }
 
-void report_error_object(ErrorHandler* error_handler, const Offset& offset, std::shared_ptr<Object> before, const std::string& message)
+void report_error_object(Interpreter* inter, ErrorHandler* error_handler, const Offset& offset, std::shared_ptr<Object> before, const std::string& message)
 {
-    error_handler->on_errors(offset, flatten_message(ToStringOptions::for_error(), before, message));
+    error_handler->on_errors(offset, flatten_message(inter, ToStringOptions::for_error(), before, message));
 }
 
-void report_error_object(ErrorHandler* error_handler, const Offset& offset, std::shared_ptr<Object> before, const std::string& message, std::shared_ptr<Object> after)
+void report_error_object(Interpreter* inter, ErrorHandler* error_handler, const Offset& offset, std::shared_ptr<Object> before, const std::string& message, std::shared_ptr<Object> after)
 {
-    error_handler->on_errors(offset, flatten_message(ToStringOptions::for_error(), before, message, after));
+    error_handler->on_errors(offset, flatten_message(inter, ToStringOptions::for_error(), before, message, after));
 }
 
-void report_note_object(ErrorHandler* error_handler, const Offset& offset, const std::string& message, std::shared_ptr<Object> after)
+void report_note_object(Interpreter* inter, ErrorHandler* error_handler, const Offset& offset, const std::string& message, std::shared_ptr<Object> after)
 {
-    error_handler->on_notes(offset, flatten_message(ToStringOptions::for_error(), message, after));
+    error_handler->on_notes(offset, flatten_message(inter, ToStringOptions::for_error(), message, after));
 }
 
-void report_error_no_properties(const Offset& offset, ErrorHandler* error_handler, std::shared_ptr<Object> object)
+void report_error_no_properties(Interpreter* inter, const Offset& offset, ErrorHandler* error_handler, std::shared_ptr<Object> object)
 {
     assert(error_handler);
     assert(object);
@@ -539,7 +539,7 @@ void report_error_no_properties(const Offset& offset, ErrorHandler* error_handle
     {
         report_error_object
         (
-            error_handler, offset,
+            inter, error_handler, offset,
             fmt::format(
                 "{} is not capable of having any properties, has value ",
                 objecttype_to_string(type)
@@ -549,7 +549,7 @@ void report_error_no_properties(const Offset& offset, ErrorHandler* error_handle
     }
 }
 
-void report_error_no_indexer(const Offset& offset, ErrorHandler* error_handler, std::shared_ptr<Object> object)
+void report_error_no_indexer(Interpreter* inter, const Offset& offset, ErrorHandler* error_handler, std::shared_ptr<Object> object)
 {
     assert(error_handler);
     assert(object);
@@ -570,7 +570,7 @@ void report_error_no_indexer(const Offset& offset, ErrorHandler* error_handler, 
     {
         report_error_object
         (
-            error_handler, offset,
+            inter, error_handler, offset,
             fmt::format(
                 "{} can't be indexed, has value ",
                 objecttype_to_string(type)
@@ -968,7 +968,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
     on_print_statement(const PrintStatement& x) override
     {
         auto value = evaluate(x.expression);
-        const auto to_print = value->to_string(nullptr, ToStringOptions::for_print());
+        const auto to_print = value->to_string(interpreter, nullptr, ToStringOptions::for_print());
         for(const auto& p: to_print)
         {
             on_line(p);
@@ -1006,7 +1006,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
         {
             report_error_object
             (
-                error_handler, x.callee->offset,
+                interpreter, error_handler, x.callee->offset,
                 fmt::format("{} is not a callable, evaluates to ",
                     objecttype_to_string(callee->get_type())
                 ),
@@ -1051,7 +1051,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
             {
                 report_error_object
                 (
-                    error_handler, x.offset,
+                    interpreter, error_handler, x.offset,
                     invalid_arg_value,
                     fmt::format(
                         " ({}) is not accepted for argument {}, expected {}",
@@ -1071,7 +1071,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
             {
                 report_note_object
                 (
-                    error_handler,
+                    interpreter, error_handler,
                     x.arguments[argument_index]->offset,
                     fmt::format(
                         "argument {} evaluated to {}: ",
@@ -1134,7 +1134,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
         {
             report_error_object
             (
-                error_handler, x.klass->offset,
+                interpreter, error_handler, x.klass->offset,
                 fmt::format(
                     "{} is not a klass, evaluates to ",
                     objecttype_to_string(klass_object->get_type())
@@ -1176,7 +1176,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
             {
                 report_error_object
                 (
-                    error_handler, x.offset,
+                    interpreter, error_handler, x.offset,
                     invalid_arg_value,
                     fmt::format(
                         " ({}) is not accepted for argument {}, expected {}",
@@ -1196,7 +1196,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
             {
                 report_note_object
                 (
-                    error_handler, x.arguments[argument_index]->offset,
+                    interpreter, error_handler, x.arguments[argument_index]->offset,
                     fmt::format(
                         "argument {} evaluated to {}: ",
                         argument_index + 1,
@@ -1231,7 +1231,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
                 // todo(Gustav): edit distance search for best named property
                 report_error_object
                 (
-                    error_handler, x.offset, object,
+                    interpreter, error_handler, x.offset, object,
                     fmt::format(
                         " doesn't have a property named {}",
                         x.name
@@ -1243,7 +1243,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
             return r;
         }
 
-        report_error_no_properties(x.offset, error_handler, object);
+        report_error_no_properties(interpreter, x.offset, error_handler, object);
         throw RuntimeError{};
     }
 
@@ -1255,7 +1255,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
 
         if(object->has_properties() == false)
         {
-            report_error_no_properties(x.offset, error_handler, object);
+            report_error_no_properties(interpreter, x.offset, error_handler, object);
             throw RuntimeError{};
         }
 
@@ -1268,7 +1268,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
                 // todo(Gustav): edit distance + custom error message?
                 report_error_object
                 (
-                    error_handler, x.offset, object,
+                    interpreter, error_handler, x.offset, object,
                     fmt::format(
                         " doesn't have a property named {}",
                         x.name
@@ -1285,7 +1285,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
             {
                 report_error_object
                 (
-                    error_handler, x.offset,
+                    interpreter, error_handler, x.offset,
                     fmt::format(
                         "expected {} but got nil for property '{}' on ",
                         invalidarg_to_string(invalid_arg_error),
@@ -1298,7 +1298,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
             {
                 report_error_object
                 (
-                    error_handler, x.offset,
+                    interpreter, error_handler, x.offset,
                     value,
                     fmt::format(
                         " ({}) is not accepted for property '{}', expected {}, on ",
@@ -1331,7 +1331,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
                 {
                     report_error_object
                     (
-                        error_handler, x.offset, object,
+                        interpreter, error_handler, x.offset, object,
                         " doesn't have a index for ",
                         index
                     );
@@ -1345,18 +1345,18 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
                 error_handler->on_error(x.offset, err.message);
                 report_note_object
                 (
-                    error_handler, x.object->offset, "object evaluated to ", object
+                    interpreter, error_handler, x.object->offset, "object evaluated to ", object
                 );
                 report_note_object
                 (
-                    error_handler, x.index->offset, "index evaluated to ", index
+                    interpreter, error_handler, x.index->offset, "index evaluated to ", index
                 );
 
                 throw RuntimeError{};
             }
         }
 
-        report_error_no_indexer(x.offset, error_handler, object);
+        report_error_no_indexer(interpreter, x.offset, error_handler, object);
         throw RuntimeError{};
     }
 
@@ -1369,7 +1369,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
 
         if(object->has_index() == false)
         {
-            report_error_no_indexer(x.offset, error_handler, object);
+            report_error_no_indexer(interpreter, x.offset, error_handler, object);
             throw RuntimeError{};
         }
 
@@ -1383,7 +1383,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
                 // todo(Gustav): edit distance + custom error message?
                 report_error_object
                 (
-                    error_handler, x.offset, object,
+                    interpreter, error_handler, x.offset, object,
                     " doesn't have a index for ", index
                 );
                 throw RuntimeError{};
@@ -1394,15 +1394,15 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
             error_handler->on_error(x.offset, err.message);
             report_note_object
             (
-                error_handler, x.object->offset, "object evaluated to ", object
+                interpreter, error_handler, x.object->offset, "object evaluated to ", object
             );
             report_note_object
             (
-                error_handler, x.index->offset, "index evaluated to ", index
+                interpreter, error_handler, x.index->offset, "index evaluated to ", index
             );
             report_note_object
             (
-                error_handler, x.value->offset, "value evaluated to ", value
+                interpreter, error_handler, x.value->offset, "value evaluated to ", value
             );
 
             throw RuntimeError{};
@@ -1415,7 +1415,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
             {
                 report_error_object
                 (
-                    error_handler, x.offset,
+                    interpreter, error_handler, x.offset,
                     fmt::format(
                         "expected {} but got nil for index ",
                         invalidarg_to_string(invalid_arg_error)
@@ -1424,14 +1424,14 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
                 );
                 report_note_object
                 (
-                    error_handler, x.offset, "object evaluated to", object
+                    interpreter, error_handler, x.offset, "object evaluated to", object
                 );
             }
             else
             {
                 report_error_object
                 (
-                    error_handler, x.offset,
+                    interpreter, error_handler, x.offset,
                     value, fmt::format(
                         " ({}), expected {}, is not accepted for index ",
                         smart_object_to_type_string(value),
@@ -1441,7 +1441,7 @@ struct MainInterpreter : ExpressionObjectVisitor, StatementVoidVisitor
                 );
                 report_note_object
                 (
-                    error_handler, x.offset, "object evaluated to", object
+                    interpreter, error_handler, x.offset, "object evaluated to", object
                 );
             }
             throw RuntimeError{};
@@ -1665,7 +1665,7 @@ struct SimpleType : Type
     {
         return ObjectType::type;
     }
-    std::vector<std::string> to_string(Callable*, const ToStringOptions&) override
+    std::vector<std::string> to_string(Interpreter*, Callable*, const ToStringOptions&) override
     {
         return {fmt::format("<type {0}>", name)};
     }

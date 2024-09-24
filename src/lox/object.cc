@@ -96,7 +96,7 @@ struct Nil : public Object
     virtual ~Nil() = default;
 
     ObjectType get_type() const override;
-    std::vector<std::string> to_string(Callable* c, const ToStringOptions&) override;
+    std::vector<std::string> to_string(Interpreter*, Callable* c, const ToStringOptions&) override;
     bool is_callable() const override { return false; }
 };
 
@@ -109,7 +109,7 @@ struct String : public Object
     virtual ~String() = default;
 
     ObjectType get_type() const override;
-    std::vector<std::string> to_string(Callable* c, const ToStringOptions&) override;
+    std::vector<std::string> to_string(Interpreter*, Callable* c, const ToStringOptions&) override;
     bool is_callable() const override { return false; }
 };
 
@@ -122,7 +122,7 @@ struct Bool : public Object
     virtual ~Bool() = default;
 
     ObjectType get_type() const override;
-    std::vector<std::string> to_string(Callable* c, const ToStringOptions&) override;
+    std::vector<std::string> to_string(Interpreter*, Callable* c, const ToStringOptions&) override;
     bool is_callable() const override { return false; }
 };
 
@@ -136,7 +136,7 @@ struct NumberInt : public Object
     virtual ~NumberInt() = default;
 
     ObjectType get_type() const override;
-    std::vector<std::string> to_string(Callable* c, const ToStringOptions&) override;
+    std::vector<std::string> to_string(Interpreter*, Callable* c, const ToStringOptions&) override;
     bool is_callable() const override { return false; }
 };
 
@@ -148,7 +148,7 @@ struct NumberFloat : public Object
     virtual ~NumberFloat() = default;
 
     ObjectType get_type() const override;
-    std::vector<std::string> to_string(Callable* c, const ToStringOptions&) override;
+    std::vector<std::string> to_string(Interpreter*, Callable* c, const ToStringOptions&) override;
     bool is_callable() const override { return false; }
 };
 
@@ -182,13 +182,13 @@ struct NativeFunctionObject : Callable
     }
 
     std::vector<std::string>
-    to_string(Callable*, const ToStringOptions&) override
+    to_string(Interpreter* inter, Callable* c, const ToStringOptions&) override
     {
-        return {fmt::format("<native fun {}>", name)};
+        // return {fmt::format("<native fun {}>", name)};
 
         // todo(Gustav): make not crash...
-        // const auto args = get_arg_info(c == nullptr ? this : c);
-        // return {fmt::format("<native fun {} ({})>", name, args.arguments)};
+        const auto args = get_arg_info(inter, c == nullptr ? this : c);
+        return {fmt::format("<native fun {} ({})>", name, args.arguments)};
     }
 
     std::shared_ptr<Object>
@@ -202,9 +202,9 @@ struct NativeFunctionObject : Callable
         return ret;
     }
 
-    ArgInfo get_arg_info(Callable* callable) override
+    ArgInfo get_arg_info(Interpreter* inter, Callable* callable) override
     {
-        ArgumentHelper helper{nullptr, nullptr};
+        ArgumentHelper helper{inter, nullptr};
         auto ret = func(callable, helper);
         return {helper.arguments_requested};
     }
@@ -234,7 +234,7 @@ Nil::get_type() const
 }
 
 std::vector<std::string>
-Nil::to_string(Callable*, const ToStringOptions&)
+Nil::to_string(Interpreter*, Callable*, const ToStringOptions&)
 {
     return {"nil"};
 }
@@ -256,7 +256,7 @@ String::get_type() const
 }
 
 std::vector<std::string>
-String::to_string(Callable*, const ToStringOptions& tso)
+String::to_string(Interpreter*, Callable*, const ToStringOptions& tso)
 {
     if(tso.quote_string)
     {
@@ -286,7 +286,7 @@ Bool::get_type() const
 }
 
 std::vector<std::string>
-Bool::to_string(Callable*, const ToStringOptions&)
+Bool::to_string(Interpreter*, Callable*, const ToStringOptions&)
 {
     if(value) { return {"true"}; }
     else { return {"false"}; }
@@ -311,7 +311,7 @@ Array::get_type() const
 
 
 std::optional<std::string>
-Array::to_flat_string_representation(Callable* c, const ToStringOptions& tso) const
+Array::to_flat_string_representation(Interpreter* inter, Callable* c, const ToStringOptions& tso) const
 {
     std::ostringstream ss;
     ss << "[";
@@ -321,7 +321,7 @@ Array::to_flat_string_representation(Callable* c, const ToStringOptions& tso) co
         if(first) { first = false; }
         else { ss <<  ", "; }
 
-        const auto s = v->to_string(c, tso);
+        const auto s = v->to_string(inter, c, tso);
         if(s.size() != 1) { return std::nullopt; }
 
         ss << s[0];
@@ -332,10 +332,10 @@ Array::to_flat_string_representation(Callable* c, const ToStringOptions& tso) co
 
 
 std::vector<std::string>
-Array::to_string(Callable* c, const ToStringOptions& tsoa)
+Array::to_string(Interpreter* inter, Callable* c, const ToStringOptions& tsoa)
 {
     const auto tso = tsoa.with_quote_string(true);
-    if(auto flat = to_flat_string_representation(c, tso); flat && flat->length() < tso.max_length)
+    if(auto flat = to_flat_string_representation(inter, c, tso); flat && flat->length() < tso.max_length)
     {
         return {*flat};
     }
@@ -348,7 +348,7 @@ Array::to_string(Callable* c, const ToStringOptions& tsoa)
         if(first) { first = false; }
         else { *r.rbegin() += ","; }
 
-        const auto ss = v->to_string(nullptr, tso);
+        const auto ss = v->to_string(inter, nullptr, tso);
         for(const auto& s: ss)
         {
             r.emplace_back(fmt::format("{}{}", tso.indent, s));
@@ -476,7 +476,7 @@ NumberInt::get_type() const
 }
 
 std::vector<std::string>
-NumberInt::to_string(Callable*, const ToStringOptions&)
+NumberInt::to_string(Interpreter*, Callable*, const ToStringOptions&)
 {
     return {fmt::format("{0}", value)};
 }
@@ -498,7 +498,7 @@ NumberFloat::get_type() const
 }
 
 std::vector<std::string>
-NumberFloat::to_string(Callable*, const ToStringOptions&)
+NumberFloat::to_string(Interpreter*, Callable*, const ToStringOptions&)
 {
     return {fmt::format("{0}", value)};
 }
@@ -509,10 +509,10 @@ NumberFloat::to_string(Callable*, const ToStringOptions&)
 
 
 std::string
-Object::to_flat_string(Callable* c, const ToStringOptions& tso)
+Object::to_flat_string(Interpreter* inter, Callable* c, const ToStringOptions& tso)
 {
     std::ostringstream ss;
-    const auto arr = to_string(c, tso);
+    const auto arr = to_string(inter, c, tso);
     const auto many = arr.size() > 1;
     if(many) { ss << "["; }
 
@@ -604,10 +604,10 @@ BoundCallable::BoundCallable(std::shared_ptr<Object> b, std::shared_ptr<NativeFu
 BoundCallable::~BoundCallable() = default;
 
 std::vector<std::string>
-BoundCallable::to_string(Callable*, const ToStringOptions&)
+BoundCallable::to_string(Interpreter* inter, Callable*, const ToStringOptions&)
 {
-    const auto a = bound->to_flat_string(nullptr, ToStringOptions::for_debug());
-    const auto b = callable->to_flat_string(this, ToStringOptions::for_debug());
+    const auto a = bound->to_flat_string(inter, nullptr, ToStringOptions::for_debug());
+    const auto b = callable->to_flat_string(inter, this, ToStringOptions::for_debug());
     return {fmt::format("<{} bound to {}>", a, b)};
 }
 
@@ -629,9 +629,9 @@ bool BoundCallable::is_bound() const
     return true;
 }
 
-ArgInfo BoundCallable::get_arg_info(Callable*)
+ArgInfo BoundCallable::get_arg_info(Interpreter* inter, Callable*)
 {
-    return callable->get_arg_info(this);
+    return callable->get_arg_info(inter, this);
 }
 
 
@@ -806,7 +806,7 @@ NativeKlass::NativeKlass(const std::string& n, std::size_t id, std::shared_ptr<K
 }
 
 std::vector<std::string>
-NativeKlass::to_string(Callable*, const ToStringOptions&)
+NativeKlass::to_string(Interpreter*, Callable*, const ToStringOptions&)
 {
     return {fmt::format("<native class {}>", klass_name)};
 }
@@ -832,7 +832,7 @@ NativeInstance::get_type() const
 }
 
 std::vector<std::string>
-NativeInstance::to_string(Callable*, const ToStringOptions&)
+NativeInstance::to_string(Interpreter*, Callable*, const ToStringOptions&)
 {
     return {fmt::format("<native instance {}>", klass->klass_name)};
 }
@@ -1371,7 +1371,7 @@ struct NativePackage : Object, Scope
     }
 
     std::vector<std::string>
-    to_string(Callable*, const ToStringOptions&) override
+    to_string(Interpreter*, Callable*, const ToStringOptions&) override
     {
         return {fmt::format("<native pkg {}>", package_name)};
     }
@@ -1554,7 +1554,7 @@ fmt::format_context::iterator
 fmt::formatter<lox::SingleArg>::format(const lox::SingleArg& a, fmt::format_context& ctx) const
 {
     // todo(Gustav): replace with a better intention?
-    const std::string s = a.type ? a.type->to_flat_string(nullptr, lox::ToStringOptions::for_print()) : "<?>";
+    const std::string s = a.type ? a.type->to_flat_string(nullptr, nullptr, lox::ToStringOptions::for_print()) : "<?>";
     const std::string display = fmt::format("{0}: {1}", a.name, s);
     return fmt::formatter<std::string_view>::format(display, ctx);
 }

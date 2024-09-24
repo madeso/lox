@@ -50,7 +50,7 @@ struct TokenizeCodeRunner : CodeRunner
 
         for (const auto& token : tokens.tokens)
         {
-            std::cout << token.to_debug_string() << "\n";
+            std::cout << token.to_debug_string(interpreter.get()) << "\n";
         }
 
         return RunError::no_error;

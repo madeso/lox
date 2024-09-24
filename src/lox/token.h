@@ -8,6 +8,7 @@
 namespace lox
 {
 
+struct Interpreter;
 
 struct Token
 {
@@ -19,7 +20,7 @@ struct Token
     Token(TokenType type, std::string_view lexeme, std::shared_ptr<Object> literal, const Offset& offset);
 
     std::string
-    to_debug_string() const;
+    to_debug_string(Interpreter* inter) const;
 };
 
 

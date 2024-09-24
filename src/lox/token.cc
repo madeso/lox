@@ -14,7 +14,7 @@ Token::Token(TokenType the_type, std::string_view the_lexeme, std::shared_ptr<Ob
 }
 
 
-std::string Token::to_debug_string() const
+std::string Token::to_debug_string(Interpreter* inter) const
 {
     const std::string of = offset.start != offset.end
         ? fmt::format("({} {})", offset.start, offset.end)
@@ -23,7 +23,7 @@ std::string Token::to_debug_string() const
 
     if(literal != nullptr)
     {
-        return fmt::format("{}({}) {} value=<{}>", tokentype_to_string(type), lexeme, of, literal->to_flat_string(nullptr, ToStringOptions::for_debug()));
+        return fmt::format("{}({}) {} value=<{}>", tokentype_to_string(type), lexeme, of, literal->to_flat_string(inter, nullptr, ToStringOptions::for_debug()));
     }
     else
     {
