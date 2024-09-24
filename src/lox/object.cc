@@ -184,9 +184,6 @@ struct NativeFunctionObject : Callable
     std::vector<std::string>
     to_string(Interpreter* inter, Callable* c, const ToStringOptions&) override
     {
-        // return {fmt::format("<native fun {}>", name)};
-
-        // todo(Gustav): make not crash...
         const auto args = get_arg_info(inter, c == nullptr ? this : c);
         return {fmt::format("<native fun {} ({})>", name, args.arguments)};
     }
