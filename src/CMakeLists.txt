@@ -5,7 +5,7 @@ set(gen_src
 )
 add_executable(generate_ast ${gen_src})
 target_link_libraries(generate_ast
-    PUBLIC fmt::fmt
+    PUBLIC external::fmt
     PRIVATE lox_project_options lox_project_warnings external::exit_codes
 )
 source_group("" FILES ${gen_src})
@@ -49,7 +49,7 @@ set(lox_src
 
 add_library(liblox STATIC ${lox_src} ${EXPR_SOURCE} ${EXPR_HEADER})
 target_link_libraries(liblox
-    PUBLIC fmt::fmt
+    PUBLIC external::fmt
     PRIVATE lox_project_options lox_project_warnings
 )
 target_include_directories(liblox
@@ -68,16 +68,18 @@ add_library(lox::liblox ALIAS liblox)
 
 # -----------------------------------------------------------------------------
 # unit test
-set(src_test
-    lox/test.cc lox/test.h
-    ../external/catch/main.cc
+if(LOX_MASTER_PROJECT)
+    set(src_test
+        lox/test.cc lox/test.h
+        ../external/catch/main.cc
 
-    lox/parser.test.cc
-    lox/interpreter.test.cc
-    lox/lox.test.cc
-)
-add_executable(test ${src_test})
-target_link_libraries(test
-    PUBLIC catch catchy liblox
-    PRIVATE lox_project_options lox_project_warnings
-)
+        lox/parser.test.cc
+        lox/interpreter.test.cc
+        lox/lox.test.cc
+    )
+    add_executable(test ${src_test})
+    target_link_libraries(test
+        PUBLIC catch catchy liblox
+        PRIVATE lox_project_options lox_project_warnings
+    )
+endif()
