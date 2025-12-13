@@ -1,3 +1,8 @@
+set(LOX_MASTER_PROJECT OFF)
+if (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
+    set(LOX_MASTER_PROJECT ON)
+endif ()
+
 cmake_minimum_required(VERSION 3.15)
 set_property(GLOBAL PROPERTY USE_FOLDERS OFF)
 project(lox C CXX)
