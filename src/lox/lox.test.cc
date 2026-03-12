@@ -169,7 +169,7 @@ TEST_CASE("lox binding" "[lox]")
         CHECK(run_ok);
         REQUIRE(StringEq(error_list, {}));
         CHECK(StringEq(console_out,{
-            "<native fun nat>",
+            "<native fun nat ([])>",
             "hello world"
         }));
     }
