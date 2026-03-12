@@ -1,4 +1,5 @@
-#include "catch.hpp"
+#include "catch2/catch_test_macros.hpp"
+#include "catch2/catch_approx.hpp"
 #include "catchy/stringeq.h"
 
 #include "lox/lox.h"
@@ -320,8 +321,8 @@ TEST_CASE("lox binding" "[lox]")
         REQUIRE(fir);
         REQUIRE(sec);
 
-        CHECK(*fir == Approx(1.0f));
-        CHECK(*sec == Approx(2.0f));
+        CHECK(*fir == Catch::Approx(1.0f));
+        CHECK(*sec == Catch::Approx(2.0f));
     }
 
     SECTION("native class default constructor")

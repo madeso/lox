@@ -79,7 +79,7 @@ if(LOX_MASTER_PROJECT)
     )
     add_executable(test ${src_test})
     target_link_libraries(test
-        PUBLIC catch catchy liblox
+        PUBLIC external::catch catchy::catchy lox::liblox
         PRIVATE lox_project_options lox_project_warnings
     )
 endif()
