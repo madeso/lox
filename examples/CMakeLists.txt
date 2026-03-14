@@ -1,15 +1,15 @@
 set(src
-    lox.main.cc
+    lax.main.cc
 )
 
-add_executable(lox ${src} ${embedded})
+add_executable(lax ${src} ${embedded})
 target_link_libraries(
-    lox
+    lax
     PUBLIC
-        liblox
+        liblax
     PRIVATE
-        lox_project_options
-        lox_project_warnings
+        lax_project_options
+        lax_project_warnings
         external::exit_codes
 )
 source_group("" FILES ${src})

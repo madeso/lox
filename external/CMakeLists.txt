@@ -1,4 +1,4 @@
-if(LOX_MASTER_PROJECT)
+if(LAX_MASTER_PROJECT)
     add_subdirectory(catchy)
 
     include(FetchContent)

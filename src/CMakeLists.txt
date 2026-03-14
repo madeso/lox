@@ -1,12 +1,12 @@
 # -----------------------------------------------------------------------------
 # ast generator
 set(gen_src
-    lox/generate_ast.cc
+    lax/generate_ast.cc
 )
 add_executable(generate_ast ${gen_src})
 target_link_libraries(generate_ast
     PUBLIC external::fmt
-    PRIVATE lox_project_options lox_project_warnings external::exit_codes
+    PRIVATE lax_project_options lax_project_warnings external::exit_codes
 )
 source_group("" FILES ${gen_src})
 
@@ -14,8 +14,8 @@ source_group("" FILES ${gen_src})
 
 # -----------------------------------------------------------------------------
 # generate expression
-set(EXPR_SOURCE "${CMAKE_CURRENT_BINARY_DIR}/lox_expression.cc")
-set(EXPR_HEADER "${CMAKE_CURRENT_BINARY_DIR}/lox_expression.h")
+set(EXPR_SOURCE "${CMAKE_CURRENT_BINARY_DIR}/lax_expression.cc")
+set(EXPR_HEADER "${CMAKE_CURRENT_BINARY_DIR}/lax_expression.h")
 add_custom_command(
     OUTPUT ${EXPR_SOURCE} ${EXPR_HEADER}
     DEPENDS ${gen_src}
@@ -27,59 +27,59 @@ add_custom_command(
 
 
 # -----------------------------------------------------------------------------
-# main loxlib
-set(lox_src
-    lox/source.cc lox/source.h
-    lox/ast.cc lox/ast.h
-    lox/config.h
-    lox/environment.cc lox/environment.h
-    lox/errorhandler.cc lox/errorhandler.h
-    lox/interpreter.cc lox/interpreter.h
-    lox/ints.h
-    lox/object.cc lox/object.h
-    lox/parser.cc lox/parser.h
-    lox/printhandler.cc lox/printhandler.h
-    lox/program.cc lox/program.h
-    lox/resolver.h lox/resolver.cc
-    lox/scanner.cc lox/scanner.h
-    lox/token.cc lox/token.h
-    lox/tokentype.h
-    lox/lox.cc lox/lox.h
+# main laxlib
+set(lax_src
+    lax/source.cc lax/source.h
+    lax/ast.cc lax/ast.h
+    lax/config.h
+    lax/environment.cc lax/environment.h
+    lax/errorhandler.cc lax/errorhandler.h
+    lax/interpreter.cc lax/interpreter.h
+    lax/ints.h
+    lax/object.cc lax/object.h
+    lax/parser.cc lax/parser.h
+    lax/printhandler.cc lax/printhandler.h
+    lax/program.cc lax/program.h
+    lax/resolver.h lax/resolver.cc
+    lax/scanner.cc lax/scanner.h
+    lax/token.cc lax/token.h
+    lax/tokentype.h
+    lax/lax.cc lax/lax.h
 )
 
-add_library(liblox STATIC ${lox_src} ${EXPR_SOURCE} ${EXPR_HEADER})
-target_link_libraries(liblox
+add_library(liblax STATIC ${lax_src} ${EXPR_SOURCE} ${EXPR_HEADER})
+target_link_libraries(liblax
     PUBLIC external::fmt
-    PRIVATE lox_project_options lox_project_warnings
+    PRIVATE lax_project_options lax_project_warnings
 )
-target_include_directories(liblox
+target_include_directories(liblax
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${CMAKE_CURRENT_BINARY_DIR}
 )
-target_precompile_headers(liblox
-    PUBLIC lox/pch.public.h
-    PRIVATE lox/pch.private.h
+target_precompile_headers(liblax
+    PUBLIC lax/pch.public.h
+    PRIVATE lax/pch.private.h
 )
-source_group("" FILES ${lox_src})
+source_group("" FILES ${lax_src})
 source_group("generated" FILES ${EXPR_SOURCE} ${EXPR_HEADER})
-add_library(lox::liblox ALIAS liblox)
+add_library(lax::liblax ALIAS liblax)
 
 
 # -----------------------------------------------------------------------------
 # unit test
-if(LOX_MASTER_PROJECT)
+if(LAX_MASTER_PROJECT)
     set(src_test
-        lox/test.cc lox/test.h
+        lax/test.cc lax/test.h
         ../external/catch/main.cc
 
-        lox/parser.test.cc
-        lox/interpreter.test.cc
-        lox/lox.test.cc
+        lax/parser.test.cc
+        lax/interpreter.test.cc
+        lax/lax.test.cc
     )
     add_executable(test ${src_test})
     target_link_libraries(test
-        PUBLIC external::catch catchy::catchy lox::liblox
-        PRIVATE lox_project_options lox_project_warnings
+        PUBLIC external::catch catchy::catchy lax::liblax
+        PRIVATE lax_project_options lax_project_warnings
     )
 endif()
