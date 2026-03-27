@@ -32,6 +32,7 @@ set(lax_src
     lax/source.cc lax/source.h
     lax/ast.cc lax/ast.h
     lax/chunk.cc lax/chunk.h
+    lax/debug.cc lax/debug.h
     lax/config.h
     lax/environment.cc lax/environment.h
     lax/errorhandler.cc lax/errorhandler.h
