@@ -57,12 +57,16 @@ struct TokenizeCodeRunner : CodeRunner
     }
 };
 
+enum class UseGraphviz
+{
+    no, yes
+};
 
 struct AstCodeRunner : CodeRunner
 {
-    bool use_graphviz;
+    UseGraphviz use_graphviz;
     
-    explicit AstCodeRunner(bool gv) : use_graphviz(gv) {}
+    explicit AstCodeRunner(UseGraphviz gv) : use_graphviz(gv) {}
 
     RunError
     run_code(std::shared_ptr<lax::Interpreter> interpreter, const std::string& source) override
@@ -75,7 +79,7 @@ struct AstCodeRunner : CodeRunner
             return RunError::syntax_error;
         }
 
-        if(use_graphviz)
+        if(use_graphviz == UseGraphviz::yes)
         {
             std::cout << lax::ast_to_grapviz(*program.program) << "\n";
         }
@@ -129,12 +133,12 @@ std::shared_ptr<CodeRunner> make_lexer()
 
 std::shared_ptr<CodeRunner> make_parser()
 {
-    return std::make_shared<AstCodeRunner>(false);
+    return std::make_shared<AstCodeRunner>(UseGraphviz::no);
 }
 
 std::shared_ptr<CodeRunner> make_parser_gv()
 {
-    return std::make_shared<AstCodeRunner>(true);
+    return std::make_shared<AstCodeRunner>(UseGraphviz::yes);
 }
 
 std::shared_ptr<CodeRunner> make_interpreter()
@@ -144,28 +148,16 @@ std::shared_ptr<CodeRunner> make_interpreter()
 
 std::string read_to_string(std::istream& handle)
 {
-    #if 0
-        // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring/2602258
-        // gcc: possible null pointer deref
-        return std::string
-        {
-            std::istreambuf_iterator<char>(handle),
-            std::istreambuf_iterator<char>()
-        };
-    #else
-        // gcc: ok
-        std::string line;
-        std::ostringstream ss;
-        while(std::getline(handle, line))
-        {
-            ss << line << '\n';
-        }
-        return ss.str();
-    #endif
+    std::string line;
+    std::ostringstream ss;
+    while(std::getline(handle, line))
+    {
+        ss << line << '\n';
+    }
+    return ss.str();
 }
 
 
-// represents Lax.java
 struct Lax
 {
     void
