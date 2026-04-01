@@ -13,3 +13,4 @@ target_link_libraries(
         external::exit_codes
 )
 source_group("" FILES ${src})
+cmake_source_group()

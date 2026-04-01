@@ -9,6 +9,7 @@ target_link_libraries(generate_ast
     PRIVATE lax_project_options lax_project_warnings external::exit_codes
 )
 source_group("" FILES ${gen_src})
+cmake_source_group()
 
 
 
@@ -65,6 +66,7 @@ target_precompile_headers(liblax
 )
 source_group("" FILES ${lax_src})
 source_group("generated" FILES ${EXPR_SOURCE} ${EXPR_HEADER})
+cmake_source_group()
 add_library(lax::liblax ALIAS liblax)
 
 
@@ -79,6 +81,8 @@ if(LAX_MASTER_PROJECT)
         lax/interpreter.test.cc
         lax/lax.test.cc
     )
+    source_group("" FILES ${src_test})
+    cmake_source_group()
     add_executable(test ${src_test})
     target_link_libraries(test
         PUBLIC external::catch catchy::catchy lax::liblax
