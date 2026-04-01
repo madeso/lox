@@ -4,6 +4,7 @@
 #include <memory>
 #include <functional>
 #include <sstream>
+#include <utility>
 
 #include "exit_codes/exit_codes.h"
 
@@ -14,6 +15,8 @@
 #include "lax/interpreter.h"
 #include "lax/printhandler.h"
 #include "lax/resolver.h"
+
+
 
 struct PrintErrors : lax::PrintHandler
 {
@@ -126,28 +129,10 @@ struct InterpreterRunner : CodeRunner
 
 
 
-std::shared_ptr<CodeRunner> make_lexer()
-{
-    return std::make_shared<TokenizeCodeRunner>();
-}
-
-std::shared_ptr<CodeRunner> make_parser()
-{
-    return std::make_shared<AstCodeRunner>(UseGraphviz::no);
-}
-
-std::shared_ptr<CodeRunner> make_parser_gv()
-{
-    return std::make_shared<AstCodeRunner>(UseGraphviz::yes);
-}
-
-std::shared_ptr<CodeRunner> make_interpreter()
-{
-    return std::make_shared<InterpreterRunner>();
-}
 
 std::string read_to_string(std::istream& handle)
 {
+    // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring/2602258
     std::string line;
     std::ostringstream ss;
     while(std::getline(handle, line))
@@ -157,22 +142,52 @@ std::string read_to_string(std::istream& handle)
     return ss.str();
 }
 
-
-struct Lax
+std::optional<std::string> read_file_to_string(const std::string& path)
 {
-    void
-    print_usage()
+    if (path == "stdin")
+    {
+        return read_to_string(std::cin);
+    }
+    
+    std::ifstream handle(path);
+    if (handle.good() == false)
+    {
+        std::cerr << "Unable to open file '" << path << "'\n";
+        return std::nullopt;
+    }
+
+    return read_to_string(handle);
+}
+
+
+
+/// return int to exit directly, or nullopt to continue parsing
+using FlagFunction = std::function<std::optional<int>()>;
+struct FlagBinding
+{
+    std::string documentation;
+    FlagFunction function;
+};
+struct Commandline
+{
+    std::unordered_map<char, FlagBinding> flags;
+
+    Commandline& bind_flag(char flag, const std::string& documentation, FlagFunction function)
+    {
+        flags[flag] = {documentation, std::move(function)};
+        return *this;
+    }
+
+    void print_usage() const
     {
         std::cout << "Usage: lax [flags] [file/script]\n";
         std::cout << "\n";
 
         std::cout << "FLAGS:\n";
-        std::cout << "  -x - assume the file is a piece of code\n";
-        std::cout << "  -h - print help\n";
-        std::cout << "  -L - run lexer only = tokenize input\n";
-        std::cout << "  -P - run lexer/parser only = print ast tree\n";
-        std::cout << "  -G - run lexer/parser only = print ast tree in graphviz\n";
-        std::cout << "  -I - run interpreter\n";
+        for (const auto& [flag, binding] : flags)
+        {
+            std::cout << "  -" << flag << " - " << binding.documentation << "\n";
+        }
         std::cout << "\n";
 
         std::cout << "FILE/SCRIPT:\n";
@@ -182,61 +197,45 @@ struct Lax
         std::cout << "\n";
     }
 
-    int
-    main(int argc, char** argv)
+    int run(int argc, char** argv, const std::function<int (const std::string&)>& callback) const
     {
-        std::function<std::shared_ptr<CodeRunner>()> run_creator = make_interpreter;
-        bool is_code = false;
-
-        for(int arg_index=1; arg_index<argc; arg_index+=1)
+        for (int arg_index = 1; arg_index < argc; arg_index += 1)
         {
             const std::string cmd = argv[arg_index];
             const bool is_flags = cmd[0] == '-' || cmd[0] == '/';
 
-            if(is_flags)
+            if (is_flags)
             {
-                bool got_flag = false;
-                for(unsigned int flag_index=1; flag_index<cmd.length(); flag_index+=1)
-                {
-                    got_flag = true;
-                    const auto flag = cmd[flag_index];
-                    switch(flag)
-                    {
-                    case 'x':
-                        is_code = true;
-                        break;
-                    case 'h':
-                        print_usage();
-                        return exit_codes::no_error;
-                    case 'L':
-                        run_creator = make_lexer;
-                        break;
-                    case 'P':
-                        run_creator = make_parser;
-                        break;
-                    case 'G':
-                        run_creator = make_parser_gv;
-                        break;
-                    case 'I':
-                        run_creator = make_interpreter;
-                        break;
-                    default:
-                        std::cerr << "ERROR: unknown flag" << flag << "\n";
-                        print_usage();
-                        return exit_codes::incorrect_usage;
-                    }
-                }
-
-                if(got_flag == false)
+                if (cmd.length() <= 1)
                 {
                     std::cerr << "ERROR: missing flag in argument #" << arg_index << ": " << cmd << "\n";
                     print_usage();
                     return exit_codes::incorrect_usage;
                 }
+
+                for (unsigned int flag_index = 1; flag_index < cmd.length(); flag_index += 1)
+                {
+                    const auto flag = cmd[flag_index];
+                    
+                    if (const auto found = flags.find(flag); found == flags.end())
+                    {
+                        std::cerr << "ERROR: unknown flag" << flag << "\n";
+                        print_usage();
+                        return exit_codes::incorrect_usage;
+                    }
+                    else
+                    {
+                        const auto ret = found->second.function();
+                        if (ret.has_value())
+                        {
+                            return *ret;
+                        }
+                    }
+                }
             }
             else
             {
-                if(arg_index+1 != argc)
+                if (arg_index + 1 != argc)
                 {
                     // this isn't the last argument
                     std::cerr << "ERROR: too many arguments after #" << arg_index << ": " << cmd << "\n";
@@ -244,125 +243,140 @@ struct Lax
                     return exit_codes::incorrect_usage;
                 }
 
-
-                // arg is not flags, assume "file"
-                if(is_code)
-                {
-                    auto runner = run_creator();
-                    return run_code_get_exitcode(runner.get(), cmd);
-                }
-                else if(cmd == "repl")
-                {
-                    run_prompt(run_creator);
-                    return exit_codes::no_error;
-                }
-                else
-                {
-                    auto runner = run_creator();
-                    // neither code nor prompt, assume file
-                    return run_file_get_exitcode(runner.get(), cmd);
-                }
+                return callback(cmd);
             }
         }
-        
+
         std::cerr << "No input given...\n";
         print_usage();
         return exit_codes::incorrect_usage;
     }
+};
 
-    void
-    run_prompt(const std::function<std::shared_ptr<CodeRunner>()>& run_creator)
-    {
-        auto interpreter = create_interpreter();
-        auto run = run_creator();
-
-        std::cout << "REPL started. EOF (ctrl-d) to exit.\n";
-        while (true)
-        {
-            std::cout << "> ";
-            std::string line;
-            if (std::getline(std::cin, line))
-            {
-                const auto result = run->run_code(interpreter, line);
-                if(result != RunError::no_error )
-                {
-                    std::cout << "EOF (ctrl-d) to exit.\n";
-                }
-            }
-            else
-            {
-                std::cout << "\n\n";
-                return;
-            }
-        }
-    }
-
-    [[nodiscard]] int
-    run_file_get_exitcode(CodeRunner* runner, const std::string& path)
-    {
-        if(path == "stdin")
-        {
-            return run_stream_get_exitcode(runner, std::cin);
-        }
-        else
-        {
-            std::ifstream handle(path);
-
-            if(handle.good() == false)
-            {
-                std::cerr << "Unable to open file '" << path << "'\n";
-                return exit_codes::missing_input;
-            }
-
-            return run_stream_get_exitcode(runner, handle);
-        }
-    }
-
-    [[nodiscard]] int
-    run_stream_get_exitcode(CodeRunner* runner, std::istream& handle)
-    {
-        // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring/2602258
-        const auto str = read_to_string(handle);
-        return run_code_get_exitcode(runner, str);
-    }
-    
-    PrintErrors printer;
-    std::shared_ptr<lax::Interpreter> create_interpreter()
-    {
-        return lax::make_interpreter(&printer, [](const std::string& s){ std::cout << s << "\n";});
-    }
-
-    [[nodiscard]] int
-    run_code_get_exitcode(CodeRunner* runner, const std::string& str)
-    {
-        auto interpreter = create_interpreter();
-        const auto error_detected = runner->run_code(interpreter, str);
-
-        switch(error_detected)
-        {
-        case RunError::no_error:
-            return exit_codes::no_error;
-        case RunError::syntax_error:
-            return exit_codes::bad_input;
-        case RunError::runtime_error:
-            // hrm... jlax returns 70 but internal error feels wrong...
-            return exit_codes::internal_error;
-        default:
-            assert(false && "unhandled RunError in run_code_get_exitcode(...)");
-            return 42;
-        }
-    }
-
-    
-
-    // todo(Gustav): refactor error handling to be part of parsing so we
-    // know the source and don't have to recreate the mapping for each error
-    
+enum class InputType
+{
+    file, code
 };
 
 
-int main(int argc, char** argv)
+
+void
+run_repl(CodeRunner* run, const std::shared_ptr<lax::Interpreter>& interpreter)
 {
-    Lax lax;
-    return lax.main(argc, argv);
+    std::cout << "REPL started. EOF (ctrl-d) to exit.\n";
+    while (true)
+    {
+        std::cout << "> ";
+        std::string line;
+        if (std::getline(std::cin, line))
+        {
+            const auto result = run->run_code(interpreter, line);
+            if(result != RunError::no_error )
+            {
+                std::cout << "EOF (ctrl-d) to exit.\n";
+            }
+        }
+        else
+        {
+            std::cout << "\n\n";
+            return;
+        }
+    }
+}
+
+
+
+[[nodiscard]] int
+run_code_get_exitcode(CodeRunner* runner, std::shared_ptr<lax::Interpreter> interpreter, const std::string& str)
+{
+    const auto error_detected = runner->run_code(std::move(interpreter), str);
+
+    switch (error_detected)
+    {
+    case RunError::no_error:
+        return exit_codes::no_error;
+    case RunError::syntax_error:
+        return exit_codes::bad_input;
+    case RunError::runtime_error:
+        // hrm... jlox returns 70 but internal error feels wrong...
+        return exit_codes::internal_error;
+    default:
+        assert(false && "unhandled RunError in run_code_get_exitcode(...)");
+        return 42;
+    }
+}
+
+
+
+[[nodiscard]] int
+run_file_get_exitcode(CodeRunner* runner, std::shared_ptr<lax::Interpreter> interpreter, const std::string& path)
+{
+    const auto contents = read_file_to_string(path);
+
+    if(contents.has_value())
+    {
+        return exit_codes::missing_input;
+    }
+
+    return run_code_get_exitcode(runner, std::move(interpreter), *contents);
+}
+
+
+
+// todo(Gustav): refactor error handling to be part of parsing so we
+// know the source and don't have to recreate the mapping for each error
+
+
+
+int
+main(int argc, char** argv)
+{
+    std::shared_ptr<CodeRunner> runner = std::make_shared<InterpreterRunner>();
+    InputType is_code = InputType::file;
+
+    Commandline cli;
+    cli.bind_flag('x', "assume the file input is a piece of code", [&]() -> std::optional<int> {
+        is_code = InputType::code;
+        return std::nullopt;
+        });
+    cli.bind_flag('h', "print help", [&]() -> std::optional<int> {
+        cli.print_usage();
+        return exit_codes::no_error;
+        });
+    cli.bind_flag('L', "run lexer only = tokenize input", [&]() -> std::optional<int> {
+        runner = std::make_shared<TokenizeCodeRunner>();
+        return std::nullopt;
+        });
+    cli.bind_flag('P', "run lexer/parser only = print ast tree", [&]() -> std::optional<int> {
+        runner = std::make_shared<AstCodeRunner>(UseGraphviz::no);
+        return std::nullopt;
+        });
+    cli.bind_flag('G', "run lexer/parser only = print ast tree in graphviz", [&]() -> std::optional<int> {
+        runner = std::make_shared<AstCodeRunner>(UseGraphviz::yes);
+        return std::nullopt;
+        });
+    cli.bind_flag('I', "run interpreter", [&]() -> std::optional<int> {
+        runner = std::make_shared<InterpreterRunner>();
+        return std::nullopt;
+        });
+
+    return cli.run(argc, argv, [&](const std::string& cmd) -> int {
+        PrintErrors print_errors;
+        auto interpreter = lax::make_interpreter(&print_errors, [](const std::string& s) { std::cout << s << "\n"; });
+
+        if (is_code == InputType::code)
+        {
+            return run_code_get_exitcode(runner.get(), std::move(interpreter), cmd);
+        }
+        else if (cmd == "repl")
+        {
+            run_repl(runner.get(), interpreter);
+            return exit_codes::no_error;
+        }
+        else
+        {
+            // neither code nor prompt, assume file
+            return run_file_get_exitcode(runner.get(), std::move(interpreter), cmd);
+        }
+    });
 }
