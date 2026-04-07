@@ -130,6 +130,26 @@ struct InterpreterRunner : CodeRunner
 
 
 
+struct AssemblerRunner : CodeRunner
+{
+    RunError
+    run_code(std::shared_ptr<lax::Interpreter> interpreter, const std::string& source) override
+    {
+        // todo(Gustav): use a assembler tokenizer
+        auto tokens = lax::scan_tokens(source, interpreter->get_error_handler());
+
+        if (tokens.errors > 0)
+        {
+            return RunError::syntax_error;
+        }
+
+        return RunError::no_error;
+    }
+};
+
+
+
+
 std::string read_to_string(std::istream& handle)
 {
     // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring/2602258
@@ -253,9 +273,9 @@ struct Commandline
     }
 };
 
-enum class InputType
+enum class StreamType
 {
-    file, code
+    automatic, file, code
 };
 
 
@@ -332,11 +352,11 @@ int
 main(int argc, char** argv)
 {
     std::shared_ptr<CodeRunner> runner = std::make_shared<InterpreterRunner>();
-    InputType is_code = InputType::file;
+    StreamType stream_type = StreamType::automatic;
 
     Commandline cli;
     cli.bind_flag('x', "assume the file input is a piece of code", [&]() -> std::optional<int> {
-        is_code = InputType::code;
+        stream_type = StreamType::code;
         return std::nullopt;
         });
     cli.bind_flag('h', "print help", [&]() -> std::optional<int> {
@@ -359,24 +379,34 @@ main(int argc, char** argv)
         runner = std::make_shared<InterpreterRunner>();
         return std::nullopt;
         });
+    cli.bind_flag('A', "treat input as assembly code", [&]() -> std::optional<int> {
+        runner = std::make_shared<AssemblerRunner>();
+        return std::nullopt;
+        });
 
     return cli.run(argc, argv, [&](const std::string& cmd) -> int {
         PrintErrors print_errors;
         auto interpreter = lax::make_interpreter(&print_errors, [](const std::string& s) { std::cout << s << "\n"; });
 
-        if (is_code == InputType::code)
+        if (stream_type == StreamType::automatic)
         {
+            if (cmd == "repl")
+            {
+                run_repl(runner.get(), interpreter);
+                return exit_codes::no_error;
+            }
+            stream_type = StreamType::file;
+        }
+
+        switch (stream_type)
+        {
+        case StreamType::code:
             return run_code_get_exitcode(runner.get(), std::move(interpreter), cmd);
-        }
-        else if (cmd == "repl")
-        {
-            run_repl(runner.get(), interpreter);
-            return exit_codes::no_error;
-        }
-        else
-        {
-            // neither code nor prompt, assume file
+        case StreamType::file:
             return run_file_get_exitcode(runner.get(), std::move(interpreter), cmd);
+        default:
+            assert(false && "unhandled StreamType in main(...)");
+            return exit_codes::internal_error;
         }
     });
 }
