@@ -44,7 +44,7 @@ struct TokenizeCodeRunner : CodeRunner
     RunError
     run_code(std::shared_ptr<lax::Interpreter> interpreter, const std::string& source) override
     {
-        auto tokens = lax::scan_tokens(source, interpreter->get_error_handler());
+        auto tokens = lax::scan_lox_tokens(source, interpreter->get_error_handler());
 
         if(tokens.errors > 0)
         {
@@ -74,7 +74,7 @@ struct AstCodeRunner : CodeRunner
     RunError
     run_code(std::shared_ptr<lax::Interpreter> interpreter, const std::string& source) override
     {
-        auto tokens = lax::scan_tokens(source, interpreter->get_error_handler());
+        auto tokens = lax::scan_lox_tokens(source, interpreter->get_error_handler());
         auto program = lax::parse_program(tokens.tokens, interpreter->get_error_handler());
 
         if(tokens.errors > 0 || program.errors > 0)
@@ -100,7 +100,7 @@ struct InterpreterRunner : CodeRunner
     RunError
     run_code(std::shared_ptr<lax::Interpreter> interpreter, const std::string& source) override
     {
-        auto tokens = lax::scan_tokens(source, interpreter->get_error_handler());
+        auto tokens = lax::scan_lox_tokens(source, interpreter->get_error_handler());
         auto program = lax::parse_program(tokens.tokens, interpreter->get_error_handler());
         
         if(tokens.errors > 0 || program.errors > 0)
@@ -136,11 +136,16 @@ struct AssemblerRunner : CodeRunner
     run_code(std::shared_ptr<lax::Interpreter> interpreter, const std::string& source) override
     {
         // todo(Gustav): use a assembler tokenizer
-        auto tokens = lax::scan_tokens(source, interpreter->get_error_handler());
+        auto tokens = lax::scan_asm_tokens(source, interpreter->get_error_handler());
 
         if (tokens.errors > 0)
         {
             return RunError::syntax_error;
+        }
+
+        for (const auto& token : tokens.tokens)
+        {
+            std::cout << token.to_debug_string() << "\n";
         }
 
         return RunError::no_error;
@@ -283,7 +288,8 @@ enum class StreamType
 void
 run_repl(CodeRunner* run, const std::shared_ptr<lax::Interpreter>& interpreter)
 {
-    std::cout << "REPL started. EOF (ctrl-d) to exit.\n";
+    const std::string_view exit_message = "EOF (ctrl-d/ctrl-z) to exit.\n";
+    std::cout << "REPL started. " << exit_message;
     while (true)
     {
         std::cout << "> ";
@@ -293,7 +299,7 @@ run_repl(CodeRunner* run, const std::shared_ptr<lax::Interpreter>& interpreter)
             const auto result = run->run_code(interpreter, line);
             if(result != RunError::no_error )
             {
-                std::cout << "EOF (ctrl-d) to exit.\n";
+                std::cout << exit_message;
             }
         }
         else
@@ -333,7 +339,7 @@ run_file_get_exitcode(CodeRunner* runner, std::shared_ptr<lax::Interpreter> inte
 {
     const auto contents = read_file_to_string(path);
 
-    if(contents.has_value())
+    if(contents.has_value() == false)
     {
         return exit_codes::missing_input;
     }

@@ -17,7 +17,7 @@ namespace
     bool
     run_string(std::shared_ptr<lax::Interpreter> interpreter, const std::string& source)
     {
-        auto tokens = lax::scan_tokens(source, interpreter->get_error_handler());
+        auto tokens = lax::scan_lox_tokens(source, interpreter->get_error_handler());
         auto program = lax::parse_program(tokens.tokens, interpreter->get_error_handler());
         
         if(tokens.errors > 0 || program.errors > 0)

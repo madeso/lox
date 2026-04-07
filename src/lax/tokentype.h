@@ -43,6 +43,37 @@ namespace lax
         EOF
     };
 
+    enum class AsmTokenType
+    {
+        // table entry
+        STRING, NUMBER_INT, NUMBER_FLOAT,
+
+        // labels
+        IDENTIFIER, COLON,
+
+        // commands
+
+        // end
+        TERMINATOR,
+
+        EOF
+    };
+
+    constexpr std::string_view tokentype_to_string(AsmTokenType tt)
+    {
+        switch (tt)
+        {
+        case AsmTokenType::STRING:       return "string";
+        case AsmTokenType::NUMBER_INT:   return "int";
+        case AsmTokenType::NUMBER_FLOAT: return "float";
+        case AsmTokenType::IDENTIFIER:   return "identifier";
+        case AsmTokenType::COLON:        return "colon";
+        case AsmTokenType::TERMINATOR:   return "terminator";
+        case AsmTokenType::EOF:          return "eof";
+        default:                         assert(false); return "???";
+        }
+    }
+
     constexpr std::string_view tokentype_to_string(TokenType tt)
     {
         switch (tt)

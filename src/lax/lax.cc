@@ -35,7 +35,7 @@ Lax::~Lax() = default;
 bool
 Lax::run_string(const std::string& source)
 {
-    auto tokens = lax::scan_tokens(source, impl->interpreter->get_error_handler());
+    auto tokens = lax::scan_lox_tokens(source, impl->interpreter->get_error_handler());
     auto program = lax::parse_program(tokens.tokens, impl->interpreter->get_error_handler());
     
     if(tokens.errors > 0 || program.errors > 0)

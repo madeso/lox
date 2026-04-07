@@ -1,5 +1,6 @@
 #pragma once
 
+#include <variant>
 
 #include "lax/object.h"
 #include "lax/source.h"
@@ -21,6 +22,18 @@ struct Token
 
     std::string
     to_debug_string(Interpreter* inter) const;
+};
+
+using AsmLiteral = std::optional<std::variant<Ti, Tf, std::string>>;
+struct AsmToken
+{
+    AsmTokenType type;
+    std::string_view lexeme;
+    AsmLiteral literal;
+    Offset offset;
+
+    std::string
+    to_debug_string() const;
 };
 
 

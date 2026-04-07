@@ -62,13 +62,17 @@ StringMap::StringMap(std::string_view source)
         lines.emplace_back(LineData{line, OffsetNoSource{start, index}});
     }
 
-    assert(lines.empty() == false);
+    // assert(lines.empty() == false);
 }
 
 
 LineData
 StringMap::get_line_from_offset(std::size_t offset) const
 {
+    if (lines.empty())
+    {
+        return {0, {offset}};
+    }
     assert(lines.empty() == false);
 
     for(std::size_t index = 0; index < lines.size(); index += 1)

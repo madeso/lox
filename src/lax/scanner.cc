@@ -70,7 +70,7 @@ substr(std::string_view str, std::size_t start_index, std::size_t end_index)
 
 
 std::optional<TokenType>
-find_keyword_or_null(std::string_view str)
+find_lax_keyword_or_null(std::string_view str)
 {
     // todo(Gustav): just constinit this instead of going via a local function
     static const std::unordered_map<std::string_view, TokenType> keywords = []() -> auto
@@ -112,24 +112,51 @@ find_keyword_or_null(std::string_view str)
     }
 }
 
+std::optional<AsmTokenType>
+find_asm_keyword_or_null(std::string_view str)
+{
+    // todo(Gustav): just constinit this instead of going via a local function
+    static const std::unordered_map<std::string_view, AsmTokenType> keywords = []() -> auto
+        {
+            std::unordered_map<std::string_view, AsmTokenType> kw;
 
-struct Scanner
+            // kw["and"] = TokenType::AND;
+
+            return kw;
+        }();
+
+    const auto found = keywords.find(str);
+    if (found != keywords.end())
+    {
+        return found->second;
+    }
+    else
+    {
+        return std::nullopt;
+    }
+}
+
+struct GenericScanner
 {
     std::string_view source;
     std::shared_ptr<Source> file;
     ErrorHandler* error_handler;
 
-    ScanResult result; // output "variable"
-
     std::size_t start = 0; // first character in lexeme being scanned
     std::size_t current = 0; // character currently being scanned
 
-    explicit Scanner(std::string_view s, ErrorHandler* eh)
+    explicit GenericScanner(std::string_view s, ErrorHandler* eh)
         : source(s)
         , file(std::make_shared<Source>(std::string(s)))
         , error_handler(eh)
     {
     }
+
+    virtual ~GenericScanner() = default;
+    GenericScanner(const GenericScanner&) = delete;
+    void operator=(const GenericScanner&) = delete;
+    GenericScanner(GenericScanner&&) = delete;
+    void operator=(GenericScanner&&) = delete;
 
     void
     scan_many_tokens()
@@ -141,75 +168,12 @@ struct Scanner
             scan_single_token();
         }
 
-        result.tokens.emplace_back(TokenType::EOF, "", nullptr, Offset{file, current, current});
+        add_eof_token();
     }
 
-    void
-    scan_single_token()
-    {
-        const char first_char = advance();
-        switch (first_char)
-        {
-        // single character tokens
-        case '(': add_token(TokenType::LEFT_PAREN);    break;
-        case ')': add_token(TokenType::RIGHT_PAREN);   break;
-        case '{': add_token(TokenType::LEFT_BRACE);    break;
-        case '}': add_token(TokenType::RIGHT_BRACE);   break;
-        case '[': add_token(TokenType::LEFT_BRACKET);  break;
-        case ']': add_token(TokenType::RIGHT_BRACKET); break;
-        case ',': add_token(TokenType::COMMA);         break;
-        case '.': add_token(TokenType::DOT);           break;
-        case ';': add_token(TokenType::SEMICOLON);     break;
-        case ':': add_token(TokenType::COLON);         break;
+    virtual void add_eof_token() = 0;
 
-        // 1 or 2 character tokens
-        case '!': add_token(match('=') ? TokenType::BANG_EQUAL    : TokenType::BANG);    break;
-        case '=': add_token(match('=') ? TokenType::EQUAL_EQUAL   : TokenType::EQUAL);   break;
-        case '<': add_token(match('=') ? TokenType::LESS_EQUAL    : TokenType::LESS);    break;
-        case '>': add_token(match('=') ? TokenType::GREATER_EQUAL : TokenType::GREATER); break;
-        
-        case '+': add_token(match('=') ? TokenType::PLUSEQ : TokenType::PLUS); break;
-        case '*': add_token(match('=') ? TokenType::STAREQ : TokenType::STAR); break;
-        case '-':
-            if      (match('>')) { add_token(TokenType::ARROW); }
-            else if (match('=')) { add_token(TokenType::MINUSEQ);}
-            else                 { add_token(TokenType::MINUS); }
-            break;
-
-        // division or comment?
-        case '/':
-            // todo(Gustav): add c-style /*  */ multi-line comments
-            if      (match('/')) { eat_line(); }
-            else if (match('=')) { add_token(TokenType::SLASHEQ); }
-            else                 { add_token(TokenType::SLASH); }
-            break;
-
-        // Ignore whitespace.
-        case ' ': case '\r': case '\t': case '\n':
-            break;
-
-        // string literal
-        case '"': case '\'':
-            scan_string(first_char);
-            break;
-
-        default:
-            if (is_num_char(first_char))
-            {
-                scan_number();
-            }
-            else if (is_alpha_char(first_char))
-            {
-                scan_identifier_or_keyword();
-            }
-            else
-            {
-                result.errors += 1;
-                error_handler->on_error(Offset{file, start}, "Unexpected character.");
-            }
-            break;
-        }
-    }
+    virtual void scan_single_token() = 0;
 
     void
     scan_identifier_or_keyword()
@@ -220,9 +184,10 @@ struct Scanner
         }
 
         const auto text = substr(source, start, current);
-        const auto keyword_type = find_keyword_or_null(text);
-        add_token(keyword_type.value_or(TokenType::IDENTIFIER));
+        add_keyword_or_id_token(text);
     }
+
+    virtual void add_keyword_or_id_token(const std::string_view& id) = 0;
 
     void
     scan_number()
@@ -250,13 +215,16 @@ struct Scanner
         const auto str = substr(source, start, current);
         if(is_int)
         {
-            add_token(TokenType::NUMBER_INT, make_number_int(parse_int(str)));
+            add_int_token(parse_int(str));
         }
         else
         {
-            add_token(TokenType::NUMBER_FLOAT, make_number_float(parse_double(str)));
+            add_float_token(parse_double(str));
         }
     }
+
+    virtual void add_int_token(Ti i) = 0;
+    virtual void add_float_token(Tf f) = 0;
 
     void
     scan_string(char end_char)
@@ -274,7 +242,7 @@ struct Scanner
 
         if (is_at_end())
         {
-            result.errors += 1;
+            add_error();
             error_handler->on_error(Offset{file, start, current}, "Unterminated string.");
             return;
         }
@@ -285,8 +253,12 @@ struct Scanner
         // Trim the surrounding quotes.
         assert(current > 0);
         auto value = substr(source, start + 1, current - 1);
-        add_token(TokenType::STRING, make_string(std::string(value)));
+        add_string_token(std::string(value));
     }
+
+    virtual void add_error() = 0;
+
+    virtual void add_string_token(const std::string& str) = 0;
 
     void
     eat_line()
@@ -358,6 +330,15 @@ struct Scanner
         current++;
         return r;
     }
+};
+
+struct LoxScanner : GenericScanner
+{
+    LoxScanner(std::string_view s, ErrorHandler* eh) : GenericScanner(s, eh)
+    {
+    }
+
+    ScanResult result; // output "variable"
 
     void
     add_token(TokenType type)
@@ -369,12 +350,211 @@ struct Scanner
     add_token(TokenType type, std::shared_ptr<Object> literal)
     {
         auto text = substr(source, start, current);
-        result.tokens.emplace_back(Token(type, text, std::move(literal), Offset{file, start, current}));
+        result.tokens.emplace_back(Token(type, text, std::move(literal), Offset{ file, start, current }));
+    }
+
+    void add_keyword_or_id_token(const std::string_view& text) override
+    {
+        const auto keyword_type = find_lax_keyword_or_null(text);
+        add_token(keyword_type.value_or(TokenType::IDENTIFIER));
+    }
+
+    void add_error() override
+    {
+        result.errors += 1;
+    }
+
+    void add_eof_token() override
+    {
+        result.tokens.emplace_back(TokenType::EOF, "", nullptr, Offset{ file, current, current });
+    }
+
+    void add_string_token(const std::string& str) override
+    {
+        add_token(TokenType::STRING, make_string(str));
+    }
+
+    void add_int_token(Ti i) override
+    {
+        add_token(TokenType::NUMBER_INT, make_number_int(i));
+    }
+
+    void add_float_token(Tf f) override
+    {
+        add_token(TokenType::NUMBER_FLOAT, make_number_float(f));
+    }
+
+    void
+    scan_single_token() override
+    {
+        const char first_char = advance();
+        switch (first_char)
+        {
+            // single character tokens
+        case '(': add_token(TokenType::LEFT_PAREN);    break;
+        case ')': add_token(TokenType::RIGHT_PAREN);   break;
+        case '{': add_token(TokenType::LEFT_BRACE);    break;
+        case '}': add_token(TokenType::RIGHT_BRACE);   break;
+        case '[': add_token(TokenType::LEFT_BRACKET);  break;
+        case ']': add_token(TokenType::RIGHT_BRACKET); break;
+        case ',': add_token(TokenType::COMMA);         break;
+        case '.': add_token(TokenType::DOT);           break;
+        case ';': add_token(TokenType::SEMICOLON);     break;
+        case ':': add_token(TokenType::COLON);         break;
+
+            // 1 or 2 character tokens
+        case '!': add_token(match('=') ? TokenType::BANG_EQUAL : TokenType::BANG);    break;
+        case '=': add_token(match('=') ? TokenType::EQUAL_EQUAL : TokenType::EQUAL);   break;
+        case '<': add_token(match('=') ? TokenType::LESS_EQUAL : TokenType::LESS);    break;
+        case '>': add_token(match('=') ? TokenType::GREATER_EQUAL : TokenType::GREATER); break;
+
+        case '+': add_token(match('=') ? TokenType::PLUSEQ : TokenType::PLUS); break;
+        case '*': add_token(match('=') ? TokenType::STAREQ : TokenType::STAR); break;
+        case '-':
+            if (match('>')) { add_token(TokenType::ARROW); }
+            else if (match('=')) { add_token(TokenType::MINUSEQ); }
+            else { add_token(TokenType::MINUS); }
+            break;
+
+            // division or comment?
+        case '/':
+            // todo(Gustav): add c-style /*  */ multi-line comments
+            if (match('/')) { eat_line(); }
+            else if (match('=')) { add_token(TokenType::SLASHEQ); }
+            else { add_token(TokenType::SLASH); }
+            break;
+
+            // Ignore whitespace.
+        case ' ': case '\r': case '\t': case '\n':
+            break;
+
+            // string literal
+        case '"': case '\'':
+            scan_string(first_char);
+            break;
+
+        default:
+            if (is_num_char(first_char))
+            {
+                scan_number();
+            }
+            else if (is_alpha_char(first_char))
+            {
+                scan_identifier_or_keyword();
+            }
+            else
+            {
+                result.errors += 1;
+                error_handler->on_error(Offset{ file, start }, "Unexpected character.");
+            }
+            break;
+        }
     }
 };
+
+struct AsmScanner : GenericScanner
+{
+    AsmScanner(std::string_view s, ErrorHandler* eh) : GenericScanner(s, eh)
+    {
+    }
+
+    AsmScanResult result; // output "variable"
+
+    void
+    add_token(AsmTokenType type)
+    {
+        add_token(type, std::nullopt);
+    }
+
+    void
+    add_token(AsmTokenType type, AsmLiteral literal)
+    {
+        auto text = substr(source, start, current);
+        result.tokens.emplace_back(AsmToken{
+            type, text, std::move(literal), Offset{ file, start, current }
+        });
+    }
+
+    void add_keyword_or_id_token(const std::string_view& text) override
+    {
+        const auto keyword_type = find_asm_keyword_or_null(text);
+        add_token(keyword_type.value_or(AsmTokenType::IDENTIFIER));
+    }
+
+    void add_error() override
+    {
+        result.errors += 1;
+    }
+
+    void add_eof_token() override
+    {
+        result.tokens.emplace_back(AsmToken{
+            AsmTokenType::EOF, "", std::nullopt, Offset{ file, current, current }});
+    }
+
+    void add_string_token(const std::string& str) override
+    {
+        add_token(AsmTokenType::STRING, str);
+    }
+
+    void add_int_token(Ti i) override
+    {
+        add_token(AsmTokenType::NUMBER_INT, i);
+    }
+
+    void add_float_token(Tf f) override
+    {
+        add_token(AsmTokenType::NUMBER_FLOAT, f);
+    }
+
+    void
+    scan_single_token() override
+    {
+        const char first_char = advance();
+        switch (first_char)
+        {
+            // comment
+        case ':':
+            add_token(AsmTokenType::COLON);
+            break;
+        case '\n':
+            add_token(AsmTokenType::TERMINATOR);
+            break;
+        case ';':
+            eat_line();
+            
+            break;
+
+            // Ignore whitespace.
+        case ' ': case '\r': case '\t':// case '\n':
+            break;
+
+            // string literal
+        case '"': case '\'':
+            scan_string(first_char);
+            break;
+
+        default:
+            if (is_num_char(first_char))
+            {
+                scan_number();
+            }
+            else if (is_alpha_char(first_char))
+            {
+                scan_identifier_or_keyword();
+            }
+            else
+            {
+                result.errors += 1;
+                error_handler->on_error(Offset{ file, start }, "Unexpected character.");
+            }
+            break;
+        }
+    }
+};
+
+
 } }
-
-
 
 namespace lax
 {
@@ -383,7 +563,7 @@ namespace lax
 std::vector<std::string>
 parse_package_path(const std::string& path)
 {
-    const auto package_path = scan_tokens(path, nullptr);
+    const auto package_path = scan_lox_tokens(path, nullptr);
     if(package_path.errors != 0) { return {}; }
     if(package_path.tokens.empty()) { return {}; }
 
@@ -413,11 +593,20 @@ parse_package_path(const std::string& path)
 }
 
 ScanResult
-scan_tokens(std::string_view source, ErrorHandler* error_handler)
+scan_lox_tokens(std::string_view source, ErrorHandler* error_handler)
 {
-    auto scanner = Scanner(source, error_handler);
+    auto scanner = LoxScanner(source, error_handler);
     scanner.scan_many_tokens();
     return std::move(scanner.result);
 }
+
+AsmScanResult
+scan_asm_tokens(std::string_view source, ErrorHandler* error_handler)
+{
+    auto scanner = AsmScanner(source, error_handler);
+    scanner.scan_many_tokens();
+    return std::move(scanner.result);
+}
+
 
 }
