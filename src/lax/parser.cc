@@ -1,10 +1,19 @@
 #include "lax/parser.h"
 
+#include "lax_expression.h"
 #include "lax/errorhandler.h"
 #include "lax/config.h"
 
 
 namespace lax { namespace {
+
+// convert an enum class to it's underlying (int) type
+// src: https://twitter.com/idoccor/status/1314664849276899328
+template<typename E>
+constexpr typename std::underlying_type_t<E> base_cast(E e) noexcept
+{
+    return static_cast<typename std::underlying_type_t<E>>(e);
+}
 
 
 struct ParseError{};
@@ -42,6 +51,21 @@ offset_for_error(const Token& token)
 
 
 Offset
+offset_for_error(const AsmToken& token)
+{
+    if (token.type == AsmTokenType::EOF)
+    {
+        return { token.offset.source, token.offset.start };
+    }
+    else
+    {
+        return token.offset;
+    }
+}
+
+
+
+Offset
 offset_for_range_error(const Offset& previous, const Token& token)
 {
     if (token.type == TokenType::EOF)
@@ -62,7 +86,7 @@ token_to_string(const Token& tok)
 }
 
 
-struct Parser
+struct LoxParser
 {
     std::vector<Token>& tokens;
     ErrorHandler* error_handler;
@@ -76,7 +100,7 @@ struct Parser
     // --------------------------------------------------------------------------------------------
     // constructor
 
-    explicit Parser(std::vector<Token>& t, ErrorHandler* eh)
+    explicit LoxParser(std::vector<Token>& t, ErrorHandler* eh)
         : tokens(t)
         , error_handler(eh)
     {
@@ -998,16 +1022,254 @@ struct Parser
 };
 
 
+struct AsmParser
+{
+    std::vector<AsmToken>& tokens;
+    ErrorHandler* error_handler;
+    std::size_t current = 0;
+    int error_count = 0;
+
+    u64 next_statement_uid = 0;
+    u64 next_expression_uid = 0;
+
+
+    // --------------------------------------------------------------------------------------------
+    // constructor
+
+    explicit AsmParser(std::vector<AsmToken>& t, ErrorHandler* eh)
+        : tokens(t)
+        , error_handler(eh)
+    {
+    }
+
+    // --------------------------------------------------------------------------------------------
+    // util functions
+
+    StatementId new_stmt() { return { next_statement_uid++ }; }
+    ExpressionId new_expr() { return { next_expression_uid++ }; }
+
+
+    // --------------------------------------------------------------------------------------------
+    // parser
+
+    std::vector<ParsedAsmInstruction>
+        parse_program()
+    {
+        auto program = std::vector<ParsedAsmInstruction>();
+
+        while (!is_at_end())
+        {
+            auto dec = parse_instruction_or_null();
+            if (dec.has_value())
+            {
+                program.emplace_back(std::move(*dec));
+            }
+        }
+
+        return program;
+    }
+
+    std::optional<ParsedAsmInstruction>
+    parse_instruction_or_null()
+    {
+        try
+        {
+            if (peek().type == AsmTokenType::TERMINATOR)
+            {
+                consume_terminator("Internal error reading terminator");
+                return std::nullopt;
+            }
+
+            std::optional<std::string> label;
+            if (match({ AsmTokenType::IDENTIFIER}))
+            {
+                label = std::string(previous().lexeme);
+                consume(AsmTokenType::COLON, "Expected ':' after label");
+            }
+
+            const auto instruction = peek().type;
+            if (base_cast(AsmTokenType::COLON) < base_cast(instruction) && base_cast(instruction) < base_cast(AsmTokenType::TERMINATOR))
+            {
+                // ok
+                consume(instruction, "Internal error reading instruction");
+            }
+            else
+            {
+                throw error(offset_for_error(peek()), label.has_value() ? "Expected instruction after label" : "Expected instruction");
+            }
+
+            std::vector<AsmLiteralValue> arguments;
+            while (match({ AsmTokenType::IDENTIFIER, AsmTokenType::NUMBER_FLOAT, AsmTokenType::NUMBER_INT, AsmTokenType::STRING }))
+            {
+                auto literal = previous().literal;
+                assert(literal.has_value());
+                if (literal.has_value())
+                {
+                    arguments.emplace_back(*literal);
+                }
+            }
+
+            consume_terminator("line");
+
+            return ParsedAsmInstruction{ std::move(label), instruction, arguments };
+        }
+        catch (const ParseError&)
+        {
+            synchronize_parser_state();
+            return std::nullopt;
+        }
+    }
+
+
+    /// This checks to see if the current token has any of the given types.
+    /// If so, it consumes the token and returns true.
+    // Otherwise, it returns false and leaves the current token alone.
+    bool
+    match(const std::vector<AsmTokenType>& types)
+    {
+        for (AsmTokenType type : types)
+        {
+            if (check(type))
+            {
+                advance();
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    bool
+    check(AsmTokenType type)
+    {
+        if (is_at_end())
+        {
+            return false;
+        }
+        else
+        {
+            return peek().type == type;
+        }
+    }
+
+    // consumes the current token and returns it
+    AsmToken&
+    advance()
+    {
+        if (is_at_end() == false)
+        {
+            current += 1;
+        }
+
+        return previous();
+    }
+
+    bool
+    is_at_end()
+    {
+        return peek().type == AsmTokenType::EOF;
+    }
+
+    AsmToken&
+    peek()
+    {
+        return tokens[current];
+    }
+
+    AsmToken&
+    previous()
+    {
+        assert(current != 0);
+        return tokens[current - 1];
+    }
+
+    Offset
+    previous_offset()
+    {
+        if (current == 0)
+        {
+            return { tokens[current].offset.source, 0 };
+        }
+        else
+        {
+            return previous().offset;
+        }
+    }
+
+    void
+    consume_terminator(const std::string& after)
+    {
+        consume
+        (
+            AsmTokenType::TERMINATOR,
+            fmt::format("Missing newline after {}", after),
+            { previous_offset() }
+        );
+    }
+
+    AsmToken&
+    consume(AsmTokenType type, const std::string& message, std::optional<Offset> offset = std::nullopt)
+    {
+        if (check(type))
+        {
+            return advance();
+        }
+        else
+        {
+            if (offset)
+            {
+                throw error(*offset, message);
+            }
+            else
+            {
+                throw error(offset_for_error(peek()), message);
+            }
+        }
+    }
+
+    ParseError
+    error(const Offset& offset, const std::string& message)
+    {
+        report_error(offset, message);
+        return ParseError{};
+    }
+
+    void
+    synchronize_parser_state()
+    {
+        advance();
+
+        while (is_at_end() == false)
+        {
+            if (previous().type == AsmTokenType::TERMINATOR)
+            {
+                return;
+            }
+
+            advance();
+        }
+    }
+
+
+    void
+    report_error(const Offset& offset, const std::string& message)
+    {
+        error_count += 1;
+        error_handler->on_error(offset, message);
+    }
+};
+
+
 }}
 
 
 namespace lax
 {
 
-ParseResult
-parse_program(std::vector<Token>& tokens, ErrorHandler* error_handler)
+LaxParseResult
+parse_lax_program(std::vector<Token>& tokens, ErrorHandler* error_handler)
 {
-    auto parser = Parser{tokens, error_handler};
+    auto parser = LoxParser{tokens, error_handler};
     try
     {
         auto prog = parser.parse_program();
@@ -1016,6 +1278,21 @@ parse_program(std::vector<Token>& tokens, ErrorHandler* error_handler)
     catch(const ParseError&)
     {
         return {parser.error_count, nullptr};
+    }
+}
+
+AsmParseResult
+parse_asm_program(std::vector<AsmToken>& tokens, ErrorHandler* error_handler)
+{
+    auto parser = AsmParser{ tokens, error_handler };
+    try
+    {
+        auto prog = parser.parse_program();
+        return { parser.error_count, prog };
+    }
+    catch (const ParseError&)
+    {
+        return { parser.error_count, {} };
     }
 }
 

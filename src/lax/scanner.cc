@@ -2,13 +2,30 @@
 
 #include <unordered_map>
 #include <sstream>
+#include <cctype>    // std::tolower
+#include <algorithm> // std::equal
 
 #include "lax/errorhandler.h"
 #include "lax/object.h"
 
+using namespace std::literals;
 
 namespace lax { namespace
 {
+
+
+bool ichar_equals(char a, char b)
+{
+    return std::tolower(static_cast<unsigned char>(a)) ==
+        std::tolower(static_cast<unsigned char>(b));
+}
+
+template<typename TStr>
+bool iequals(const TStr& a, const TStr& b)
+{
+    return a.size() == b.size() &&
+        std::equal(a.begin(), a.end(), b.begin(), ichar_equals);
+}
 
 
 bool
@@ -115,25 +132,9 @@ find_lax_keyword_or_null(std::string_view str)
 std::optional<AsmTokenType>
 find_asm_keyword_or_null(std::string_view str)
 {
-    // todo(Gustav): just constinit this instead of going via a local function
-    static const std::unordered_map<std::string_view, AsmTokenType> keywords = []() -> auto
-        {
-            std::unordered_map<std::string_view, AsmTokenType> kw;
-
-            // kw["and"] = TokenType::AND;
-
-            return kw;
-        }();
-
-    const auto found = keywords.find(str);
-    if (found != keywords.end())
-    {
-        return found->second;
-    }
-    else
-    {
-        return std::nullopt;
-    }
+    if (iequals(str, "CST"sv)) return AsmTokenType::CST;
+    if (iequals(str, "RET"sv)) return AsmTokenType::RET;
+    return std::nullopt;
 }
 
 struct GenericScanner

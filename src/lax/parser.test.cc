@@ -21,7 +21,7 @@ namespace
 
         auto printer = AddStringErrors{&output.err};
         auto tokens = lax::scan_lox_tokens(source, &printer);
-        auto program = lax::parse_program(tokens.tokens, &printer);
+        auto program = lax::parse_lax_program(tokens.tokens, &printer);
 
         if(tokens.errors == 0 && program.errors == 0)
         {

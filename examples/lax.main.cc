@@ -75,7 +75,7 @@ struct AstCodeRunner : CodeRunner
     run_code(std::shared_ptr<lax::Interpreter> interpreter, const std::string& source) override
     {
         auto tokens = lax::scan_lox_tokens(source, interpreter->get_error_handler());
-        auto program = lax::parse_program(tokens.tokens, interpreter->get_error_handler());
+        auto program = lax::parse_lax_program(tokens.tokens, interpreter->get_error_handler());
 
         if(tokens.errors > 0 || program.errors > 0)
         {
@@ -101,7 +101,7 @@ struct InterpreterRunner : CodeRunner
     run_code(std::shared_ptr<lax::Interpreter> interpreter, const std::string& source) override
     {
         auto tokens = lax::scan_lox_tokens(source, interpreter->get_error_handler());
-        auto program = lax::parse_program(tokens.tokens, interpreter->get_error_handler());
+        auto program = lax::parse_lax_program(tokens.tokens, interpreter->get_error_handler());
         
         if(tokens.errors > 0 || program.errors > 0)
         {
@@ -130,12 +130,11 @@ struct InterpreterRunner : CodeRunner
 
 
 
-struct AssemblerRunner : CodeRunner
+struct AssemblerTokensRunner : CodeRunner
 {
     RunError
     run_code(std::shared_ptr<lax::Interpreter> interpreter, const std::string& source) override
     {
-        // todo(Gustav): use a assembler tokenizer
         auto tokens = lax::scan_asm_tokens(source, interpreter->get_error_handler());
 
         if (tokens.errors > 0)
@@ -146,6 +145,36 @@ struct AssemblerRunner : CodeRunner
         for (const auto& token : tokens.tokens)
         {
             std::cout << token.to_debug_string() << "\n";
+        }
+
+        return RunError::no_error;
+    }
+};
+
+
+
+struct AssemblerStatementsRunner : CodeRunner
+{
+    RunError
+    run_code(std::shared_ptr<lax::Interpreter> interpreter, const std::string& source) override
+    {
+        auto tokens = lax::scan_asm_tokens(source, interpreter->get_error_handler());
+        auto program = lax::parse_asm_program(tokens.tokens, interpreter->get_error_handler());
+
+        if (tokens.errors > 0 || program.errors > 0)
+        {
+            return RunError::syntax_error;
+        }
+
+        for (const auto& instruction : program.program)
+        {
+            std::cout << instruction.label.value_or("[no label]") << ": " << lax::tokentype_to_string(instruction.instruction);
+
+            for (const auto& va : instruction.arguments)
+            {
+                std::cout << " " << lax::string_from_asm(va);
+            }
+            std::cout << "\n";
         }
 
         return RunError::no_error;
@@ -385,8 +414,12 @@ main(int argc, char** argv)
         runner = std::make_shared<InterpreterRunner>();
         return std::nullopt;
         });
-    cli.bind_flag('A', "treat input as assembly code", [&]() -> std::optional<int> {
-        runner = std::make_shared<AssemblerRunner>();
+    cli.bind_flag('l', "show asm tokens", [&]() -> std::optional<int> {
+        runner = std::make_shared<AssemblerTokensRunner>();
+        return std::nullopt;
+        });
+    cli.bind_flag('p', "run lexer/parser on asm", [&]() -> std::optional<int> {
+        runner = std::make_shared<AssemblerStatementsRunner>();
         return std::nullopt;
         });
 

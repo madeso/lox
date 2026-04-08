@@ -24,7 +24,8 @@ struct Token
     to_debug_string(Interpreter* inter) const;
 };
 
-using AsmLiteral = std::optional<std::variant<Ti, Tf, std::string>>;
+using AsmLiteralValue = std::variant<Ti, Tf, std::string>;
+using AsmLiteral = std::optional<AsmLiteralValue>;
 struct AsmToken
 {
     AsmTokenType type;
@@ -35,6 +36,8 @@ struct AsmToken
     std::string
     to_debug_string() const;
 };
+
+std::string string_from_asm(const AsmLiteral& literal);
 
 
 }
