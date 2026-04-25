@@ -12,6 +12,6 @@ struct DebugOutput
 };
 
 void disassemble_chunk(DebugOutput* output, Chunk* chunk, std::string& name);
-int disassemble_instruction(DebugOutput* output, const Chunk* chunk, int offset);
+std::size_t disassemble_instruction(DebugOutput* output, const Chunk* chunk, std::size_t offset);
 
 }
