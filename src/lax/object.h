@@ -18,6 +18,7 @@ enum class ObjectType
 };
 
 
+struct Object;
 struct Environment;
 struct ArgumentHelper;
 struct Interpreter;
@@ -25,6 +26,7 @@ struct Instance;
 struct Callable;
 
 
+std::string objecttype_to_string(std::shared_ptr<Object> obj);
 constexpr std::string_view objecttype_to_string(ObjectType ot)
 {
     switch (ot)

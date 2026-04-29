@@ -10,6 +10,21 @@
 namespace lax
 {
 
+    std::string objecttype_to_string(std::shared_ptr<Object> obj)
+{
+    assert(obj);
+    auto t = objecttype_to_string(obj->get_type());
+
+    auto inst = as_instance(obj);
+    if (inst)
+    {
+        return fmt::format("{} of {}", t, inst->klass->klass_name);
+    }
+    else
+    {
+        return fmt::format("{}", t);
+    }
+}
 
 struct ObjectIntegrationImpl : ObjectIntegration
 {
