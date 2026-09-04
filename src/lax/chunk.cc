@@ -6,7 +6,7 @@
 namespace lax
 {
 
-    void Chunk::write(std::uint8_t byte, SourceRange range)
+    void Chunk::write(uint8_t byte, SourceRange range)
     {
         code.push_back(byte);
         source.ranges.push_back(range);

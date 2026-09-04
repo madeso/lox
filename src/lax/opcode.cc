@@ -6,12 +6,12 @@
 namespace lax
 {
 
-std::uint8_t byte_from_opcode(OpCode op)
+uint8_t byte_from_opcode(OpCode op)
 {
-    return static_cast<std::uint8_t>(op);
+    return static_cast<uint8_t>(op);
 }
 
-OpCode opcode_from_byte(std::uint8_t byte)
+OpCode opcode_from_byte(uint8_t byte)
 {
     return static_cast<OpCode>(byte);
 }

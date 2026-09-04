@@ -230,14 +230,14 @@ struct AsmToBytecodeRunner : CodeRunner
                     },
                     [&](lax::Tf f) {
                         const auto index = chunk.add_constant(f);
-                        if (index >= static_cast<std::size_t>(std::numeric_limits<std::uint8_t>::max()))
+                        if (index >= static_cast<std::size_t>(std::numeric_limits<uint8_t>::max()))
                         {
                             std::cerr << "error: too many constants\n";
                             error = true;
                         }
                         else
                         {
-                            chunk.write(static_cast<std::uint8_t>(index), where);
+                            chunk.write(static_cast<uint8_t>(index), where);
                         }
                     },
                     [&](std::string s) {
