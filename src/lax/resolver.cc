@@ -109,7 +109,9 @@ struct MainResolver : ExpressionVoidVisitor, StatementVoidVisitor
         Scope& scope = scopes.back();
         auto found = scope.find(name);
         assert(found != scope.end());
-        found->second.status = VarStatus::defined;
+        if(found != scope.end()) {
+            found->second.status = VarStatus::defined;
+        }
     }
 
     void resolve_local(const Expression& x, const std::string& name)
