@@ -6,10 +6,10 @@ jobs:
     build:
         strategy:
             matrix:
-                cxx: [g++-14, clang++-18]
+                cxx: [g++-15, clang++-22]
                 build_type: [Debug, Release]
 
-        runs-on: ubuntu-24.04
+        runs-on: ubuntu-26.04
 
         steps:
             - uses: actions/checkout@v2
